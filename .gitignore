@@ -8,3 +8,14 @@ Thumbs.db
 coverage/
 dist/
 .netlify/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.sqlite3
+staticfiles/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
