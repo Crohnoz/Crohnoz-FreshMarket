@@ -1,6 +1,7 @@
 import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { formatCLP } from "../core/format.js";
 import { readStorage, writeStorage } from "../core/storage.js";
+import { confirmAction, setButtonPending, setStatus, showToast } from "../core/ui-feedback.js";
 import { products } from "../data/demo-data.js";
 import { initialInventoryLots, initialPurchases, initialSuppliers } from "../data/operations-demo.js";
 import { createInventoryLot } from "../domain/inventory.js";
@@ -16,10 +17,15 @@ const submitButton = form.querySelector("button[type=submit]");
 const applySuggested = form.elements.applySuggested;
 const statusRegion = document.querySelector("#purchase-status");
 let decision = null;
+let operationVersion = 0;
 
 function todayISO() {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function cloneValue(value) {
+  return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
 }
 
 function formatDateOnly(value) {
@@ -31,8 +37,7 @@ function productById(id) { return products.find((product) => product.id === id) 
 function supplierById(id) { return suppliers.find((supplier) => supplier.id === id) ?? null; }
 
 function announce(message, state = "success") {
-  statusRegion.textContent = message;
-  statusRegion.dataset.state = state;
+  setStatus(statusRegion, message, state);
 }
 
 function applyTheme() {
@@ -135,9 +140,31 @@ function renderHistory() {
   });
 }
 
+function offerUndo(snapshot, productName) {
+  const version = ++operationVersion;
+  showToast({
+    message: `Compra de ${productName} guardada.`,
+    state: "success",
+    actionLabel: "Deshacer",
+    onAction: () => {
+      if (version !== operationVersion) throw new Error("Solo puede deshacerse la compra más reciente.");
+      purchases = snapshot.purchases;
+      lots = snapshot.lots;
+      prices = snapshot.prices;
+      operationVersion += 1;
+      writeStorage("purchase-orders", purchases);
+      writeStorage("inventory-lots", lots);
+      writeStorage("prices", prices);
+      renderHistory();
+      recalculate();
+      announce("La última compra fue deshecha junto con su lote y precio.", "success");
+    },
+  });
+}
+
 form.addEventListener("input", recalculate);
 form.addEventListener("change", recalculate);
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   recalculate();
   if (!decision) {
@@ -150,58 +177,86 @@ form.addEventListener("submit", (event) => {
     announce("Selecciona un producto y proveedor válidos.", "error");
     return;
   }
-  const quantity = Number(form.quantity.value);
-  const total = Math.round(Number(form.totalCost.value));
-  const unitCost = calculateUnitCost(total, quantity);
-  const purchaseId = crypto.randomUUID();
-  const lot = createInventoryLot({
-    productId: product.id,
-    productName: product.name,
-    unit: product.baseUnitLabel,
-    receivedQuantity: quantity,
-    unitCost,
-    receivedAt: form.receivedAt.value,
-    bestBeforeDate: form.bestBeforeDate.value,
-    condition: form.condition.value,
-    ripeness: form.ripeness.value,
-    supplierId: supplier.id,
-    source: "purchase",
-    notes: `Compra ${purchaseId}`,
-  });
-  purchases.push({
-    id: purchaseId,
-    supplierId: supplier.id,
-    supplierName: supplier.name,
-    createdAt: new Date().toISOString(),
-    settlement: form.settlement.value,
-    total,
-    lines: [{
+
+  const priceApplied = applySuggested.checked && !applySuggested.disabled;
+  if (priceApplied) {
+    const accepted = await confirmAction({
+      title: `Cambiar el precio de ${product.name}`,
+      message: "La compra se guardará y también se actualizará el precio del catálogo demo.",
+      detail: `${formatCLP(decision.currentPrice)} → ${formatCLP(decision.suggestedPrice)} por ${product.baseUnitLabel}`,
+      confirmLabel: "Guardar y cambiar precio",
+    });
+    if (!accepted) {
+      announce("No se guardó la compra. Puedes desmarcar el cambio de precio y volver a intentar.", "warning");
+      return;
+    }
+  }
+
+  const snapshot = {
+    purchases: cloneValue(purchases),
+    lots: cloneValue(lots),
+    prices: cloneValue(prices),
+  };
+  setButtonPending(submitButton, true, "Guardando compra…");
+  try {
+    const quantity = Number(form.quantity.value);
+    const total = Math.round(Number(form.totalCost.value));
+    const unitCost = calculateUnitCost(total, quantity);
+    const purchaseId = crypto.randomUUID();
+    const lot = createInventoryLot({
       productId: product.id,
       productName: product.name,
-      quantity,
       unit: product.baseUnitLabel,
+      receivedQuantity: quantity,
       unitCost,
-      targetMarginPercent: Number(form.targetMarginPercent.value),
-      expectedWastePercent: Number(form.expectedWastePercent.value),
-      suggestedPrice: decision.suggestedPrice,
-    }],
-    lotIds: [lot.id],
-  });
-  lots.push(lot);
-  const priceApplied = applySuggested.checked && !applySuggested.disabled;
-  if (priceApplied) prices[product.id] = decision.suggestedPrice;
-  writeStorage("purchase-orders", purchases);
-  writeStorage("inventory-lots", lots);
-  writeStorage("prices", prices);
-  announce(priceApplied
-    ? "Compra y lote guardados. El precio sugerido quedó aplicado."
-    : "Compra y lote guardados. El precio se mantuvo sin cambios.", "success");
-  form.reset();
-  form.receivedAt.value = todayISO();
-  form.targetMarginPercent.value = 30;
-  form.expectedWastePercent.value = 8;
-  renderHistory();
-  recalculate();
+      receivedAt: form.receivedAt.value,
+      bestBeforeDate: form.bestBeforeDate.value,
+      condition: form.condition.value,
+      ripeness: form.ripeness.value,
+      supplierId: supplier.id,
+      source: "purchase",
+      notes: `Compra ${purchaseId}`,
+    });
+    purchases.push({
+      id: purchaseId,
+      supplierId: supplier.id,
+      supplierName: supplier.name,
+      createdAt: new Date().toISOString(),
+      settlement: form.settlement.value,
+      total,
+      lines: [{
+        productId: product.id,
+        productName: product.name,
+        quantity,
+        unit: product.baseUnitLabel,
+        unitCost,
+        targetMarginPercent: Number(form.targetMarginPercent.value),
+        expectedWastePercent: Number(form.expectedWastePercent.value),
+        suggestedPrice: decision.suggestedPrice,
+      }],
+      lotIds: [lot.id],
+    });
+    lots.push(lot);
+    if (priceApplied) prices[product.id] = decision.suggestedPrice;
+    writeStorage("purchase-orders", purchases);
+    writeStorage("inventory-lots", lots);
+    writeStorage("prices", prices);
+    announce(priceApplied
+      ? "Compra y lote guardados. El precio sugerido quedó aplicado."
+      : "Compra y lote guardados. El precio se mantuvo sin cambios.", "success");
+    form.reset();
+    form.receivedAt.value = todayISO();
+    form.targetMarginPercent.value = 30;
+    form.expectedWastePercent.value = 8;
+    renderHistory();
+    recalculate();
+    offerUndo(snapshot, product.name);
+  } catch (error) {
+    announce(error.message ?? "No se pudo guardar la compra.", "error");
+  } finally {
+    setButtonPending(submitButton, false);
+    recalculate();
+  }
 });
 
 applyTheme();
