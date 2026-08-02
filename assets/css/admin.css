@@ -20,12 +20,20 @@
 .panel-header p { margin: 6px 0 0; color: var(--muted); }
 .orders-list { display: grid; gap: 13px; }
 .order-card { padding: 17px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
-.order-card header, .order-card footer, .order-lines > div { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
+.order-card header, .order-card footer { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
 .order-card h3 { margin: 0 0 4px; }
 .order-card small { color: var(--muted); }
 .status-pill { padding: 7px 10px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); font-size: 11px; font-weight: 900; text-align: center; }
 .order-lines { display: grid; gap: 8px; margin: 16px 0; padding: 14px 0; border-block: 1px solid var(--line); font-size: 13px; }
-.order-lines span { color: var(--muted); }
+.order-product-line { display: grid; grid-template-columns: 42px 1fr auto; gap: 11px; align-items: center; }
+.order-product-copy { display: grid; gap: 3px; }
+.order-product-copy strong { color: var(--text); }
+.order-product-copy small { color: var(--muted); }
+.product-thumb { position: relative; display: grid; place-items: center; width: 42px; height: 42px; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
+.product-thumb img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.product-thumb [data-fallback] { display: grid; place-items: center; width: 100%; height: 100%; font-size: 21px; }
+.table-product { display: inline-flex; align-items: center; gap: 10px; min-width: 185px; }
+.table-product strong { font-size: 13px; }
 .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .visual-side-card { overflow: hidden; padding: 0; }
 .visual-side-card img { width: 100%; height: 185px; display: block; object-fit: cover; }
@@ -55,4 +63,5 @@
   .weighing-line { grid-template-columns: 1fr; }
   .calculation { grid-column: auto; }
   .quick-actions { grid-template-columns: 1fr; }
+  .order-card footer { align-items: stretch; flex-direction: column; }
 }
