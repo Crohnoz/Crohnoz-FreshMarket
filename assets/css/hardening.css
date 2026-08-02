@@ -1,0 +1,7 @@
+.skip-link { position: fixed; z-index: 999; top: 8px; left: 8px; padding: 10px 14px; border-radius: 10px; background: var(--text); color: var(--bg); transform: translateY(-160%); transition: transform .15s ease; }
+.skip-link:focus { transform: translateY(0); }
+.connection-notice { position: fixed; z-index: 95; right: 12px; bottom: 84px; max-width: 360px; padding: 11px 14px; border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--line)); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow); font-size: 13px; }
+[aria-busy="true"] { cursor: progress; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+@media (forced-colors: active) { .button, .card, input, select, textarea { border: 1px solid CanvasText; } }
+@media print { .topbar, .demo-banner, .mobile-bottom-nav, .guided-tools, .page-footer, .button, .connection-notice { display: none !important; } body { background: white; color: black; } .card { box-shadow: none; } }
