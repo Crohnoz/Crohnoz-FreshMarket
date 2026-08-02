@@ -31,7 +31,34 @@ function applyTheme() {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function ensureLedgerSettlementField() {
+  const form = document.querySelector("#ledger-form");
+  if (!form || form.querySelector("[name=settlement]")) return;
+  const label = document.createElement("label");
+  label.id = "ledger-settlement-label";
+  label.innerHTML = `Medio del abono
+    <select name="settlement">
+      <option value="cash">Efectivo</option>
+      <option value="transfer">Transferencia</option>
+    </select>`;
+  form.querySelector(".form-grid")?.insertAdjacentElement("afterend", label);
+}
+
+function toggleLedgerSettlement() {
+  const form = document.querySelector("#ledger-form");
+  const label = document.querySelector("#ledger-settlement-label");
+  const settlement = form?.querySelector("[name=settlement]");
+  if (!form || !label || !settlement) return;
+  const payment = form.type.value === "payment";
+  label.hidden = !payment;
+  settlement.required = payment;
 }
 
 function fillCustomerSelects() {
@@ -77,7 +104,9 @@ function renderCustomers() {
     row.querySelector(".balance-positive, .balance-zero").textContent = formatCLP(balance);
     row.querySelector("button").addEventListener("click", () => {
       document.querySelector("#ledger-customer").value = customer.id;
-      document.querySelector("#ledger-form [name=type]").value = "payment";
+      const type = document.querySelector("#ledger-form [name=type]");
+      type.value = "payment";
+      type.dispatchEvent(new Event("change", { bubbles: true }));
       document.querySelector("#ledger-form [name=amount]").focus();
     });
     list.append(row);
@@ -103,6 +132,10 @@ function renderAssistant() {
   container.append(card);
 }
 
+function settlementLabel(value) {
+  return ({ cash: "Efectivo", transfer: "Transferencia", credit: "Fiado" })[value] ?? "Sin clasificar";
+}
+
 function renderDailyLog() {
   const container = document.querySelector("#daily-log");
   container.replaceChildren();
@@ -110,7 +143,7 @@ function renderDailyLog() {
     const article = document.createElement("article");
     article.innerHTML = `<div><strong></strong><small></small></div><strong></strong>`;
     article.querySelector("div strong").textContent = transaction.counterparty;
-    article.querySelector("small").textContent = `${transaction.type === "sale" ? "Venta" : "Compra"} · ${transaction.settlement} · ${transaction.lines.length} ítems`;
+    article.querySelector("small").textContent = `${transaction.type === "sale" ? "Venta" : "Compra"} · ${settlementLabel(transaction.settlement)} · ${transaction.lines.length} ítems`;
     article.querySelector(":scope > strong").textContent = formatCLP(transaction.total);
     container.append(article);
   });
@@ -162,6 +195,7 @@ function registerLedgerMovement(event) {
     customerId: form.customerId.value,
     type: form.type.value,
     amount,
+    settlement: form.type.value === "payment" ? form.settlement.value : "credit",
     description: form.description.value.trim() || (form.type.value === "charge" ? "Fiado" : "Abono"),
     occurredAt: todayISO(),
     source: "manual",
@@ -215,6 +249,7 @@ function registerTransaction(event) {
       customerId: transaction.customerId,
       type: "charge",
       amount: total,
+      settlement: "credit",
       description: `Venta fiada: ${lines.map((line) => line.product).join(", ")}`,
       occurredAt: todayISO(),
       source: "daily-transaction",
@@ -288,6 +323,7 @@ function confirmImport() {
       customerId: customer.id,
       type: candidate.type,
       amount: candidate.amount,
+      settlement: candidate.type === "payment" ? "unknown" : "credit",
       description: "Importado desde transcripción del cuaderno",
       occurredAt: todayISO(),
       source: "notebook-import",
@@ -309,12 +345,15 @@ function renderAll() {
   renderAssistant();
   renderDailyLog();
   toggleCreditCustomer();
+  toggleLedgerSettlement();
 }
 
 applyTheme();
+ensureLedgerSettlementField();
 addTransactionLine({ product: "Tomate", quantity: 5, unitPrice: 1490 });
 renderAll();
 document.querySelector("#ledger-form").addEventListener("submit", registerLedgerMovement);
+document.querySelector("#ledger-form [name=type]").addEventListener("change", toggleLedgerSettlement);
 document.querySelector("#customer-form").addEventListener("submit", createCustomer);
 document.querySelector("#transaction-form").addEventListener("submit", registerTransaction);
 document.querySelector("#add-line").addEventListener("click", () => addTransactionLine());
