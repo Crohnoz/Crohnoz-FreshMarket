@@ -17,6 +17,11 @@
   status = 200
 
 [[redirects]]
+  from = "/cierre"
+  to = "/cierre.html"
+  status = 200
+
+[[redirects]]
   from = "/dashboard"
   to = "/admin.html"
   status = 200
