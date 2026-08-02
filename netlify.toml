@@ -12,6 +12,11 @@
     Content-Security-Policy = "default-src 'self'; img-src 'self' data: blob: https://images.pexels.com https://images.unsplash.com; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
 
 [[redirects]]
+  from = "/operar"
+  to = "/operar.html"
+  status = 200
+
+[[redirects]]
   from = "/dashboard"
   to = "/admin.html"
   status = 200
