@@ -1,3 +1,5 @@
+import { shouldRecommendBackup } from "./backup.js";
+
 const ACTIVE_ORDER_STATES = new Set([
   "new",
   "preparing",
@@ -19,6 +21,8 @@ export function chooseOperatorRecommendation({
   inventorySummary = {},
   closes = [],
   outstanding = 0,
+  activityCount = 0,
+  lastBackupAt = null,
   now = new Date(),
 } = {}) {
   const activeOrders = orders.filter((order) => ACTIVE_ORDER_STATES.has(order.status));
@@ -64,6 +68,16 @@ export function chooseOperatorRecommendation({
     return {
       taskId: "close-day",
       reason: "El día está terminando y todavía no existe un cierre guardado para hoy.",
+      urgency: "medium",
+    };
+  }
+
+  if (shouldRecommendBackup({ activityCount, lastBackupAt, now })) {
+    return {
+      taskId: "backup",
+      reason: lastBackupAt
+        ? "Ya hay actividad nueva y el último respaldo tiene una semana o más. Descarga una copia actualizada."
+        : "Ya registraste varias operaciones sin descargar un respaldo local.",
       urgency: "medium",
     };
   }
