@@ -6,10 +6,12 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 
 **Piloto comercial funcionalmente completo, pendiente de validación física.** La interfaz usa datos ficticios y `localStorage`. No existe autenticación, persistencia central, aislamiento multiempresa ni garantía transaccional.
 
+Versión actual: **0.3.0-pilot**.
+
 ## Páginas
 
 - `/index.html`: tienda pública.
-- `/operar.html`: inicio guiado por tareas.
+- `/operar.html`: inicio guiado, prioridades, checklist y continuación de la última tarea.
 - `/admin.html`: preparación, pesaje, precios rápidos y merma.
 - `/cuentas.html`: fiados, abonos, operaciones rápidas y voz.
 - `/cierre.html`: conciliación diaria de efectivo.
@@ -18,12 +20,22 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 - `/ventas.html`: confirmación, cobro, entrega y comprobante interno.
 - `/asistente.html`: contexto operacional y propuestas revisables.
 - `/validacion.html`: diagnóstico técnico y pruebas de usuario.
-- `/configurador.html`: identidad y parámetros demo.
+- `/configurador.html`: identidad, respaldo, restauración y restablecimiento demo.
 - `/scanner-lab.html`: laboratorio HID para lector de códigos.
 
 Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
 
-## Cinco bloques completados
+## Capacidades principales
+
+### Inicio operacional guiado
+
+- recomendación contextual según pedidos, pesaje, entrega, inventario y cierre;
+- recomendación de respaldo después de actividad local relevante;
+- tareas frecuentes separadas de herramientas secundarias;
+- filtros por área;
+- checklist de puesta en marcha;
+- regreso seguro a la última pantalla operacional visitada;
+- navegación móvil con contexto activo para vender, pedidos, fiados y voz.
 
 ### Inventario perecible
 
@@ -61,6 +73,18 @@ Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/
 - importación desde transcripción revisada;
 - contrato JSON Schema para backend futuro.
 
+### Continuidad local
+
+- formato JSON versionado y limitado a 2 MB;
+- validación de producto, versión, namespace, fecha y nombres de colecciones;
+- bloqueo de claves inseguras;
+- resumen previo de colecciones y registros estimados;
+- confirmación explícita antes de reemplazar datos;
+- descarga con nombre estable por negocio y fecha;
+- indicador de almacenamiento local, memoria temporal y último respaldo;
+- restablecimiento completo de datos demo con confirmación destructiva;
+- caché offline de Configuración y de los módulos de continuidad.
+
 ### Hardening del piloto
 
 - service worker y fallback offline;
@@ -68,6 +92,7 @@ Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/
 - enlace de salto, alto contraste y movimiento reducido;
 - aviso de conectividad;
 - diagnóstico de capacidades;
+- confirmaciones y deshacer de una operación en mutaciones críticas;
 - cinco escenarios cronometrados;
 - historial local de validación.
 
@@ -85,12 +110,14 @@ Abrir `http://localhost:8000/operar.html`.
 npm test
 ```
 
-La suite cubre mediciones, pesaje, códigos de barra, fiados, voz, imágenes, cierre diario, inventario, compras, márgenes, flujo de pedidos, propuestas asistidas, rutas y validación del piloto.
+La suite cubre mediciones, pesaje, códigos de barra, fiados, voz, imágenes, cierre diario, inventario, compras, márgenes, flujo de pedidos, propuestas asistidas, rutas, UX reversible, respaldo, restauración, onboarding y validación del piloto.
 
 ## Seguridad y límites
 
-- No ingresar datos reales o sensibles.
+- No ingresar datos reales, personales, clínicos, financieros o sensibles.
 - `localStorage` no sincroniza dispositivos y puede perderse.
+- El respaldo JSON es manual, no cifrado y debe mantenerse en un lugar controlado.
+- La restauración reemplaza todas las colecciones del namespace del piloto.
 - El service worker mejora continuidad local, pero no constituye respaldo.
 - La voz y cámara dependen del navegador y permisos del usuario.
 - El soporte del escáner debe probarse físicamente.
@@ -104,7 +131,7 @@ La separación entre piloto y producción está documentada en `docs/PILOT_COMPL
 
 ## Producción futura
 
-Django, DRF, PostgreSQL, autenticación, organizaciones, RBAC, auditoría, transacciones, idempotencia, almacenamiento privado, OCR/IA backend, backups, observabilidad, privacidad, pagos e integración tributaria.
+Django, DRF, PostgreSQL, autenticación, organizaciones, RBAC, auditoría, transacciones, idempotencia, almacenamiento privado, respaldos automáticos cifrados, restauraciones probadas, OCR/IA backend, observabilidad, privacidad, pagos e integración tributaria.
 
 ## Referencia de reutilización
 

@@ -1,7 +1,38 @@
 import { readStorage, writeStorage } from "./storage.js";
 
-const ONBOARDING_KEY = "guided-onboarding-v1";
+const ONBOARDING_KEY = "guided-onboarding-v2";
 const EASY_MODE_KEY = "easy-mode";
+const VISITED_PAGES_KEY = "visited-operator-pages-v1";
+const LAST_ROUTE_KEY = "last-operator-route";
+
+const PAGE_ALIASES = Object.freeze({
+  "": "index.html",
+  operar: "operar.html",
+  inventario: "inventario.html",
+  compras: "compras.html",
+  ventas: "ventas.html",
+  asistente: "asistente.html",
+  validacion: "validacion.html",
+  cierre: "cierre.html",
+  dashboard: "admin.html",
+  cuentas: "cuentas.html",
+  configurar: "configurador.html",
+  scanner: "scanner-lab.html",
+});
+
+const OPERATOR_PAGE_META = Object.freeze({
+  "admin.html": { label: "Preparación y pesaje" },
+  "asistente.html": { label: "Centro asistido" },
+  "cierre.html": { label: "Cierre del día" },
+  "compras.html": { label: "Compras y proveedores" },
+  "configurador.html": { label: "Configuración y respaldo" },
+  "cuentas.html": { label: "Ventas y fiados" },
+  "inventario.html": { label: "Inventario perecible" },
+  "operar.html": { label: "Inicio del negocio" },
+  "scanner-lab.html": { label: "Prueba de lector" },
+  "validacion.html": { label: "Validación del piloto" },
+  "ventas.html": { label: "Cobros y entregas" },
+});
 
 const onboardingSteps = [
   {
@@ -11,28 +42,36 @@ const onboardingSteps = [
     text: "En Inicio del negocio encontrarás botones grandes para vender, anotar fiados, recibir abonos y preparar pedidos.",
   },
   {
+    icon: "🧭",
+    eyebrow: "Prioridades",
+    title: "Sigue el siguiente paso recomendado",
+    text: "El inicio revisa pedidos, pesaje, inventario y cierre para mostrar primero la tarea que necesita atención.",
+  },
+  {
     icon: "🎙️",
     eyebrow: "Ayuda por voz",
     title: "También puedes decirlo",
     text: "El copiloto escucha una frase corta, muestra lo que entendió y prepara una propuesta. Nada se guarda sin tu confirmación.",
   },
   {
-    icon: "🧮",
-    eyebrow: "Cálculo asistido",
-    title: "Revisa el total antes de guardar",
-    text: "El sistema multiplica cantidades y precios, pero siempre debes revisar la persona, los productos y el monto final.",
-  },
-  {
     icon: "✅",
     eyebrow: "Control humano",
     title: "Confirma con calma",
-    text: "Fiados, abonos y cambios de peso requieren una acción explícita. Puedes corregir o cancelar antes de registrar.",
+    text: "Fiados, pagos, mermas y cambios de peso requieren una acción explícita. Puedes corregir, cancelar o deshacer el cambio más reciente.",
+  },
+  {
+    icon: "💾",
+    eyebrow: "Continuidad",
+    title: "Descarga respaldos periódicos",
+    text: "Los datos viven en este navegador. Desde Configuración puedes descargar una copia JSON y restaurarla después de una revisión previa.",
   },
 ];
 
 function currentPage() {
-  const filename = window.location.pathname.split("/").pop() || "index.html";
-  return filename || "index.html";
+  const segment = window.location.pathname.split("/").filter(Boolean).at(-1) ?? "";
+  if (PAGE_ALIASES[segment] !== undefined) return PAGE_ALIASES[segment];
+  if (!segment) return "index.html";
+  return segment.includes(".") ? segment : `${segment}.html`;
 }
 
 function isStorefront() {
@@ -40,7 +79,23 @@ function isStorefront() {
 }
 
 function isOperatorSurface() {
-  return !isStorefront();
+  return Object.hasOwn(OPERATOR_PAGE_META, currentPage());
+}
+
+function recordOperatorVisit() {
+  if (!isOperatorSurface()) return;
+  const page = currentPage();
+  const visited = readStorage(VISITED_PAGES_KEY, []);
+  const nextVisited = [...new Set([...(Array.isArray(visited) ? visited : []), page])];
+  writeStorage(VISITED_PAGES_KEY, nextVisited);
+
+  if (page === "operar.html") return;
+  const meta = OPERATOR_PAGE_META[page];
+  writeStorage(LAST_ROUTE_KEY, {
+    href: `${page}${window.location.search}${window.location.hash}`,
+    label: meta.label,
+    visitedAt: new Date().toISOString(),
+  });
 }
 
 function setEasyMode(enabled) {
@@ -54,12 +109,16 @@ function setEasyMode(enabled) {
 
 function createOperatorBottomNav() {
   const page = currentPage();
+  const task = new URLSearchParams(window.location.search).get("task");
+  const saleContext = page === "ventas.html" || (page === "cuentas.html" && ["sale", "credit-sale"].includes(task));
+  const voiceContext = page === "asistente.html" || (page === "cuentas.html" && task === "voice");
+  const creditContext = page === "cuentas.html" && !saleContext && !voiceContext;
   const items = [
     { label: "Inicio", icon: "⌂", href: "operar.html", active: page === "operar.html" },
-    { label: "Vender", icon: "🧾", href: "cuentas.html?task=sale#transaction-form", active: false },
+    { label: "Vender", icon: "🧾", href: "cuentas.html?task=sale#transaction-form", active: saleContext },
     { label: "Pedidos", icon: "⚖️", href: "admin.html#orders-list", active: page === "admin.html" },
-    { label: "Fiados", icon: "📒", href: "cuentas.html", active: page === "cuentas.html" },
-    { label: "Hablar", icon: "🎙️", href: "cuentas.html?task=voice#voice-copilot", active: false },
+    { label: "Fiados", icon: "📒", href: "cuentas.html", active: creditContext },
+    { label: "Hablar", icon: "🎙️", href: "cuentas.html?task=voice#voice-copilot", active: voiceContext },
   ];
 
   const nav = document.createElement("nav");
@@ -212,25 +271,25 @@ function applyTaskDeepLink() {
   if (!task) return;
 
   if (task === "sale" || task === "credit-sale") {
-    focusWhenAvailable("#transaction-form", (form) => {
+    focusWhenAvailable("#transaction-form", (formElement) => {
       if (task === "credit-sale") {
-        const settlement = form.querySelector("#settlement");
+        const settlement = formElement.querySelector("#settlement");
         settlement.value = "credit";
         settlement.dispatchEvent(new Event("change", { bubbles: true }));
         showTaskNotice("Venta fiada: completa la persona, los productos y revisa el total antes de guardar.");
       } else {
         showTaskNotice("Nueva venta: ingresa la contraparte, cantidades y precios.");
       }
-      form.scrollIntoView({ behavior: "smooth", block: "center" });
-      form.querySelector("[name=counterparty]")?.focus({ preventScroll: true });
+      formElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      formElement.querySelector("[name=counterparty]")?.focus({ preventScroll: true });
     });
   }
 
   if (task === "payment" || task === "charge") {
-    focusWhenAvailable("#ledger-form", (form) => {
-      form.querySelector("[name=type]").value = task;
-      form.scrollIntoView({ behavior: "smooth", block: "center" });
-      form.querySelector("[name=amount]")?.focus({ preventScroll: true });
+    focusWhenAvailable("#ledger-form", (formElement) => {
+      formElement.querySelector("[name=type]").value = task;
+      formElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      formElement.querySelector("[name=amount]")?.focus({ preventScroll: true });
       showTaskNotice(task === "payment"
         ? "Abono: elige la persona, ingresa el monto recibido y revisa antes de guardar."
         : "Nuevo fiado: elige la persona, ingresa el monto y agrega un detalle breve.");
@@ -248,10 +307,11 @@ function applyTaskDeepLink() {
 
 function initialize() {
   setEasyMode(readStorage(EASY_MODE_KEY, false));
+  recordOperatorVisit();
   const onboarding = mountOnboarding();
   createGuidedTools(onboarding);
   if (isStorefront()) createStoreBottomNav();
-  else createOperatorBottomNav();
+  else if (isOperatorSurface()) createOperatorBottomNav();
   applyTaskDeepLink();
 
   if (currentPage() === "operar.html" && !readStorage(ONBOARDING_KEY, false)) {

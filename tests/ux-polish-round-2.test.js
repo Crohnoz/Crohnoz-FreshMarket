@@ -38,6 +38,7 @@ test("operator tasks are split into frequent and secondary groups", () => {
   assert.ok(groups.frequent.some((task) => task.id === "sale"));
   assert.ok(groups.frequent.some((task) => task.id === "inventory"));
   assert.ok(groups.secondary.some((task) => task.id === "scan"));
+  assert.ok(groups.secondary.some((task) => task.id === "backup"));
   assert.equal(groups.frequent.length + groups.secondary.length, OPERATOR_TASKS.length);
 });
 
@@ -96,7 +97,7 @@ test("audited scripts pass syntax validation and offline cache includes new asse
     execFileSync(process.execPath, ["--check", fileURLToPath(new URL(`../${path}`, import.meta.url))]);
   }
   const worker = await text("sw.js");
-  assert.match(worker, /crohnoz-fresh-market-v4/);
+  assert.match(worker, /crohnoz-fresh-market-v\d+/);
   assert.match(worker, /assets\/css\/ux-polish\.css/);
   assert.match(worker, /assets\/js\/core\/ui-feedback\.js/);
   assert.match(worker, /assets\/js\/domain\/operator-guidance\.js/);

@@ -9,7 +9,7 @@ test("operator tasks have unique safe identifiers and local destinations", () =>
     assert.match(task.id, /^[a-z0-9-]+$/);
     assert.ok(task.title.length >= 4);
     assert.ok(task.description.length >= 20);
-    assert.match(task.href, /^(admin|cuentas|scanner-lab|cierre|inventario|compras|ventas|asistente|validacion)\.html/);
+    assert.match(task.href, /^(admin|cuentas|scanner-lab|cierre|inventario|compras|ventas|asistente|validacion|configurador)\.html/);
     assert.ok(!task.href.includes("javascript:"));
   }
 });
@@ -17,6 +17,7 @@ test("operator tasks have unique safe identifiers and local destinations", () =>
 test("tasks can be resolved by id and group", () => {
   assert.equal(operatorTaskById("payment")?.title, "Recibir abono");
   assert.equal(operatorTaskById("inventory")?.href, "inventario.html");
+  assert.equal(operatorTaskById("backup")?.href, "configurador.html#continuidad");
   assert.equal(operatorTaskById("missing"), null);
   assert.ok(operatorTasksByGroup("credit").length >= 3);
 });
@@ -26,5 +27,6 @@ test("task search supports everyday Spanish words", () => {
   assert.equal(operatorTaskSearch("cerrar caja")[0]?.id, "close-day");
   assert.equal(operatorTaskSearch("vender primero")[0]?.id, "inventory");
   assert.equal(operatorTaskSearch("probar piloto")[0]?.id, "validate-pilot");
+  assert.equal(operatorTaskSearch("guardar copia")[0]?.id, "backup");
   assert.ok(operatorTaskSearch("").length === OPERATOR_TASKS.length);
 });

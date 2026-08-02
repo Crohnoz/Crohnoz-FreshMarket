@@ -2,10 +2,11 @@ import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { formatCLP } from "../core/format.js";
 import { readStorage } from "../core/storage.js";
 import { initialOrders } from "../data/demo-data.js";
-import { initialInventoryLots } from "../data/operations-demo.js";
+import { initialInventoryLots, initialPurchases } from "../data/operations-demo.js";
 import { initialCustomers, initialDailyTransactions, initialLedgerEntries } from "../data/receivables-demo.js";
 import { inventorySummary } from "../domain/inventory.js";
 import { chooseOperatorRecommendation, operatorTaskGroups } from "../domain/operator-guidance.js";
+import { buildOperatorReadiness, normalizeResumeTarget } from "../domain/operator-readiness.js";
 import { buildReceivablesSummary } from "../domain/receivables.js";
 import { OPERATOR_TASKS, operatorTaskById, operatorTaskSearch } from "../domain/operator-tasks.js";
 
@@ -13,9 +14,14 @@ const business = readStorage("business", DEFAULT_BUSINESS);
 const orders = readStorage("orders", initialOrders);
 const lots = readStorage("inventory-lots", initialInventoryLots);
 const closes = readStorage("daily-closes", []);
+const purchases = readStorage("purchase-orders", initialPurchases);
+const waste = readStorage("waste", []);
 const customers = readStorage("credit-customers", initialCustomers);
 const entries = readStorage("credit-ledger", initialLedgerEntries);
 const transactions = readStorage("daily-transactions", initialDailyTransactions);
+const continuityMeta = readStorage("continuity-meta", {});
+const visitedPages = readStorage("visited-operator-pages-v1", []);
+const lastRoute = readStorage("last-operator-route", null);
 const receivables = buildReceivablesSummary(customers, entries);
 let activeGroup = "all";
 
@@ -86,12 +92,22 @@ function renderTasks() {
   document.querySelector("#task-empty").hidden = tasks.length > 0;
 }
 
+function userActivityCount() {
+  return Math.max(0, entries.length - initialLedgerEntries.length)
+    + Math.max(0, transactions.length - initialDailyTransactions.length)
+    + Math.max(0, purchases.length - initialPurchases.length)
+    + waste.length
+    + closes.length;
+}
+
 function renderRecommendation() {
   const recommendation = chooseOperatorRecommendation({
     orders,
     inventorySummary: inventorySummary(lots),
     closes,
     outstanding: receivables.totalOutstanding,
+    activityCount: userActivityCount(),
+    lastBackupAt: continuityMeta.lastBackupAt,
     now: new Date(),
   });
   const task = operatorTaskById(recommendation.taskId) ?? OPERATOR_TASKS[0];
@@ -128,6 +144,63 @@ function renderAssistantSummary() {
   container.append(strong, span, link);
 }
 
+function relativeVisit(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Puedes volver directamente a esa pantalla.";
+  const minutes = Math.round((date.getTime() - Date.now()) / 60_000);
+  const formatter = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+  if (Math.abs(minutes) < 60) return `Visitada ${formatter.format(minutes, "minute")}.`;
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return `Visitada ${formatter.format(hours, "hour")}.`;
+  return `Visitada ${formatter.format(Math.round(hours / 24), "day")}.`;
+}
+
+function renderResume() {
+  const card = document.querySelector("#resume-card");
+  const target = normalizeResumeTarget(lastRoute);
+  if (!target) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  document.querySelector("#resume-title").textContent = target.label;
+  document.querySelector("#resume-detail").textContent = relativeVisit(target.visitedAt);
+  const action = document.querySelector("#resume-action");
+  action.href = target.href;
+  action.textContent = `Volver a ${target.label.toLocaleLowerCase("es")}`;
+}
+
+function renderReadiness() {
+  const readiness = buildOperatorReadiness({
+    business,
+    defaultBusiness: DEFAULT_BUSINESS,
+    visitedPages,
+    continuityMeta,
+  });
+  document.querySelector("#readiness-count").textContent = `${readiness.completed}/${readiness.total}`;
+  const progress = document.querySelector("#readiness-progress");
+  progress.style.width = `${readiness.percent}%`;
+  progress.parentElement.setAttribute("aria-valuenow", String(readiness.percent));
+  document.querySelector("#readiness-summary").textContent = readiness.ready
+    ? "La puesta en marcha local está completa. El siguiente paso es validar el piloto en el dispositivo real."
+    : `Completa ${readiness.total - readiness.completed} paso(s) para dejar preparado este navegador.`;
+
+  const list = document.querySelector("#readiness-list");
+  list.replaceChildren();
+  readiness.items.forEach((item) => {
+    const entry = document.createElement("li");
+    entry.className = item.complete ? "complete" : "pending";
+    const link = document.createElement("a");
+    link.href = item.href;
+    link.innerHTML = `<span class="readiness-check" aria-hidden="true"></span><span><strong></strong><small></small></span><b aria-hidden="true">→</b>`;
+    link.querySelector(".readiness-check").textContent = item.complete ? "✓" : "○";
+    link.querySelector("strong").textContent = item.label;
+    link.querySelector("small").textContent = item.description;
+    entry.append(link);
+    list.append(entry);
+  });
+}
+
 function bindControls() {
   document.querySelector("#task-search").addEventListener("input", renderTasks);
   document.querySelectorAll(".task-filter").forEach((button) => {
@@ -144,4 +217,6 @@ renderMetrics();
 renderRecommendation();
 renderTasks();
 renderAssistantSummary();
+renderResume();
+renderReadiness();
 bindControls();
