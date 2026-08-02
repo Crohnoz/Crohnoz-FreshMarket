@@ -4,6 +4,7 @@ import {
   buildCashReconciliation,
   canSaveDailyClose,
   createDailyCloseAssistant,
+  formatWasteQuantities,
   localDateKey,
   summarizeDailyOperations,
 } from "../assets/js/domain/daily-close.js";
@@ -44,6 +45,20 @@ test("separa efectivo, transferencias, fiados y compras", () => {
   assert.equal(summary.payments.transfer, 2500);
   assert.equal(summary.creditGenerated, 10000);
   assert.equal(summary.waste.estimatedCost, 1200);
+});
+
+test("conserva unidades distintas en la merma", () => {
+  const summary = summarizeDailyOperations({
+    dateKey,
+    waste: [
+      { quantity: 1.25, unit: "kg", unitCost: 1000, createdAt: `${dateKey}T12:00:00` },
+      { quantity: 2, unit: "unit", unitCost: 700, createdAt: `${dateKey}T13:00:00` },
+    ],
+  });
+  assert.deepEqual(summary.waste.quantities, { kg: 1.25, unidad: 2 });
+  assert.equal(summary.waste.description, "1,25 kg · 2 unidades");
+  assert.equal(formatWasteQuantities(summary.waste), "1,25 kg · 2 unidades");
+  assert.equal(summary.waste.estimatedCost, 2650);
 });
 
 test("no duplica la venta fiada vinculada al libro de cuentas", () => {
