@@ -2,6 +2,7 @@ const CACHE_NAME = "crohnoz-fresh-market-v3";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
+  "/index.html",
   "/operar.html",
   "/inventario.html",
   "/compras.html",
@@ -21,6 +22,7 @@ const CORE_ASSETS = [
   "/assets/css/pilot-completion.css",
   "/assets/css/operator-home.css",
   "/assets/css/daily-close.css",
+  "/assets/css/store.css",
   "/assets/js/core/config.js",
   "/assets/js/core/storage.js",
   "/assets/js/core/format.js",
@@ -30,6 +32,7 @@ const CORE_ASSETS = [
   "/assets/js/data/demo-data.js",
   "/assets/js/data/receivables-demo.js",
   "/assets/js/data/operations-demo.js",
+  "/assets/js/store/app.js",
   "/assets/js/operator/home.js",
   "/assets/js/inventory/app.js",
   "/assets/js/purchasing/app.js",
@@ -38,6 +41,8 @@ const CORE_ASSETS = [
   "/assets/js/assistant/speech.js",
   "/assets/js/validation/app.js",
   "/assets/js/close/app.js",
+  "/assets/js/domain/pricing.js",
+  "/assets/js/domain/substitutions.js",
   "/assets/js/domain/inventory.js",
   "/assets/js/domain/purchasing.js",
   "/assets/js/domain/sales-flow.js",
@@ -69,9 +74,9 @@ self.addEventListener("message", (event) => {
 });
 
 function htmlFallbackFor(url) {
-  if (url.pathname === "/" || url.pathname === "") return "/operar.html";
+  if (url.pathname === "/" || url.pathname === "") return "/index.html";
   const segment = url.pathname.split("/").filter(Boolean).at(-1);
-  if (!segment) return "/operar.html";
+  if (!segment) return "/index.html";
   if (segment.endsWith(".html")) return `/${segment}`;
   return `/${segment}.html`;
 }
