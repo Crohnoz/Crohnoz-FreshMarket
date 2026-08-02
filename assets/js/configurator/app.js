@@ -147,7 +147,6 @@ async function exportBackup() {
   try {
     const exportedAt = new Date();
     const filename = buildBackupFilename(business.name, exportedAt);
-    updateContinuityMeta({ lastBackupAt: exportedAt.toISOString(), lastBackupFilename: filename });
     const snapshot = snapshotStorage();
     if (snapshot.invalidKeys.length) throw new Error("Existen colecciones dañadas y el respaldo fue bloqueado.");
     const envelope = createBackupEnvelope(snapshot.entries, {
@@ -155,7 +154,9 @@ async function exportBackup() {
       appVersion: APP_CONFIG.version,
       exportedAt: exportedAt.toISOString(),
     });
-    downloadTextFile(serializeBackup(envelope), filename);
+    const serialized = serializeBackup(envelope);
+    downloadTextFile(serialized, filename);
+    updateContinuityMeta({ lastBackupAt: exportedAt.toISOString(), lastBackupFilename: filename });
     setStatus("#continuity-status", `Respaldo descargado: ${filename}.`, "success");
     showToast({ message: "Respaldo local descargado.", state: "success" });
     renderContinuity();
@@ -228,7 +229,9 @@ async function importBackup() {
     setStatus("#continuity-status", error.message, "error");
     showToast({ message: error.message, state: "error" });
   } finally {
+    const canRestore = Boolean(pendingBackup);
     setButtonPending(importButton, false);
+    importButton.disabled = !canRestore;
   }
 }
 
