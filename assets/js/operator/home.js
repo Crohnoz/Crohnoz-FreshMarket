@@ -3,6 +3,7 @@ import { formatCLP } from "../core/format.js";
 import { readStorage, snapshotStorage } from "../core/storage.js";
 import { initialOrders, products } from "../data/demo-data.js";
 import { initialInventoryLots, initialPurchases } from "../data/operations-demo.js";
+import { materializePilotEntries } from "../data/pilot-state.js";
 import { initialCustomers, initialDailyTransactions, initialLedgerEntries } from "../data/receivables-demo.js";
 import { auditDataIntegrity } from "../domain/data-integrity.js";
 import { inventorySummary } from "../domain/inventory.js";
@@ -26,7 +27,8 @@ const visitedPages = readStorage("visited-operator-pages-v1", []);
 const lastRoute = readStorage("last-operator-route", null);
 const receivables = buildReceivablesSummary(customers, entries);
 const localSnapshot = snapshotStorage();
-const baseIntegrityReport = auditDataIntegrity(localSnapshot.entries, { products });
+const effectiveEntries = materializePilotEntries(localSnapshot.entries);
+const baseIntegrityReport = auditDataIntegrity(effectiveEntries, { products });
 const integrityReport = localSnapshot.invalidKeys.length
   ? {
     ...baseIntegrityReport,
