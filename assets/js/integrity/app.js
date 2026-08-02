@@ -1,6 +1,7 @@
 import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { readStorage, snapshotStorage, writeStorage } from "../core/storage.js";
 import { products } from "../data/demo-data.js";
+import { materializePilotEntries } from "../data/pilot-state.js";
 import { auditDataIntegrity, integrityStatusDescription, integrityStatusLabel } from "../domain/data-integrity.js";
 
 const business = readStorage("business", DEFAULT_BUSINESS);
@@ -8,6 +9,7 @@ const statusRegion = document.querySelector("#integrity-live-status");
 let activeSeverity = "all";
 let currentReport = null;
 let currentSnapshot = null;
+let currentEffectiveEntries = null;
 let generatedAt = null;
 
 function applyTheme() {
@@ -142,9 +144,10 @@ function announce(message, state = "success") {
 
 function runAudit({ announceResult = true } = {}) {
   currentSnapshot = snapshotStorage();
+  currentEffectiveEntries = materializePilotEntries(currentSnapshot.entries);
   generatedAt = new Date().toISOString();
   currentReport = addStorageParseIssues(
-    auditDataIntegrity(currentSnapshot.entries, { products }),
+    auditDataIntegrity(currentEffectiveEntries, { products }),
     currentSnapshot,
   );
   writeStorage("integrity-meta", {
@@ -180,7 +183,8 @@ function downloadReport() {
     storage: {
       namespace: currentSnapshot.namespace,
       backend: currentSnapshot.backend,
-      collections: currentSnapshot.collections,
+      persistedCollections: currentSnapshot.collections,
+      effectiveCollections: Object.keys(currentEffectiveEntries).length,
       invalidKeys: [...currentSnapshot.invalidKeys],
     },
     report: currentReport,
