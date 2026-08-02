@@ -1,4 +1,4 @@
-const CACHE_NAME = "crohnoz-fresh-market-v3";
+const CACHE_NAME = "crohnoz-fresh-market-v4";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -19,6 +19,7 @@ const CORE_ASSETS = [
   "/assets/css/guided-shell.css",
   "/assets/css/hardening.css",
   "/assets/css/usability-audit.css",
+  "/assets/css/ux-polish.css",
   "/assets/css/pilot-completion.css",
   "/assets/css/operator-home.css",
   "/assets/css/daily-close.css",
@@ -26,6 +27,7 @@ const CORE_ASSETS = [
   "/assets/js/core/config.js",
   "/assets/js/core/storage.js",
   "/assets/js/core/format.js",
+  "/assets/js/core/ui-feedback.js",
   "/assets/js/core/guided-shell.js",
   "/assets/js/core/guided-shell-state.js",
   "/assets/js/core/hardening.js",
@@ -46,6 +48,7 @@ const CORE_ASSETS = [
   "/assets/js/domain/inventory.js",
   "/assets/js/domain/purchasing.js",
   "/assets/js/domain/sales-flow.js",
+  "/assets/js/domain/operator-guidance.js",
   "/assets/js/domain/structured-assistance.js",
   "/assets/js/domain/pilot-validation.js",
   "/assets/js/domain/receivables.js",
