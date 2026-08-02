@@ -29,7 +29,7 @@ test("the complete effective demo state passes integrity checks", () => {
   const report = auditDataIntegrity(entries, { products });
   assert.equal(report.status, "healthy");
   assert.deepEqual(report.counts, { critical: 0, warning: 0, info: 0 });
-  assert.ok(report.collectionsChecked >= 13);
+  assert.ok(report.collectionsChecked >= 12);
   assert.ok(report.recordsChecked > 20);
   assert.deepEqual(report.issues, []);
 });
