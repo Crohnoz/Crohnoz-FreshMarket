@@ -9,33 +9,48 @@
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; img-src 'self' data: blob: https://images.pexels.com https://images.unsplash.com; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data: blob: https://images.pexels.com https://images.unsplash.com; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
 
 [[redirects]]
   from = "/operar"
   to = "/operar.html"
   status = 200
-
+[[redirects]]
+  from = "/inventario"
+  to = "/inventario.html"
+  status = 200
+[[redirects]]
+  from = "/compras"
+  to = "/compras.html"
+  status = 200
+[[redirects]]
+  from = "/ventas"
+  to = "/ventas.html"
+  status = 200
+[[redirects]]
+  from = "/asistente"
+  to = "/asistente.html"
+  status = 200
+[[redirects]]
+  from = "/validacion"
+  to = "/validacion.html"
+  status = 200
 [[redirects]]
   from = "/cierre"
   to = "/cierre.html"
   status = 200
-
 [[redirects]]
   from = "/dashboard"
   to = "/admin.html"
   status = 200
-
 [[redirects]]
   from = "/cuentas"
   to = "/cuentas.html"
   status = 200
-
 [[redirects]]
   from = "/configurar"
   to = "/configurador.html"
   status = 200
-
 [[redirects]]
   from = "/scanner"
   to = "/scanner-lab.html"
