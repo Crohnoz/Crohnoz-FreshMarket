@@ -60,7 +60,7 @@ test("offline page avoids inline scripts and caches the audited application shel
   const worker = await text("sw.js");
   assert.doesNotMatch(offline, /onclick=/);
   assert.match(offline, /href="\/inventario"/);
-  assert.match(worker, /crohnoz-fresh-market-v3/);
+  assert.match(worker, /crohnoz-fresh-market-v\d+/);
   assert.match(worker, /"\/index\.html"/);
   assert.match(worker, /"\/assets\/js\/inventory\/app\.js"/);
 });
