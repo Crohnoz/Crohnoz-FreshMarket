@@ -64,7 +64,7 @@ class InventoryLotSerializer(serializers.ModelSerializer):
         if available is not None and available < 0:
             raise serializers.ValidationError({"quantity_available": "La cantidad disponible no puede ser negativa."})
         if received is not None and available is not None and available > received:
-            raise serializers.ValidationError({"quantity_available": "No puede superar la cantidad recibida."})
+            raise serializers.ValidationError({"quantity_available": "La cantidad disponible no puede superar la cantidad recibida."})
         if received_at and best_before and best_before < received_at:
             raise serializers.ValidationError({"best_before": "La fecha preferente no puede ser anterior a la recepción."})
         return attrs
