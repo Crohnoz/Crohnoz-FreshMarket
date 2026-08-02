@@ -3,19 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Configurador comercial demo de Crohnoz Fresh Market.">
-  <title>Crohnoz Fresh Market · Configurador</title>
+  <meta name="description" content="Configuración y continuidad local de Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <title>Crohnoz Fresh Market · Configuración y respaldo</title>
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/configurator.css">
 </head>
 <body>
   <div class="demo-banner" id="demo-notice"></div>
-  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong>Crohnoz Fresh Market</strong><small>Configurador comercial</small></span></a><nav class="nav"><a href="index.html">Tienda</a><a href="admin.html">Operación</a><a aria-current="page" href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav></div></header>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong>Crohnoz Fresh Market</strong><small>Configuración y continuidad</small></span></a>
+      <nav class="nav"><a href="operar.html">Inicio</a><a href="index.html">Tienda</a><a href="admin.html">Operación</a><a aria-current="page" href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav>
+    </div>
+  </header>
 
-  <main class="config-main">
+  <main class="config-main" id="main-content">
     <div class="shell">
-      <div class="section-title"><div><p class="eyebrow">Identidad del negocio</p><h1>Personaliza la experiencia</h1><p>La configuración es local y demostrativa. No representa una cuenta autenticada.</p></div></div>
+      <div class="section-title"><div><p class="eyebrow">Identidad del negocio</p><h1>Configura y protege el piloto</h1><p>Personaliza la experiencia y descarga respaldos periódicos. Todo sigue guardado únicamente en este navegador.</p></div></div>
       <div class="config-grid">
         <form class="card config-form" id="business-form">
           <label>Nombre del negocio<input name="name" maxlength="60" required></label>
@@ -26,11 +33,11 @@
           <label>Máximo adicional autorizado en CLP<input name="maxExtraAmount" type="number" min="0" step="100"></label>
           <label class="check-row"><input name="darkMode" type="checkbox"> Usar modo oscuro</label>
           <label class="check-row"><input name="isOpen" type="checkbox"> Mostrar negocio abierto</label>
-          <div class="form-actions"><button class="button primary" type="submit">Guardar configuración</button><button class="button secondary" id="reset-demo" type="button">Restablecer demo</button></div>
-          <div class="save-status" id="save-status" role="status"></div>
+          <div class="form-actions"><button class="button primary" type="submit">Guardar configuración</button><a class="button secondary" href="#continuidad">Revisar respaldos</a></div>
+          <div class="save-status pilot-status" id="save-status" role="status" aria-live="polite"></div>
         </form>
 
-        <section class="card preview-shell">
+        <section class="card preview-shell" aria-label="Vista previa del negocio">
           <div class="business-preview" id="business-preview">
             <div class="preview-top"><div class="preview-logo">FM</div><span class="status success" data-status></span></div>
             <div class="preview-hero"><span class="status success" data-tolerance></span><h2></h2><p></p><a class="button primary" href="index.html">Ver tienda demo</a></div>
@@ -38,10 +45,40 @@
           </div>
         </section>
       </div>
+
+      <section class="continuity-section" id="continuidad" aria-labelledby="continuity-title">
+        <div class="section-title"><div><p class="eyebrow">Continuidad local</p><h2 id="continuity-title">Respaldo y recuperación</h2><p>Una copia JSON permite recuperar el piloto en este u otro navegador. No es un respaldo automático ni reemplaza una base de datos.</p></div></div>
+        <div class="continuity-grid">
+          <section class="card continuity-card">
+            <div class="continuity-card-heading"><div><p class="eyebrow">Estado actual</p><h3>Datos de este navegador</h3></div><span class="status" id="continuity-health-badge">Revisando</span></div>
+            <div class="continuity-metrics" aria-label="Resumen de datos locales">
+              <article><span>Colecciones</span><strong id="continuity-collections">0</strong></article>
+              <article><span>Registros estimados</span><strong id="continuity-records">0</strong></article>
+              <article><span>Tamaño local</span><strong id="continuity-size">0 B</strong></article>
+              <article><span>Último respaldo</span><strong id="continuity-last-backup">Nunca</strong></article>
+            </div>
+            <div class="continuity-health" id="continuity-health" role="status"></div>
+            <p class="continuity-warning"><strong>Importante:</strong> no ingreses datos personales reales durante el piloto. Borrar los datos del navegador elimina la información local que no hayas exportado.</p>
+          </section>
+
+          <section class="card continuity-card continuity-actions-card">
+            <div><p class="eyebrow">Acciones seguras</p><h3>Descargar o recuperar una copia</h3><p>El archivo incluye configuración, pedidos, inventario, cuentas, compras, cierres y progreso local.</p></div>
+            <button class="button primary full" id="export-backup" type="button">⬇ Descargar respaldo</button>
+            <div class="continuity-divider"><span>Restaurar</span></div>
+            <label class="backup-file-field">Archivo JSON<input id="backup-file" type="file" accept="application/json,.json"><small>Máximo 2 MB. Se valida antes de reemplazar los datos.</small></label>
+            <div class="backup-preview" id="backup-preview" hidden><strong id="backup-preview-title"></strong><span id="backup-preview-detail"></span></div>
+            <button class="button secondary full" id="import-backup" type="button" disabled>Revisar y restaurar</button>
+            <div class="continuity-divider"><span>Zona de prueba</span></div>
+            <button class="button danger full" id="reset-demo" type="button">Restablecer todos los datos demo</button>
+            <div class="pilot-status" id="continuity-status" role="status" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
     </div>
   </main>
 
-  <footer class="page-footer"><div class="shell"><span>Configuración guardada localmente</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <footer class="page-footer"><div class="shell"><span>Configuración y respaldo local</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
   <script type="module" src="assets/js/configurator/app.js"></script>
+  <script type="module" src="assets/js/core/guided-shell.js"></script>
 </body>
 </html>
