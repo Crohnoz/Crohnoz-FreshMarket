@@ -53,7 +53,7 @@ async function cacheCoreAssets() {
 }
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(cacheCoreAssets().then(() => self.skipWaiting()));
+  event.waitUntil(cacheCoreAssets());
 });
 
 self.addEventListener("activate", (event) => {
