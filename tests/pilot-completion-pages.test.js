@@ -23,11 +23,13 @@ test("application scripts pass syntax validation", () => {
   for (const path of [
     "assets/js/store/app.js",
     "assets/js/operator/home.js",
+    "assets/js/admin/dashboard.js",
     "assets/js/inventory/app.js",
     "assets/js/purchasing/app.js",
     "assets/js/sales/app.js",
     "assets/js/assistant/app.js",
     "assets/js/validation/app.js",
+    "assets/js/close/app.js",
     "assets/js/core/guided-shell-state.js",
     "assets/js/core/hardening.js",
     "sw.js",
