@@ -67,12 +67,6 @@ function addOperatorHomeShortcut() {
   tools.append(link);
 }
 
-function mountPageEnhancements() {
-  if (normalizedPage() === "cuentas.html") {
-    import("../accounts/ledger-settlement.js");
-  }
-}
-
 function removeDuplicateMobileCart() {
   const legacyButton = document.querySelector("#mobile-cart");
   if (legacyButton && document.querySelector(".store-bottom-nav")) legacyButton.hidden = true;
@@ -87,6 +81,5 @@ synchronizeEasyMode();
 installCloseNavigation();
 synchronizeNavigation();
 addOperatorHomeShortcut();
-mountPageEnhancements();
 removeDuplicateMobileCart();
 openFirstRunGuideFromAlias();
