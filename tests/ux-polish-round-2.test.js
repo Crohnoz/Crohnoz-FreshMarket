@@ -10,13 +10,17 @@ async function text(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("operator guidance prioritizes customer confirmation and weighing", () => {
+test("operator guidance prioritizes customer confirmation, weighing and ready orders", () => {
   assert.equal(chooseOperatorRecommendation({
     orders: [{ status: "pending_customer_confirmation" }],
   }).taskId, "sales-control");
   assert.equal(chooseOperatorRecommendation({
     orders: [{ status: "pending_weighing" }],
   }).taskId, "prepare");
+  assert.equal(chooseOperatorRecommendation({
+    orders: [{ status: "ready" }],
+    inventorySummary: { criticalLots: 3 },
+  }).taskId, "sales-control");
 });
 
 test("operator guidance prioritizes critical inventory and evening close", () => {
