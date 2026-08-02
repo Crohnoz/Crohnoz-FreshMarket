@@ -14,7 +14,8 @@ test("resume pagos y crea comprobante no tributario", () => {
   assert.match(createReceiptText({ businessName: "Mercado", order, payments: [] }), /No es boleta tributaria/);
 });
 
-test("aplica transición permitida", () => {
+test("aplica transiciones permitidas para delivery y retiro", () => {
   assert.equal(nextOrderState(order, "confirm_difference").status, "confirmed");
+  assert.equal(nextOrderState({ ...order, status: "ready" }, "complete_pickup").status, "delivered");
   assert.throws(() => nextOrderState(order, "deliver"));
 });

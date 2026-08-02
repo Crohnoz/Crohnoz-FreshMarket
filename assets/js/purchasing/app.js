@@ -7,16 +7,34 @@ import { createInventoryLot } from "../domain/inventory.js";
 import { buildPriceDecision, calculateUnitCost } from "../domain/purchasing.js";
 
 const business = readStorage("business", DEFAULT_BUSINESS);
-let suppliers = readStorage("suppliers", initialSuppliers);
+const suppliers = readStorage("suppliers", initialSuppliers);
 let purchases = readStorage("purchase-orders", initialPurchases);
 let lots = readStorage("inventory-lots", initialInventoryLots);
 let prices = readStorage("prices", Object.fromEntries(products.map((product) => [product.id, product.price])));
 const form = document.querySelector("#purchase-form");
+const submitButton = form.querySelector("button[type=submit]");
+const applySuggested = form.elements.applySuggested;
+const statusRegion = document.querySelector("#purchase-status");
 let decision = null;
 
-function todayISO() { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
-function productById(id) { return products.find((product) => product.id === id); }
-function supplierById(id) { return suppliers.find((supplier) => supplier.id === id); }
+function todayISO() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateOnly(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Sin fecha" : date.toLocaleDateString("es-CL");
+}
+
+function productById(id) { return products.find((product) => product.id === id) ?? null; }
+function supplierById(id) { return suppliers.find((supplier) => supplier.id === id) ?? null; }
+
+function announce(message, state = "success") {
+  statusRegion.textContent = message;
+  statusRegion.dataset.state = state;
+}
+
 function applyTheme() {
   document.documentElement.style.setProperty("--primary", business.primaryColor);
   document.documentElement.style.setProperty("--accent", business.accentColor);
@@ -28,34 +46,89 @@ function applyTheme() {
 function populate() {
   form.supplierId.innerHTML = suppliers.map((supplier) => `<option value="${supplier.id}">${supplier.name}</option>`).join("");
   form.productId.innerHTML = products.map((product) => `<option value="${product.id}">${product.name}</option>`).join("");
+  form.totalCost.min = "1";
+  const help = document.createElement("small");
+  help.id = "purchase-quantity-help";
+  help.className = "field-help";
+  form.quantity.closest("label").append(help);
+}
+
+function clearDecision(message = "Completa una cantidad y un costo válidos para calcular.") {
+  decision = null;
+  ["#purchase-unit-cost", "#purchase-current-price", "#purchase-suggested-price", "#purchase-margin"].forEach((selector) => {
+    document.querySelector(selector).textContent = "—";
+  });
+  document.querySelector("#price-decision").textContent = message;
+  applySuggested.checked = false;
+  applySuggested.disabled = true;
+  submitButton.disabled = true;
 }
 
 function recalculate() {
   const product = productById(form.productId.value);
+  document.querySelector("#purchase-quantity-help").textContent = product
+    ? `La cantidad se registra en ${product.baseUnitLabel}.`
+    : "";
+  if (!product) {
+    clearDecision("Selecciona un producto para continuar.");
+    return;
+  }
+
+  const quantity = Number(form.quantity.value);
+  const totalCost = Number(form.totalCost.value);
+  if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(totalCost) || totalCost <= 0) {
+    clearDecision();
+    return;
+  }
+  if (form.bestBeforeDate.value && form.receivedAt.value && form.bestBeforeDate.value < form.receivedAt.value) {
+    clearDecision("La fecha de consumo preferente no puede ser anterior a la recepción.");
+    return;
+  }
+
   try {
-    const unitCost = calculateUnitCost(form.totalCost.value, form.quantity.value);
-    decision = buildPriceDecision({ currentPrice: prices[product.id] ?? product.price, unitCost, targetMarginPercent: form.targetMarginPercent.value, expectedWastePercent: form.expectedWastePercent.value });
+    const unitCost = calculateUnitCost(totalCost, quantity);
+    decision = buildPriceDecision({
+      currentPrice: prices[product.id] ?? product.price,
+      unitCost,
+      targetMarginPercent: form.targetMarginPercent.value,
+      expectedWastePercent: form.expectedWastePercent.value,
+    });
     document.querySelector("#purchase-unit-cost").textContent = `${formatCLP(unitCost)}/${product.baseUnitLabel}`;
     document.querySelector("#purchase-current-price").textContent = formatCLP(decision.currentPrice);
     document.querySelector("#purchase-suggested-price").textContent = formatCLP(decision.suggestedPrice);
     document.querySelector("#purchase-margin").textContent = `${decision.currentMargin}% → ${decision.suggestedMargin}%`;
-    document.querySelector("#price-decision").textContent = decision.action === "raise" ? "El costo nuevo exige revisar el precio." : decision.action === "keep" ? "El precio actual protege el objetivo." : "El precio podría revisarse a la baja, con aprobación humana.";
-  } catch {
-    decision = null;
-    ["#purchase-unit-cost", "#purchase-current-price", "#purchase-suggested-price", "#purchase-margin"].forEach((selector) => { document.querySelector(selector).textContent = "—"; });
+    document.querySelector("#price-decision").textContent = decision.action === "raise"
+      ? "El costo nuevo exige revisar el precio para proteger el margen y la merma esperada."
+      : decision.action === "keep"
+        ? "El precio actual protege el objetivo. No es necesario cambiarlo."
+        : "El precio podría revisarse a la baja, pero solo después de aprobación humana.";
+    const changesPrice = decision.suggestedPrice !== decision.currentPrice;
+    applySuggested.disabled = !changesPrice;
+    if (!changesPrice) applySuggested.checked = false;
+    submitButton.disabled = false;
+  } catch (error) {
+    clearDecision(error.message);
   }
 }
 
 function renderHistory() {
   const container = document.querySelector("#purchase-history");
   container.replaceChildren();
-  [...purchases].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 12).forEach((purchase) => {
+  const recent = [...purchases].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 12);
+  if (!recent.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "Todavía no hay compras registradas en este navegador.";
+    container.append(empty);
+    return;
+  }
+  recent.forEach((purchase) => {
     const line = purchase.lines[0];
     const row = document.createElement("article");
     row.className = "purchase-row";
     row.innerHTML = `<div><strong></strong><small></small></div><div><span></span><b></b></div>`;
     row.querySelector("strong").textContent = `${line.productName} · ${line.quantity} ${line.unit}`;
-    row.querySelector("small").textContent = `${purchase.supplierName} · ${new Date(purchase.createdAt).toLocaleDateString("es-CL")} · ${purchase.settlement === "cash" ? "Efectivo" : "Transferencia"}`;
+    row.querySelector("small").textContent = `${purchase.supplierName} · ${formatDateOnly(purchase.createdAt)} · ${purchase.settlement === "cash" ? "Efectivo" : "Transferencia"}`;
     row.querySelector("span").textContent = `${formatCLP(line.unitCost)}/${line.unit}`;
     row.querySelector("b").textContent = formatCLP(purchase.total);
     container.append(row);
@@ -66,21 +139,63 @@ form.addEventListener("input", recalculate);
 form.addEventListener("change", recalculate);
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!decision) return;
+  recalculate();
+  if (!decision) {
+    announce("Revisa la cantidad, el costo y las fechas antes de guardar.", "error");
+    return;
+  }
   const product = productById(form.productId.value);
   const supplier = supplierById(form.supplierId.value);
+  if (!product || !supplier) {
+    announce("Selecciona un producto y proveedor válidos.", "error");
+    return;
+  }
   const quantity = Number(form.quantity.value);
   const total = Math.round(Number(form.totalCost.value));
   const unitCost = calculateUnitCost(total, quantity);
   const purchaseId = crypto.randomUUID();
-  const lot = createInventoryLot({ productId: product.id, productName: product.name, unit: product.baseUnitLabel, receivedQuantity: quantity, unitCost, receivedAt: form.receivedAt.value, bestBeforeDate: form.bestBeforeDate.value, condition: form.condition.value, ripeness: form.ripeness.value, supplierId: supplier.id, source: "purchase", notes: `Compra ${purchaseId}` });
-  purchases.push({ id: purchaseId, supplierId: supplier.id, supplierName: supplier.name, createdAt: new Date().toISOString(), settlement: form.settlement.value, total, lines: [{ productId: product.id, productName: product.name, quantity, unit: product.baseUnitLabel, unitCost, targetMarginPercent: Number(form.targetMarginPercent.value), expectedWastePercent: Number(form.expectedWastePercent.value), suggestedPrice: decision.suggestedPrice }], lotIds: [lot.id] });
+  const lot = createInventoryLot({
+    productId: product.id,
+    productName: product.name,
+    unit: product.baseUnitLabel,
+    receivedQuantity: quantity,
+    unitCost,
+    receivedAt: form.receivedAt.value,
+    bestBeforeDate: form.bestBeforeDate.value,
+    condition: form.condition.value,
+    ripeness: form.ripeness.value,
+    supplierId: supplier.id,
+    source: "purchase",
+    notes: `Compra ${purchaseId}`,
+  });
+  purchases.push({
+    id: purchaseId,
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    createdAt: new Date().toISOString(),
+    settlement: form.settlement.value,
+    total,
+    lines: [{
+      productId: product.id,
+      productName: product.name,
+      quantity,
+      unit: product.baseUnitLabel,
+      unitCost,
+      targetMarginPercent: Number(form.targetMarginPercent.value),
+      expectedWastePercent: Number(form.expectedWastePercent.value),
+      suggestedPrice: decision.suggestedPrice,
+    }],
+    lotIds: [lot.id],
+  });
   lots.push(lot);
-  if (form.applySuggested.checked) prices[product.id] = decision.suggestedPrice;
+  const priceApplied = applySuggested.checked && !applySuggested.disabled;
+  if (priceApplied) prices[product.id] = decision.suggestedPrice;
   writeStorage("purchase-orders", purchases);
   writeStorage("inventory-lots", lots);
   writeStorage("prices", prices);
-  document.querySelector("#purchase-status").textContent = form.applySuggested.checked ? "Compra y lote guardados. El precio sugerido quedó aplicado." : "Compra y lote guardados. El precio quedó solo como sugerencia.";
+  announce(priceApplied
+    ? "Compra y lote guardados. El precio sugerido quedó aplicado."
+    : "Compra y lote guardados. El precio se mantuvo sin cambios.", "success");
   form.reset();
   form.receivedAt.value = todayISO();
   form.targetMarginPercent.value = 30;

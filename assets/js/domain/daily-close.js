@@ -10,6 +10,29 @@ function settlementKey(value) {
   return ["cash", "transfer", "credit"].includes(value) ? value : "unknown";
 }
 
+function normalizedWasteUnit(value) {
+  const unit = String(value ?? "kg").trim().toLocaleLowerCase("es");
+  return ({ unit: "unidad", units: "unidad", unidad: "unidad", unidades: "unidad" })[unit] ?? unit;
+}
+
+function quantityText(value) {
+  return Number(value).toLocaleString("es-CL", { maximumFractionDigits: 3 });
+}
+
+function unitText(unit, quantity) {
+  if (unit === "unidad") return Number(quantity) === 1 ? "unidad" : "unidades";
+  return unit;
+}
+
+export function formatWasteQuantities(wasteSummary) {
+  const quantities = wasteSummary?.quantities ?? wasteSummary?.byUnit ?? {};
+  const entries = Object.entries(quantities).filter(([, value]) => Number(value) > 0);
+  if (!entries.length) return "sin cantidad registrada";
+  return entries
+    .map(([unit, value]) => `${quantityText(value)} ${unitText(unit, value)}`)
+    .join(" · ");
+}
+
 export function localDateKey(value = new Date()) {
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = value instanceof Date ? value : new Date(value);
@@ -33,6 +56,13 @@ export function summarizeDailyOperations({
   const dayTransactions = transactions.filter((item) => isOnBusinessDate(item.createdAt, dateKey));
   const dayLedgerEntries = ledgerEntries.filter((item) => isOnBusinessDate(item.occurredAt, dateKey));
   const dayWaste = waste.filter((item) => isOnBusinessDate(item.createdAt, dateKey));
+  const transactionReferences = new Set(
+    dayTransactions.flatMap((transaction) => [transaction.id, transaction.referenceId].filter(Boolean)),
+  );
+  const isLedgerEntryLinkedToTransaction = (entry) => (
+    entry.source === "daily-transaction"
+    || Boolean(entry.referenceId && transactionReferences.has(entry.referenceId))
+  );
 
   const sales = { cash: 0, transfer: 0, credit: 0, unknown: 0, total: 0, count: 0 };
   const purchases = { cash: 0, transfer: 0, credit: 0, unknown: 0, total: 0, count: 0 };
@@ -60,7 +90,7 @@ export function summarizeDailyOperations({
       payments.total += amount;
       payments.count += 1;
     }
-    if (entry.type === "charge" && entry.source !== "daily-transaction") {
+    if (entry.type === "charge" && !isLedgerEntryLinkedToTransaction(entry)) {
       manualCreditCharges += amount;
       manualCreditChargeCount += 1;
     }
@@ -68,19 +98,22 @@ export function summarizeDailyOperations({
 
   const wasteSummary = dayWaste.reduce((summary, item) => {
     const quantity = Number(item.quantity ?? 0);
+    const safeQuantity = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
+    const unit = normalizedWasteUnit(item.unit);
     const value = item.estimatedCost != null
       ? money(item.estimatedCost)
-      : Math.round(Math.max(0, quantity) * Math.max(0, Number(item.unitCost ?? 0)));
-    summary.quantity += Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
+      : Math.round(safeQuantity * Math.max(0, Number(item.unitCost ?? 0)));
+    summary.quantity += safeQuantity;
+    summary.quantities[unit] = (summary.quantities[unit] ?? 0) + safeQuantity;
     summary.estimatedCost += value;
     summary.count += 1;
     return summary;
-  }, { quantity: 0, estimatedCost: 0, count: 0 });
+  }, { quantity: 0, quantities: {}, estimatedCost: 0, count: 0 });
+  wasteSummary.description = formatWasteQuantities(wasteSummary);
 
+  const independentLedgerEntries = dayLedgerEntries.filter((entry) => !isLedgerEntryLinkedToTransaction(entry));
   const creditGenerated = sales.credit + manualCreditCharges;
-  const movementCount = dayTransactions.length
-    + dayLedgerEntries.filter((entry) => entry.source !== "daily-transaction").length
-    + dayWaste.length;
+  const movementCount = dayTransactions.length + independentLedgerEntries.length + dayWaste.length;
 
   return {
     dateKey,
@@ -97,7 +130,7 @@ export function summarizeDailyOperations({
       + dayLedgerEntries.filter((entry) => entry.type === "payment" && !["cash", "transfer"].includes(entry.settlement)).length,
     unclassifiedPayments: dayLedgerEntries.filter((entry) => entry.type === "payment" && !["cash", "transfer"].includes(entry.settlement)),
     transactionCount: dayTransactions.length,
-    ledgerMovementCount: dayLedgerEntries.filter((entry) => entry.source !== "daily-transaction").length,
+    ledgerMovementCount: independentLedgerEntries.length,
   };
 }
 
@@ -166,7 +199,7 @@ export function createDailyCloseAssistant(summary, reconciliation) {
     observations.push(`Las compras registradas suman ${summary.purchases.total} pesos.`);
   }
   if (summary.waste.count) {
-    observations.push(`Se registraron ${summary.waste.quantity.toFixed(2)} kilos de merma.`);
+    observations.push(`Se registró merma por ${summary.waste.description}.`);
   }
   if (summary.unclassifiedPayments.length) {
     warnings.push(`${summary.unclassifiedPayments.length} abono(s) no tienen medio de pago y deben clasificarse.`);

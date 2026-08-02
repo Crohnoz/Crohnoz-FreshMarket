@@ -7,6 +7,7 @@ import {
   buildCashReconciliation,
   canSaveDailyClose,
   createDailyCloseAssistant,
+  formatWasteQuantities,
   localDateKey,
   summarizeDailyOperations,
 } from "../domain/daily-close.js";
@@ -19,10 +20,14 @@ let ledgerEntries = readStorage("credit-ledger", initialLedgerEntries);
 const waste = readStorage("waste", []);
 let savedCloses = readStorage("daily-closes", []);
 
-const costByProduct = Object.fromEntries(products.map((product) => [product.id, product.cost ?? 0]));
+const productMeta = Object.fromEntries(products.map((product) => [product.id, {
+  unitCost: product.cost ?? 0,
+  unit: product.baseUnit,
+}]));
 const form = document.querySelector("#close-form");
 const dateInput = document.querySelector("#close-date");
 const saveButton = document.querySelector("#save-close");
+const statusRegion = document.querySelector("#close-save-status");
 let currentSummary = null;
 let currentReconciliation = null;
 let currentReport = null;
@@ -33,6 +38,11 @@ function applyTheme() {
   document.documentElement.dataset.theme = business.darkMode ? "dark" : "light";
   document.querySelectorAll("[data-business-name]").forEach((node) => { node.textContent = business.name; });
   document.querySelector("#demo-notice").textContent = APP_CONFIG.demoNotice;
+}
+
+function announce(message, state = "success") {
+  statusRegion.textContent = message;
+  statusRegion.dataset.state = state;
 }
 
 function numberField(name) {
@@ -56,7 +66,8 @@ function readChecklist() {
 function enrichedWaste() {
   return waste.map((item) => ({
     ...item,
-    unitCost: item.unitCost ?? costByProduct[item.productId] ?? 0,
+    unit: item.unit ?? productMeta[item.productId]?.unit ?? "kg",
+    unitCost: item.unitCost ?? productMeta[item.productId]?.unitCost ?? 0,
   }));
 }
 
@@ -100,7 +111,7 @@ function renderBreakdown() {
     breakdownRow("Abonos por transferencia", "Reducen deuda, pero no aumentan la caja física", currentSummary.payments.transfer),
     breakdownRow("Compras en efectivo", "Se descuentan de la caja esperada", currentSummary.purchases.cash),
     breakdownRow("Compras por transferencia", "No afectan el efectivo contado", currentSummary.purchases.transfer),
-    breakdownRow("Merma estimada", `${currentSummary.waste.quantity.toFixed(2)} kg registrados`, currentSummary.waste.estimatedCost),
+    breakdownRow("Merma estimada", `${formatWasteQuantities(currentSummary.waste)} en ${currentSummary.waste.count} registro(s)`, currentSummary.waste.estimatedCost),
   );
 }
 
@@ -117,13 +128,15 @@ function renderMetrics() {
   if (currentReconciliation.difference === null) {
     difference.textContent = "—";
     detail.textContent = "Falta contar la caja";
-  } else {
-    const sign = currentReconciliation.difference > 0 ? "+" : "";
-    difference.textContent = `${sign}${formatCLP(currentReconciliation.difference)}`;
-    detail.textContent = currentReconciliation.status === "balanced"
-      ? "Dentro de la tolerancia"
-      : currentReconciliation.difference > 0 ? "Hay más efectivo de lo esperado" : "Falta efectivo respecto del registro";
+    return;
   }
+  const sign = currentReconciliation.difference > 0 ? "+" : "";
+  difference.textContent = `${sign}${formatCLP(currentReconciliation.difference)}`;
+  detail.textContent = currentReconciliation.status === "balanced"
+    ? "Dentro de la tolerancia"
+    : currentReconciliation.difference > 0
+      ? "Hay más efectivo de lo esperado"
+      : "Falta efectivo respecto del registro";
 }
 
 function customerName(customerId) {
@@ -136,6 +149,7 @@ function classifyPayment(entryId, settlement) {
   if (!entry) return;
   entry.settlement = settlement;
   writeStorage("credit-ledger", ledgerEntries);
+  announce("Abono clasificado. La caja fue recalculada.", "success");
   recalculate();
 }
 
@@ -161,11 +175,10 @@ function renderUnclassified() {
   });
 }
 
-function assistantText() {
+function assistantObservations() {
   const parts = [
-    currentReport.headline,
     `Las ventas del día suman ${formatCLP(currentSummary.sales.total)}.`,
-    `El efectivo esperado en caja es ${formatCLP(currentReconciliation.expectedCash)}.`,
+    `En efectivo entraron ${formatCLP(currentSummary.sales.cash + currentSummary.payments.cash)} por ventas y abonos.`,
   ];
   if (currentSummary.sales.transfer || currentSummary.payments.transfer) {
     parts.push(`Se registraron ${formatCLP(currentSummary.sales.transfer + currentSummary.payments.transfer)} por transferencia.`);
@@ -177,8 +190,23 @@ function assistantText() {
     parts.push(`Las compras registradas suman ${formatCLP(currentSummary.purchases.total)}.`);
   }
   if (currentSummary.waste.count) {
-    parts.push(`La merma registrada es de ${currentSummary.waste.quantity.toFixed(2)} kilos.`);
+    parts.push(`La merma registrada corresponde a ${formatWasteQuantities(currentSummary.waste)}, con costo estimado de ${formatCLP(currentSummary.waste.estimatedCost)}.`);
   }
+  return parts;
+}
+
+function formattedWarnings() {
+  return currentReport.warnings.map((warning) => {
+    if (currentReconciliation.difference === null) return warning;
+    return warning.replace(
+      String(Math.abs(currentReconciliation.difference)),
+      formatCLP(Math.abs(currentReconciliation.difference)),
+    );
+  });
+}
+
+function assistantText() {
+  const parts = [currentReport.headline, ...assistantObservations()];
   if (currentReconciliation.countedCash === null) {
     parts.push("Todavía falta ingresar el efectivo contado.");
   } else {
@@ -187,7 +215,7 @@ function assistantText() {
       ? "No existe diferencia de caja."
       : `La diferencia es de ${formatCLP(currentReconciliation.difference)}.`);
   }
-  currentReport.warnings.forEach((warning) => parts.push(`Atención: ${warning}`));
+  formattedWarnings().forEach((warning) => parts.push(`Atención: ${warning}`));
   return parts.join(" ");
 }
 
@@ -198,39 +226,36 @@ function renderAssistant() {
   headline.className = "close-assistant-headline";
   headline.textContent = currentReport.headline;
   const list = document.createElement("ul");
-  currentReport.observations.forEach((observation) => {
+  assistantObservations().forEach((observation) => {
     const item = document.createElement("li");
-    item.textContent = observation
-      .replace(String(currentSummary.sales.total), formatCLP(currentSummary.sales.total))
-      .replace(String(currentSummary.sales.cash + currentSummary.payments.cash), formatCLP(currentSummary.sales.cash + currentSummary.payments.cash))
-      .replace(String(currentSummary.sales.transfer + currentSummary.payments.transfer), formatCLP(currentSummary.sales.transfer + currentSummary.payments.transfer))
-      .replace(String(currentSummary.creditGenerated), formatCLP(currentSummary.creditGenerated))
-      .replace(String(currentSummary.purchases.total), formatCLP(currentSummary.purchases.total));
+    item.textContent = observation;
     list.append(item);
   });
   const warnings = document.createElement("div");
   warnings.className = "close-assistant-warnings";
-  currentReport.warnings.forEach((warning) => {
+  formattedWarnings().forEach((warning) => {
     const item = document.createElement("div");
     item.className = "close-assistant-warning";
-    item.textContent = currentReconciliation.difference === null
-      ? warning
-      : warning.replace(
-        String(Math.abs(currentReconciliation.difference)),
-        formatCLP(Math.abs(currentReconciliation.difference)),
-      );
+    item.textContent = warning;
     warnings.append(item);
   });
   container.append(headline, list, warnings);
+}
+
+function formatCloseDate(dateKey) {
+  const [year, month, day] = String(dateKey).split("-").map(Number);
+  return Number.isFinite(year)
+    ? new Intl.DateTimeFormat("es-CL", { dateStyle: "medium" }).format(new Date(year, month - 1, day))
+    : dateKey;
 }
 
 function renderSavedCloses() {
   const container = document.querySelector("#saved-closes");
   container.replaceChildren();
   if (!savedCloses.length) {
-    const empty = document.createElement("p");
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
     empty.textContent = "Todavía no hay cierres guardados en este navegador.";
-    empty.style.color = "var(--muted)";
     container.append(empty);
     return;
   }
@@ -238,11 +263,11 @@ function renderSavedCloses() {
     const row = document.createElement("article");
     row.className = "saved-close-row";
     row.innerHTML = `<div><strong></strong><small></small></div><b></b>`;
-    row.querySelector("strong").textContent = close.dateKey;
+    row.querySelector("strong").textContent = formatCloseDate(close.dateKey);
     row.querySelector("small").textContent = `Esperado ${formatCLP(close.reconciliation.expectedCash)} · contado ${formatCLP(close.reconciliation.countedCash)}`;
-    const status = row.querySelector("b");
-    status.dataset.state = close.reconciliation.status;
-    status.textContent = close.reconciliation.difference === 0
+    const state = row.querySelector("b");
+    state.dataset.state = close.reconciliation.status;
+    state.textContent = close.reconciliation.difference === 0
       ? "Cuadrado"
       : `${close.reconciliation.difference > 0 ? "+" : ""}${formatCLP(close.reconciliation.difference)}`;
     container.append(row);
@@ -251,12 +276,11 @@ function renderSavedCloses() {
 
 function recalculate() {
   try {
-    const dateKey = dateInput.value || localDateKey();
     currentSummary = summarizeDailyOperations({
       transactions,
       ledgerEntries,
       waste: enrichedWaste(),
-      dateKey,
+      dateKey: dateInput.value || localDateKey(),
     });
     currentReconciliation = buildCashReconciliation({
       summary: currentSummary,
@@ -278,12 +302,10 @@ function recalculate() {
       reconciliation: currentReconciliation,
       checklist: readChecklist(),
     });
-    document.querySelector("#close-save-status").dataset.error = "false";
+    if (statusRegion.dataset.state === "error") announce("", "");
   } catch (error) {
     saveButton.disabled = true;
-    const status = document.querySelector("#close-save-status");
-    status.dataset.error = "true";
-    status.textContent = error.message || "Revisa los montos ingresados.";
+    announce(error.message || "Revisa los montos ingresados.", "error");
   }
 }
 
@@ -299,9 +321,9 @@ function resetFormForDate() {
   form.elements.salesRecorded.checked = existing?.checklist.salesRecorded ?? false;
   form.elements.expensesRecorded.checked = existing?.checklist.expensesRecorded ?? false;
   form.elements.cashCounted.checked = existing?.checklist.cashCounted ?? false;
-  document.querySelector("#close-save-status").textContent = existing
+  announce(existing
     ? "Este día ya tiene un cierre. Al guardar, se actualizará la copia local."
-    : "";
+    : "", existing ? "warning" : "");
   recalculate();
 }
 
@@ -310,7 +332,7 @@ function saveClose(event) {
   recalculate();
   const checklist = readChecklist();
   if (!canSaveDailyClose({ summary: currentSummary, reconciliation: currentReconciliation, checklist })) {
-    document.querySelector("#close-save-status").textContent = "Falta clasificar movimientos, contar la caja o completar la lista de revisión.";
+    announce("Falta clasificar movimientos, contar la caja o completar la lista de revisión.", "warning");
     return;
   }
   const snapshot = {
@@ -323,23 +345,23 @@ function saveClose(event) {
     tolerance: numberField("tolerance"),
     notes: form.elements.notes.value.trim(),
     assistant: currentReport,
-    version: 1,
+    version: 2,
   };
   savedCloses = [...savedCloses.filter((item) => item.dateKey !== snapshot.dateKey), snapshot];
   writeStorage("daily-closes", savedCloses);
-  document.querySelector("#close-save-status").textContent = currentReconciliation.status === "balanced"
+  announce(currentReconciliation.status === "balanced"
     ? "Cierre guardado. La caja quedó dentro de la tolerancia."
-    : "Cierre guardado con una diferencia pendiente de revisión.";
+    : "Cierre guardado con una diferencia pendiente de revisión.",
+  currentReconciliation.status === "balanced" ? "success" : "warning");
   renderSavedCloses();
 }
 
 async function copySummary() {
-  const text = assistantText();
   try {
-    await navigator.clipboard.writeText(text);
-    document.querySelector("#close-save-status").textContent = "Resumen copiado.";
+    await navigator.clipboard.writeText(assistantText());
+    announce("Resumen copiado.", "success");
   } catch {
-    document.querySelector("#close-save-status").textContent = "El navegador no permitió copiar automáticamente.";
+    announce("El navegador no permitió copiar automáticamente.", "warning");
   }
 }
 
@@ -353,6 +375,6 @@ form.addEventListener("submit", saveClose);
 dateInput.addEventListener("change", resetFormForDate);
 document.querySelector("#recalculate-close").addEventListener("click", recalculate);
 document.querySelector("#speak-close").addEventListener("click", () => {
-  if (!speakText(assistantText())) document.querySelector("#close-save-status").textContent = "Este navegador no ofrece lectura en voz alta.";
+  if (!speakText(assistantText())) announce("Este navegador no ofrece lectura en voz alta.", "warning");
 });
 document.querySelector("#copy-close").addEventListener("click", copySummary);

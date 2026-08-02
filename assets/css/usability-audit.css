@@ -1,0 +1,111 @@
+/* Shared usability layer: loaded after hardening and intentionally uses
+   slightly higher specificity than the legacy pilot rules. */
+html { scroll-padding-top: 96px; }
+html body { overflow-x: hidden; }
+html body main[id] { scroll-margin-top: 96px; }
+html body :where(h1, h2, h3, h4, p, strong, small, span, dd, label) { overflow-wrap: anywhere; }
+html body :where(button, .button, input, select, textarea) { min-height: 44px; }
+html body :where(input[type="checkbox"], input[type="radio"]) { min-height: 0; }
+html body :where(button, .button)[disabled] { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; }
+html body .status.danger { background: color-mix(in srgb, var(--danger) 13%, transparent); color: var(--danger); }
+html body .field-help { display: block; margin-top: -2px; color: var(--muted); font-size: 11px; font-weight: 600; line-height: 1.45; }
+html body .empty-state { padding: 22px; border: 1px dashed var(--line); border-radius: 15px; background: var(--surface-2); color: var(--muted); text-align: center; line-height: 1.55; }
+html body .pilot-status:not(:empty) { min-height: 0; padding: 11px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--text); line-height: 1.45; }
+html body .pilot-status[data-state="success"] { border-color: color-mix(in srgb, var(--success) 35%, var(--line)); background: color-mix(in srgb, var(--success) 8%, var(--surface)); }
+html body .pilot-status[data-state="warning"] { border-color: color-mix(in srgb, var(--warning) 40%, var(--line)); background: color-mix(in srgb, var(--warning) 9%, var(--surface)); }
+html body .pilot-status[data-state="error"] { border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+html body .pilot-layout > *,
+html body .pilot-stack,
+html body .pilot-panel,
+html body .pilot-panel > header > *,
+html body .sales-shell > *,
+html body .inventory-lot-main,
+html body .assistant-proposal > *,
+html body .purchase-row > *,
+html body .sales-order-row > * { min-width: 0; }
+html body .pilot-panel > header { flex-wrap: wrap; }
+html body .pilot-form label { min-width: 0; }
+html body .pilot-form input,
+html body .pilot-form select,
+html body .pilot-form textarea { line-height: 1.35; }
+html body .pilot-form button[type="submit"] { justify-self: start; }
+
+/* Inventory: one readable lot per row, restrained imagery and flexible text. */
+html body .inventory-lots { grid-template-columns: minmax(0, 1fr); }
+html body .inventory-lot { grid-template-columns: 148px minmax(0, 1fr); align-items: start; }
+html body .inventory-lot-image { align-self: start; width: 132px; height: 132px; min-height: 132px; margin: 14px 0 14px 14px; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; }
+html body .inventory-lot-image img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+html body .inventory-lot-image span { height: 100%; min-height: 0; }
+html body .inventory-lot-main { gap: 11px; padding: 15px 17px 16px; }
+html body .inventory-lot-title { align-items: flex-start; flex-wrap: wrap; }
+html body .inventory-lot-title > div { flex: 1 1 180px; min-width: 0; }
+html body .inventory-lot-title .status { flex: 0 0 auto; white-space: nowrap; }
+html body .inventory-lot h3 { font-size: clamp(18px, 2vw, 22px); line-height: 1.15; }
+html body .inventory-lot .eyebrow { max-width: 100%; margin-bottom: 5px; font-size: 10px; line-height: 1.35; }
+html body .inventory-lot-numbers strong { font-size: clamp(24px, 3vw, 30px); line-height: 1; }
+html body .inventory-lot dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+html body .inventory-lot dl div { min-width: 0; }
+html body .inventory-lot dd { line-height: 1.3; }
+html body .inventory-note { margin: 0; line-height: 1.45; }
+html body .inventory-lot-main > .button { justify-self: start; }
+html body .inventory-recommendation { grid-template-columns: 32px minmax(0, 1fr) auto; }
+html body .inventory-recommendation > span { white-space: nowrap; }
+
+/* Other pilot surfaces: prevent squeezed text and unclear action areas. */
+html body .price-decision-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html body .purchase-row,
+html body .payment-row,
+html body .validation-history-row { grid-template-columns: minmax(0, 1fr) auto; }
+html body .purchase-row > div:last-child,
+html body .payment-row > b,
+html body .validation-history-row > b { text-align: right; }
+html body .sales-order-row { grid-template-columns: minmax(0, 1fr) auto; }
+html body .sales-order-row > div:last-child { text-align: right; }
+html body .assistant-proposal { grid-template-columns: minmax(0, 1fr) auto; }
+html body .proposal-actions { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+html body .proposal-settlement { min-width: 150px; }
+html body .validation-scenario { grid-template-columns: minmax(0, 1.15fr) minmax(150px, .45fr) minmax(190px, 1fr); }
+html body .validation-check strong { line-height: 1.25; }
+html body .pilot-hero-actions .button { white-space: normal; text-align: center; }
+
+@media (max-width: 980px) {
+  html body .inventory-lot dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html body .validation-scenario { grid-template-columns: 1fr 1fr; }
+  html body .validation-scenario > label:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  html body .pilot-panel { padding: 18px; }
+  html body .pilot-hero h1 { font-size: clamp(31px, 10vw, 45px); }
+  html body .pilot-hero-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+  html body .pilot-hero-actions .button { width: 100%; }
+  html body .pilot-form button[type="submit"] { width: 100%; }
+  html body .inventory-lot { grid-template-columns: 124px minmax(0, 1fr); }
+  html body .inventory-lot-image { width: 110px; height: 110px; min-height: 110px; }
+  html body .inventory-lot dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html body .purchase-row { align-items: start; }
+  html body .assistant-proposal { grid-template-columns: 1fr; }
+  html body .proposal-actions { justify-content: stretch; }
+  html body .proposal-actions > * { flex: 1 1 130px; }
+  html body .validation-scenario { grid-template-columns: 1fr; }
+  html body .validation-scenario > label:last-child { grid-column: auto; }
+}
+
+@media (max-width: 520px) {
+  html body .inventory-lot { grid-template-columns: 1fr; }
+  html body .inventory-lot-image { width: auto; height: auto; min-height: 0; aspect-ratio: 16 / 9; margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+  html body .inventory-lot-main { padding: 17px; }
+  html body .inventory-lot-title { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  html body .inventory-lot dl { grid-template-columns: 1fr 1fr; }
+  html body .inventory-lot-main > .button { width: 100%; }
+  html body .price-decision-grid,
+  html body .sales-summary { grid-template-columns: 1fr; }
+  html body .purchase-row,
+  html body .payment-row,
+  html body .validation-history-row,
+  html body .sales-order-row { grid-template-columns: 1fr; }
+  html body .purchase-row > div:last-child,
+  html body .payment-row > b,
+  html body .validation-history-row > b,
+  html body .sales-order-row > div:last-child { text-align: left; }
+}

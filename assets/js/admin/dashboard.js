@@ -2,12 +2,28 @@ import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { readStorage, writeStorage } from "../core/storage.js";
 import { formatCLP, formatQuantity } from "../core/format.js";
 import { calculateWeightAdjustment } from "../domain/weight-adjustment.js";
+import { applyLotMovement, lotRemaining, recommendFEFO } from "../domain/inventory.js";
+import { formatWasteQuantities } from "../domain/daily-close.js";
 import { initialOrders, products } from "../data/demo-data.js";
+import { initialInventoryLots } from "../data/operations-demo.js";
 
 const business = readStorage("business", DEFAULT_BUSINESS);
 let orders = readStorage("orders", initialOrders);
 let prices = readStorage("prices", Object.fromEntries(products.map((product) => [product.id, product.price])));
 let waste = readStorage("waste", []);
+let lots = readStorage("inventory-lots", initialInventoryLots);
+const wasteForm = document.querySelector("#waste-form");
+
+function localDateKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function announce(selector, message, state = "success") {
+  const region = document.querySelector(selector);
+  region.textContent = message;
+  region.dataset.state = state;
+}
 
 function applyTheme() {
   document.documentElement.style.setProperty("--primary", business.primaryColor);
@@ -19,6 +35,14 @@ function applyTheme() {
 
 function productById(productId) {
   return products.find((product) => product.id === productId) ?? null;
+}
+
+function unitLabel(unit) {
+  return ({ unit: "unidad", units: "unidades" })[unit] ?? unit;
+}
+
+function quantityLabel(value, unit) {
+  return formatQuantity(value, unitLabel(unit));
 }
 
 function applyProductImage(container, product) {
@@ -59,21 +83,41 @@ function orderEstimatedTotal(order) {
   return order.lines.reduce((sum, line) => sum + Math.round(line.requestedQuantity * (prices[line.productId] ?? line.price)), 0);
 }
 
+function wasteQuantities() {
+  return waste.reduce((summary, item) => {
+    const unit = ({ unit: "unidad", units: "unidad" })[item.unit] ?? item.unit ?? "kg";
+    summary[unit] = (summary[unit] ?? 0) + Math.max(0, Number(item.quantity) || 0);
+    return summary;
+  }, {});
+}
+
 function renderMetrics() {
   const pendingWeight = orders.filter((order) => order.status === "pending_weighing").length;
   const pendingConfirmation = orders.filter((order) => order.status === "pending_customer_confirmation").length;
-  const active = orders.filter((order) => !["delivered", "cancelled"].includes(order.status)).length;
-  document.querySelector("#metric-active").textContent = active;
+  const activeOrders = orders.filter((order) => !["delivered", "cancelled"].includes(order.status));
+  document.querySelector("#metric-active").textContent = activeOrders.length;
   document.querySelector("#metric-weighing").textContent = pendingWeight;
   document.querySelector("#metric-confirmation").textContent = pendingConfirmation;
-  document.querySelector("#metric-sales").textContent = formatCLP(orders.reduce((sum, order) => sum + orderEstimatedTotal(order), 0));
-  document.querySelector("#metric-waste").textContent = `${waste.reduce((sum, item) => sum + item.quantity, 0).toFixed(2)} kg`;
+  document.querySelector("#metric-sales").textContent = formatCLP(activeOrders.reduce((sum, order) => sum + orderEstimatedTotal(order), 0));
+  document.querySelector("#metric-waste").textContent = waste.length
+    ? formatWasteQuantities({ quantities: wasteQuantities() })
+    : "Sin merma";
+  document.querySelector("#operations-live-active").textContent = `${activeOrders.length} pedido(s) por preparar`;
+  document.querySelector("#operations-live-confirmation").textContent = `${pendingConfirmation} pendiente(s) de confirmación`;
 }
 
 function renderOrders() {
   const container = document.querySelector("#orders-list");
+  const activeOrders = orders.filter((order) => !["delivered", "cancelled"].includes(order.status));
   container.replaceChildren();
-  orders.forEach((order) => {
+  if (!activeOrders.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "No hay pedidos activos en este momento.";
+    container.append(empty);
+    return;
+  }
+  activeOrders.forEach((order) => {
     const article = document.createElement("article");
     article.className = "order-card";
     article.innerHTML = `
@@ -94,10 +138,12 @@ function renderOrders() {
       applyProductImage(row, product);
       row.querySelector(".order-product-copy strong").textContent = line.name;
       row.querySelector(".order-product-copy small").textContent = line.preference;
-      row.querySelector("b").textContent = formatQuantity(line.requestedQuantity, line.unit);
+      row.querySelector("b").textContent = quantityLabel(line.requestedQuantity, line.unit);
       lines.append(row);
     });
-    article.querySelector("button").addEventListener("click", () => openWeighing(order.id));
+    const openButton = article.querySelector("button");
+    openButton.setAttribute("aria-label", `Abrir pesaje de ${order.id} para ${order.customer}`);
+    openButton.addEventListener("click", () => openWeighing(order.id));
     container.append(article);
   });
 }
@@ -119,26 +165,34 @@ function openWeighing(orderId) {
       <label>Peso/cantidad real<input type="number" min="0" step="0.01" inputmode="decimal"></label>
       <div class="calculation" aria-live="polite"></div>`;
     row.querySelector("strong").textContent = line.name;
-    row.querySelector("small").textContent = `Solicitado: ${formatQuantity(line.requestedQuantity, line.unit)} · ${formatCLP(prices[line.productId] ?? line.price)}/${line.unit}`;
+    row.querySelector("small").textContent = `Solicitado: ${quantityLabel(line.requestedQuantity, line.unit)} · ${formatCLP(prices[line.productId] ?? line.price)}/${unitLabel(line.unit)}`;
     const input = row.querySelector("input");
     input.value = line.actualQuantity ?? line.requestedQuantity;
     const calculate = () => {
-      const result = calculateWeightAdjustment({
-        requestedQuantity: line.requestedQuantity,
-        actualQuantity: Number(input.value),
-        pricePerBaseUnit: prices[line.productId] ?? line.price,
-        tolerancePercent: order.tolerancePercent,
-        maxExtraAmount: order.maxExtraAmount,
-      });
-      row.dataset.result = JSON.stringify(result);
       const calculation = row.querySelector(".calculation");
-      calculation.className = `calculation ${result.requiresConfirmation ? "warning" : "success"}`;
-      calculation.textContent = `${formatCLP(result.estimatedTotal)} → ${formatCLP(result.finalTotal)} · diferencia ${result.differencePercent}% · ${result.decision === "auto_accepted" ? "aceptación automática" : "consultar cliente"}`;
+      try {
+        const result = calculateWeightAdjustment({
+          requestedQuantity: line.requestedQuantity,
+          actualQuantity: Number(input.value),
+          pricePerBaseUnit: prices[line.productId] ?? line.price,
+          tolerancePercent: order.tolerancePercent,
+          maxExtraAmount: order.maxExtraAmount,
+        });
+        row.dataset.result = JSON.stringify(result);
+        row.dataset.valid = "true";
+        calculation.className = `calculation ${result.requiresConfirmation ? "warning" : "success"}`;
+        calculation.textContent = `${formatCLP(result.estimatedTotal)} → ${formatCLP(result.finalTotal)} · diferencia ${result.differencePercent}% · ${result.decision === "auto_accepted" ? "aceptación automática" : "consultar cliente"}`;
+      } catch (error) {
+        row.dataset.valid = "false";
+        calculation.className = "calculation warning";
+        calculation.textContent = error.message || "Ingresa una cantidad válida.";
+      }
+      document.querySelector("#save-weighing").disabled = [...dialog.querySelectorAll(".weighing-line")].some((item) => item.dataset.valid === "false");
     };
     input.addEventListener("input", calculate);
-    calculate();
     row.dataset.lineIndex = index;
     container.append(row);
+    calculate();
   });
   dialog.showModal();
 }
@@ -146,9 +200,10 @@ function openWeighing(orderId) {
 function saveWeighing() {
   const dialog = document.querySelector("#weighing-dialog");
   const order = orders.find((item) => item.id === dialog.dataset.orderId);
-  if (!order) return;
+  const rows = [...dialog.querySelectorAll(".weighing-line")];
+  if (!order || rows.some((row) => row.dataset.valid !== "true")) return;
   let requiresConfirmation = false;
-  dialog.querySelectorAll(".weighing-line").forEach((row) => {
+  rows.forEach((row) => {
     const index = Number(row.dataset.lineIndex);
     const result = JSON.parse(row.dataset.result);
     order.lines[index].actualQuantity = result.actualQuantity;
@@ -166,38 +221,97 @@ function renderPrices() {
   tbody.replaceChildren();
   products.forEach((product) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td><span class="table-product"><span class="product-thumb"><img loading="lazy" decoding="async"><span data-fallback hidden aria-hidden="true"></span></span><strong></strong></span></td><td></td><td><input type="number" min="0" step="10"></td><td><button class="button small secondary" type="button">Guardar</button></td>`;
+    tr.innerHTML = `<td><span class="table-product"><span class="product-thumb"><img loading="lazy" decoding="async"><span data-fallback hidden aria-hidden="true"></span></span><strong></strong></span></td><td></td><td><input type="number" min="1" step="10" inputmode="numeric"></td><td><button class="button small secondary" type="button">Guardar</button></td>`;
     applyProductImage(tr, product);
     tr.querySelector(".table-product strong").textContent = product.name;
     tr.children[1].textContent = `${product.stock} ${product.baseUnitLabel}`;
     const input = tr.querySelector("input");
     input.value = prices[product.id] ?? product.price;
     tr.querySelector("button").addEventListener("click", () => {
-      prices[product.id] = Math.max(0, Math.round(Number(input.value)));
+      const value = Math.round(Number(input.value));
+      if (!Number.isFinite(value) || value <= 0) {
+        announce("#price-status", `Revisa el precio de ${product.name}.`, "error");
+        input.focus();
+        return;
+      }
+      prices[product.id] = value;
       writeStorage("prices", prices);
-      renderAll();
+      announce("#price-status", `Precio de ${product.name} actualizado a ${formatCLP(value)}.`, "success");
+      renderMetrics();
     });
     tbody.append(tr);
   });
 }
 
+function productLots(productId) {
+  return recommendFEFO(lots.filter((lot) => lot.productId === productId));
+}
+
+function synchronizeWasteForm() {
+  const product = productById(wasteForm.product.value);
+  const active = product ? productLots(product.id) : [];
+  const remaining = active.reduce((sum, lot) => sum + lotRemaining(lot), 0);
+  const label = product?.baseUnitLabel ?? "unidad";
+  document.querySelector("#waste-quantity-label").textContent = `Cantidad en ${label}`;
+  document.querySelector("#waste-stock-help").textContent = active.length
+    ? `Disponible por lotes: ${quantityLabel(remaining, product.baseUnit)}.`
+    : "Este producto no tiene un lote activo. Recíbelo primero desde Inventario.";
+  wasteForm.quantity.max = active.length ? String(remaining) : "0";
+  wasteForm.quantity.step = product?.baseUnit === "unit" ? "1" : "0.01";
+  wasteForm.querySelector("button[type=submit]").disabled = !active.length;
+}
+
+function consumeWaste(product, quantity) {
+  const ordered = productLots(product.id);
+  const totalRemaining = ordered.reduce((sum, lot) => sum + lotRemaining(lot), 0);
+  if (quantity > totalRemaining) throw new Error(`Solo hay ${quantityLabel(totalRemaining, product.baseUnit)} disponibles.`);
+  let pending = quantity;
+  let estimatedCost = 0;
+  const lotIds = [];
+  for (const candidate of ordered) {
+    if (pending <= 0) break;
+    const amount = Math.min(pending, lotRemaining(candidate));
+    const index = lots.findIndex((lot) => lot.id === candidate.id);
+    lots[index] = applyLotMovement(lots[index], { type: "waste", quantity: amount });
+    estimatedCost += Math.round(amount * Number(candidate.unitCost ?? product.cost ?? 0));
+    lotIds.push(candidate.id);
+    pending = Math.round((pending - amount) * 1000) / 1000;
+  }
+  return { estimatedCost, lotIds };
+}
+
 function registerWaste(event) {
   event.preventDefault();
-  const form = event.currentTarget;
-  const product = products.find((item) => item.id === form.product.value);
-  const quantity = Number(form.quantity.value);
-  if (!product || !Number.isFinite(quantity) || quantity <= 0) return;
-  waste.push({
-    id: crypto.randomUUID(),
-    productId: product.id,
-    productName: product.name,
-    quantity,
-    reason: form.reason.value,
-    createdAt: new Date().toISOString(),
-  });
-  writeStorage("waste", waste);
-  form.reset();
-  renderAll();
+  const product = productById(wasteForm.product.value);
+  const quantity = Number(wasteForm.quantity.value);
+  if (!product || !Number.isFinite(quantity) || quantity <= 0) {
+    announce("#waste-status", "Selecciona un producto e ingresa una cantidad válida.", "error");
+    return;
+  }
+  try {
+    const allocation = consumeWaste(product, quantity);
+    waste.push({
+      id: crypto.randomUUID(),
+      productId: product.id,
+      productName: product.name,
+      quantity,
+      unit: product.baseUnit,
+      reason: wasteForm.reason.value,
+      estimatedCost: allocation.estimatedCost,
+      lotIds: allocation.lotIds,
+      createdAt: new Date().toISOString(),
+      occurredAt: localDateKey(),
+      source: "inventory-lot",
+    });
+    writeStorage("waste", waste);
+    writeStorage("inventory-lots", lots);
+    wasteForm.quantity.value = "";
+    announce("#waste-status", `Merma registrada: ${quantityLabel(quantity, product.baseUnit)} de ${product.name}.`, "success");
+    renderAll();
+    synchronizeWasteForm();
+  } catch (error) {
+    announce("#waste-status", error.message, "error");
+  }
 }
 
 function populateWasteProducts() {
@@ -220,7 +334,9 @@ function renderAll() {
 applyTheme();
 populateWasteProducts();
 renderAll();
+synchronizeWasteForm();
 document.querySelector("#close-weighing").addEventListener("click", () => document.querySelector("#weighing-dialog").close());
 document.querySelector("#cancel-weighing").addEventListener("click", () => document.querySelector("#weighing-dialog").close());
 document.querySelector("#save-weighing").addEventListener("click", saveWeighing);
-document.querySelector("#waste-form").addEventListener("submit", registerWaste);
+wasteForm.product.addEventListener("change", synchronizeWasteForm);
+wasteForm.addEventListener("submit", registerWaste);
