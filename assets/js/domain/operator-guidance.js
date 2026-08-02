@@ -40,6 +40,15 @@ export function chooseOperatorRecommendation({
     };
   }
 
+  const readyToComplete = activeOrders.filter((order) => ["confirmed", "ready", "delivering"].includes(order.status));
+  if (readyToComplete.length) {
+    return {
+      taskId: "sales-control",
+      reason: `${readyToComplete.length} pedido(s) están listos para cobrar, despachar o entregar.`,
+      urgency: "high",
+    };
+  }
+
   if (Number(inventorySummary.criticalLots ?? 0) > 0) {
     return {
       taskId: "inventory",
