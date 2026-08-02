@@ -16,7 +16,7 @@
   <header class="topbar">
     <div class="shell topbar-inner">
       <a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong>Crohnoz Fresh Market</strong><small>Configuración y continuidad</small></span></a>
-      <nav class="nav"><a href="operar.html">Inicio</a><a href="index.html">Tienda</a><a href="admin.html">Operación</a><a aria-current="page" href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav>
+      <nav class="nav"><a href="operar.html">Inicio</a><a href="index.html">Tienda</a><a href="admin.html">Operación</a><a href="integridad.html">Integridad</a><a aria-current="page" href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav>
     </div>
   </header>
 
@@ -47,7 +47,7 @@
       </div>
 
       <section class="continuity-section" id="continuidad" aria-labelledby="continuity-title">
-        <div class="section-title"><div><p class="eyebrow">Continuidad local</p><h2 id="continuity-title">Respaldo y recuperación</h2><p>Una copia JSON permite recuperar el piloto en este u otro navegador. No es un respaldo automático ni reemplaza una base de datos.</p></div></div>
+        <div class="section-title"><div><p class="eyebrow">Continuidad local</p><h2 id="continuity-title">Respaldo y recuperación</h2><p>Una copia JSON con checksum permite detectar alteraciones accidentales antes de recuperar el piloto. No es un respaldo automático ni reemplaza una base de datos.</p></div></div>
         <div class="continuity-grid">
           <section class="card continuity-card">
             <div class="continuity-card-heading"><div><p class="eyebrow">Estado actual</p><h3>Datos de este navegador</h3></div><span class="status" id="continuity-health-badge">Revisando</span></div>
@@ -58,15 +58,16 @@
               <article><span>Último respaldo</span><strong id="continuity-last-backup">Nunca</strong></article>
             </div>
             <div class="continuity-health" id="continuity-health" role="status"></div>
+            <a class="button secondary small integrity-link" href="integridad.html">🛡️ Revisar integridad completa</a>
             <p class="continuity-warning"><strong>Importante:</strong> no ingreses datos personales reales durante el piloto. Borrar los datos del navegador elimina la información local que no hayas exportado.</p>
           </section>
 
           <section class="card continuity-card continuity-actions-card">
-            <div><p class="eyebrow">Acciones seguras</p><h3>Descargar o recuperar una copia</h3><p>El archivo incluye configuración, pedidos, inventario, cuentas, compras, cierres y progreso local.</p></div>
-            <button class="button primary full" id="export-backup" type="button">⬇ Descargar respaldo</button>
+            <div><p class="eyebrow">Acciones seguras</p><h3>Descargar o recuperar una copia</h3><p>El archivo incluye configuración, pedidos, inventario, cuentas, compras, cierres, progreso local y checksum de integridad.</p></div>
+            <button class="button primary full" id="export-backup" type="button">⬇ Descargar respaldo con checksum</button>
             <div class="continuity-divider"><span>Restaurar</span></div>
-            <label class="backup-file-field">Archivo JSON<input id="backup-file" type="file" accept="application/json,.json"><small>Máximo 2 MB. Se valida antes de reemplazar los datos.</small></label>
-            <div class="backup-preview" id="backup-preview" hidden><strong id="backup-preview-title"></strong><span id="backup-preview-detail"></span></div>
+            <label class="backup-file-field">Archivo JSON<input id="backup-file" type="file" accept="application/json,.json"><small>Máximo 2 MB. Se valida checksum, compatibilidad y coherencia antes de reemplazar los datos.</small></label>
+            <div class="backup-preview" id="backup-preview" hidden><strong id="backup-preview-title"></strong><span id="backup-preview-detail"></span><small id="backup-preview-integrity"></small></div>
             <button class="button secondary full" id="import-backup" type="button" disabled>Revisar y restaurar</button>
             <div class="continuity-divider"><span>Zona de prueba</span></div>
             <button class="button danger full" id="reset-demo" type="button">Restablecer todos los datos demo</button>
