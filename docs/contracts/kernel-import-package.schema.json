@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crohnoz.local/contracts/kernel-import-package.schema.json",
+  "title": "Crohnoz Kernel Import Package",
+  "description": "Contrato de importación desde Crohnoz Fresh Market. No implica que el backend esté desplegado.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "exportedAt",
+    "source",
+    "organization",
+    "data",
+    "auditVerification",
+    "checksum"
+  ],
+  "properties": {
+    "format": { "const": "crohnoz-kernel-import-package" },
+    "version": { "const": 1 },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "appVersion", "persistence", "actorTrust"],
+      "properties": {
+        "product": { "const": "crohnoz-fresh-market" },
+        "appVersion": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "persistence": { "const": "localStorage" },
+        "actorTrust": { "const": "unverified-local" }
+      }
+    },
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "slug", "sourceMode"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "sourceMode": { "const": "local-unverified" }
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "business": { "type": "object" },
+        "orders": { "$ref": "#/$defs/recordArray" },
+        "prices": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } },
+        "inventory-lots": { "$ref": "#/$defs/recordArray" },
+        "suppliers": { "$ref": "#/$defs/recordArray" },
+        "purchase-orders": { "$ref": "#/$defs/recordArray" },
+        "order-payments": { "$ref": "#/$defs/recordArray" },
+        "credit-customers": { "$ref": "#/$defs/recordArray" },
+        "credit-ledger": { "$ref": "#/$defs/recordArray" },
+        "daily-transactions": { "$ref": "#/$defs/recordArray" },
+        "waste": { "$ref": "#/$defs/recordArray" },
+        "daily-closes": { "$ref": "#/$defs/recordArray" },
+        "assistant-proposals": { "$ref": "#/$defs/recordArray" },
+        "pilot-validations": { "$ref": "#/$defs/recordArray" },
+        "audit-log": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/auditEvent" }
+        },
+        "audit-meta": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "status", "lastSequence", "lastEventHash", "eventCount", "updatedAt"],
+          "properties": {
+            "version": { "const": 1 },
+            "status": { "enum": ["empty", "healthy", "blocked"] },
+            "lastSequence": { "type": "integer", "minimum": 0 },
+            "lastEventHash": {
+              "oneOf": [
+                { "type": "null" },
+                { "$ref": "#/$defs/checksum" }
+              ]
+            },
+            "eventCount": { "type": "integer", "minimum": 0 },
+            "updatedAt": {
+              "oneOf": [
+                { "type": "null" },
+                { "type": "string", "format": "date-time" }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "auditVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "eventsChecked", "lastEventHash"],
+      "properties": {
+        "status": { "enum": ["empty", "healthy"] },
+        "eventsChecked": { "type": "integer", "minimum": 0 },
+        "lastEventHash": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/checksum" }
+          ]
+        }
+      }
+    },
+    "checksum": { "$ref": "#/$defs/checksum" }
+  },
+  "$defs": {
+    "checksum": {
+      "type": "string",
+      "pattern": "^fnv1a64:[a-f0-9]{16}$"
+    },
+    "recordArray": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "auditEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sequence",
+        "occurredAt",
+        "organizationId",
+        "actor",
+        "action",
+        "source",
+        "resource",
+        "beforeDigest",
+        "afterDigest",
+        "previousEventHash",
+        "reason",
+        "eventHash"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "sequence": { "type": "integer", "minimum": 1 },
+        "occurredAt": { "type": "string", "format": "date-time" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "type", "role", "verified"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1, "maxLength": 120 },
+            "type": { "type": "string", "minLength": 1, "maxLength": 80 },
+            "role": { "type": "string", "minLength": 1, "maxLength": 80 },
+            "verified": { "type": "boolean" }
+          }
+        },
+        "action": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["collection", "beforeCount", "afterCount"],
+          "properties": {
+            "collection": { "type": "string", "minLength": 1, "maxLength": 120 },
+            "beforeCount": { "type": "integer", "minimum": 0 },
+            "afterCount": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "beforeDigest": { "$ref": "#/$defs/checksum" },
+        "afterDigest": { "$ref": "#/$defs/checksum" },
+        "previousEventHash": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/checksum" }
+          ]
+        },
+        "reason": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "maxLength": 240 }
+          ]
+        },
+        "eventHash": { "$ref": "#/$defs/checksum" }
+      }
+    }
+  }
+}
