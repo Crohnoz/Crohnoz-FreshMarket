@@ -1,6 +1,7 @@
 import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { formatCLP, formatQuantity } from "../core/format.js";
 import { readStorage, writeStorage } from "../core/storage.js";
+import { setStatus, showToast } from "../core/ui-feedback.js";
 import { products } from "../data/demo-data.js";
 import { initialInventoryLots } from "../data/operations-demo.js";
 import { applyLotMovement, createInventoryLot, inventorySummary, lotRemaining, lotRisk, recommendFEFO } from "../domain/inventory.js";
@@ -12,10 +13,15 @@ const movementForm = document.querySelector("#lot-movement-form");
 const filter = document.querySelector("#inventory-filter");
 const productFilter = document.querySelector("#inventory-product-filter");
 const statusRegion = document.querySelector("#inventory-status");
+let operationVersion = 0;
 
 function todayISO() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function cloneLots() {
+  return typeof structuredClone === "function" ? structuredClone(lots) : JSON.parse(JSON.stringify(lots));
 }
 
 function applyTheme() {
@@ -46,8 +52,7 @@ function lotCode(id) {
 }
 
 function announce(message, state = "success") {
-  statusRegion.textContent = message;
-  statusRegion.dataset.state = state;
+  setStatus(statusRegion, message, state);
 }
 
 function installFieldHelp() {
@@ -62,6 +67,35 @@ function installFieldHelp() {
   movementHelp.id = "lot-movement-help";
   movementHelp.className = "field-help";
   movementQuantityLabel.append(movementHelp);
+
+  const toolbar = document.querySelector(".inventory-toolbar");
+  const summary = document.createElement("div");
+  summary.className = "inline-toolbar";
+  summary.innerHTML = '<span class="result-count" id="inventory-result-count"></span><button class="button secondary small" id="clear-inventory-filters" type="button">Limpiar filtros</button>';
+  toolbar.insertAdjacentElement("afterend", summary);
+  summary.querySelector("button").addEventListener("click", () => {
+    filter.value = "";
+    productFilter.value = "";
+    renderLots();
+    filter.focus();
+  });
+}
+
+function offerUndo(previousLots, message) {
+  const version = ++operationVersion;
+  showToast({
+    message,
+    state: "success",
+    actionLabel: "Deshacer",
+    onAction: () => {
+      if (version !== operationVersion) throw new Error("Solo puede deshacerse la operación más reciente.");
+      lots = previousLots;
+      operationVersion += 1;
+      writeStorage("inventory-lots", lots);
+      renderAll();
+      announce("La última operación fue deshecha.", "success");
+    },
+  });
 }
 
 function populateProducts() {
@@ -182,6 +216,8 @@ function renderLots() {
     && (!query || normalizeText(`${lot.productName} ${lot.notes} ${lot.id}`).includes(query))
   ));
   container.replaceChildren();
+  const resultCount = document.querySelector("#inventory-result-count");
+  if (resultCount) resultCount.textContent = `${ordered.length} lote${ordered.length === 1 ? "" : "s"} visible${ordered.length === 1 ? "" : "s"}`;
 
   if (!ordered.length) {
     const empty = document.createElement("div");
@@ -244,6 +280,7 @@ receiveForm.addEventListener("submit", (event) => {
     receiveForm.bestBeforeDate.focus();
     return;
   }
+  const previousLots = cloneLots();
   try {
     lots.push(createInventoryLot({
       productId: product.id,
@@ -263,6 +300,7 @@ receiveForm.addEventListener("submit", (event) => {
     syncReceiveUnit();
     announce("Lote recibido y agregado a la rotación.", "success");
     renderAll();
+    offerUndo(previousLots, `${product.name} fue agregado al inventario.`);
   } catch (error) {
     announce(error.message, "error");
   }
@@ -275,12 +313,15 @@ movementForm.addEventListener("submit", (event) => {
     announce("Selecciona un lote con saldo disponible.", "error");
     return;
   }
+  const previousLots = cloneLots();
+  const lotName = lots[index].productName;
   try {
     lots[index] = applyLotMovement(lots[index], { type: movementForm.type.value, quantity: movementForm.quantity.value });
     writeStorage("inventory-lots", lots);
     movementForm.quantity.value = "";
     announce("Movimiento guardado. El saldo y la prioridad se recalcularon.", "success");
     renderAll();
+    offerUndo(previousLots, `Movimiento de ${lotName} guardado.`);
   } catch (error) {
     announce(error.message, "error");
   }

@@ -62,6 +62,20 @@ function attachImageFallback(image, fallback) {
   }, { once: true });
 }
 
+function installCatalogSummary() {
+  const summary = document.createElement("div");
+  summary.className = "inline-toolbar";
+  summary.innerHTML = '<span class="result-count" id="catalog-result-count"></span><button class="button secondary small" id="clear-catalog-filters" type="button">Ver todos</button>';
+  document.querySelector(".catalog-tools").insertAdjacentElement("afterend", summary);
+  summary.querySelector("button").addEventListener("click", () => {
+    activeCategory = "all";
+    searchInput.value = "";
+    renderCategories();
+    renderProducts();
+    searchInput.focus();
+  });
+}
+
 function renderProducts() {
   const query = normalizeText(searchInput.value);
   productGrid.replaceChildren();
@@ -70,6 +84,11 @@ function renderProducts() {
     const searchMatch = !query || normalizeText(`${product.name} ${product.description} ${product.badge}`).includes(query);
     return categoryMatch && searchMatch;
   });
+
+  const count = document.querySelector("#catalog-result-count");
+  if (count) count.textContent = `${visible.length} producto${visible.length === 1 ? "" : "s"}`;
+  const clear = document.querySelector("#clear-catalog-filters");
+  if (clear) clear.hidden = !query && activeCategory === "all";
 
   for (const product of visible) {
     const card = document.createElement("article");
@@ -83,11 +102,15 @@ function renderProducts() {
       <div class="product-body">
         <div class="product-heading"><div><p class="eyebrow"></p><h3></h3></div><strong></strong></div>
         <p class="product-description"></p>
-        <div class="product-controls">
-          <label>Presentación<select data-role="option"></select></label>
-          <label>Preferencia<select data-role="preference"></select></label>
-          <label>Sustitución<select data-role="substitution"></select></label>
-        </div>
+        <p class="product-defaults"></p>
+        <details class="product-customization">
+          <summary>Cambiar presentación y preferencias</summary>
+          <div class="product-controls">
+            <label>Presentación<select data-role="option"></select></label>
+            <label>Preferencia<select data-role="preference"></select></label>
+            <label>Sustitución<select data-role="substitution"></select></label>
+          </div>
+        </details>
         <button class="button primary full" type="button" data-role="add">Agregar al pedido</button>
       </div>`;
 
@@ -120,6 +143,15 @@ function renderProducts() {
       option.textContent = policy.label;
       substitutionSelect.append(option);
     });
+
+    const defaults = card.querySelector(".product-defaults");
+    const syncDefaults = () => {
+      const substitutionLabel = SUBSTITUTION_POLICIES.find((policy) => policy.value === substitutionSelect.value)?.label ?? substitutionSelect.value;
+      defaults.textContent = `${optionSelect.selectedOptions[0]?.textContent ?? ""} · ${preferenceSelect.value} · ${substitutionLabel}`;
+    };
+    [optionSelect, preferenceSelect, substitutionSelect].forEach((select) => select.addEventListener("change", syncDefaults));
+    syncDefaults();
+
     const addButton = card.querySelector("[data-role='add']");
     addButton.setAttribute("aria-label", `Agregar ${product.name} al pedido`);
     addButton.addEventListener("click", () => {
@@ -331,6 +363,7 @@ function trapCartFocus(event) {
 }
 
 applyBusiness();
+installCatalogSummary();
 renderCategories();
 renderProducts();
 renderCart();
