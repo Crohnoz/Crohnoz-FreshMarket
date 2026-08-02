@@ -40,6 +40,13 @@ function createOption(option) {
   return element;
 }
 
+function attachImageFallback(image, fallback) {
+  image.addEventListener("error", () => {
+    image.hidden = true;
+    fallback.hidden = false;
+  }, { once: true });
+}
+
 function renderProducts() {
   const query = searchInput.value.trim().toLowerCase();
   productGrid.replaceChildren();
@@ -53,9 +60,13 @@ function renderProducts() {
     const card = document.createElement("article");
     card.className = "product-card";
     card.innerHTML = `
-      <div class="product-visual" aria-hidden="true"><span>${product.emoji}</span></div>
+      <div class="product-visual">
+        <img loading="lazy" decoding="async">
+        <span class="product-emoji-fallback" hidden aria-hidden="true"></span>
+        <span class="product-photo-badge"></span>
+      </div>
       <div class="product-body">
-        <div class="product-heading"><div><p class="eyebrow">${product.baseUnitLabel}</p><h3></h3></div><strong></strong></div>
+        <div class="product-heading"><div><p class="eyebrow"></p><h3></h3></div><strong></strong></div>
         <p class="product-description"></p>
         <div class="product-controls">
           <label>Presentación<select data-role="option"></select></label>
@@ -64,9 +75,20 @@ function renderProducts() {
         </div>
         <button class="button primary full" type="button" data-role="add">Agregar al pedido</button>
       </div>`;
+
+    const image = card.querySelector(".product-visual img");
+    const fallback = card.querySelector(".product-emoji-fallback");
+    image.src = product.image;
+    image.alt = product.imageAlt;
+    image.style.objectPosition = product.imagePosition ?? "center";
+    fallback.textContent = product.emoji;
+    attachImageFallback(image, fallback);
+    card.querySelector(".product-photo-badge").textContent = product.badge ?? "Producto fresco";
+    card.querySelector(".eyebrow").textContent = product.baseUnitLabel;
     card.querySelector("h3").textContent = product.name;
-    card.querySelector("strong").textContent = `${formatCLP(product.price)} / ${product.baseUnitLabel}`;
+    card.querySelector(".product-heading strong").textContent = `${formatCLP(product.price)} / ${product.baseUnitLabel}`;
     card.querySelector(".product-description").textContent = product.description;
+
     const optionSelect = card.querySelector("[data-role='option']");
     product.options.forEach((option) => optionSelect.append(createOption(option)));
     const preferenceSelect = card.querySelector("[data-role='preference']");
@@ -119,6 +141,9 @@ function addToCart(product, optionId, preference, substitution) {
       productId: product.id,
       name: product.name,
       emoji: product.emoji,
+      image: product.image,
+      imageAlt: product.imageAlt,
+      imagePosition: product.imagePosition,
       optionLabel: option.label,
       quantityBase: option.quantityBase,
       unit: product.baseUnit,
@@ -158,10 +183,21 @@ function renderCart() {
     const item = document.createElement("article");
     item.className = "cart-line";
     item.innerHTML = `
-      <span class="cart-emoji" aria-hidden="true"></span>
+      <span class="cart-media"><img loading="lazy" decoding="async"><span class="cart-emoji" hidden aria-hidden="true"></span></span>
       <div><strong></strong><small></small><div class="stepper"><button type="button" data-step="-1">−</button><span></span><button type="button" data-step="1">+</button></div></div>
       <b></b>`;
-    item.querySelector(".cart-emoji").textContent = line.emoji;
+    const image = item.querySelector(".cart-media img");
+    const fallback = item.querySelector(".cart-emoji");
+    image.src = line.image ?? "";
+    image.alt = line.imageAlt ?? line.name;
+    image.style.objectPosition = line.imagePosition ?? "center";
+    fallback.textContent = line.emoji;
+    if (!line.image) {
+      image.hidden = true;
+      fallback.hidden = false;
+    } else {
+      attachImageFallback(image, fallback);
+    }
     item.querySelector("strong").textContent = line.name;
     item.querySelector("small").textContent = `${line.optionLabel} · ${line.preference}`;
     item.querySelector(".stepper span").textContent = line.multiplier;
