@@ -1,0 +1,37 @@
+.admin-main { padding: 42px 0; }
+.metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 32px; }
+.metric { padding: 18px; }
+.metric span { color: var(--muted); font-size: 12px; font-weight: 800; }
+.metric strong { display: block; margin-top: 10px; font-size: 29px; letter-spacing: -.04em; }
+.admin-grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 22px; align-items: start; }
+.panel { padding: 22px; }
+.panel + .panel { margin-top: 22px; }
+.panel-header { display: flex; justify-content: space-between; align-items: start; gap: 18px; margin-bottom: 16px; }
+.panel-header h2 { margin: 0; }
+.panel-header p { margin: 6px 0 0; color: var(--muted); }
+.orders-list { display: grid; gap: 13px; }
+.order-card { padding: 17px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
+.order-card header, .order-card footer, .order-lines > div { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
+.order-card h3 { margin: 0 0 4px; }
+.order-card small { color: var(--muted); }
+.status-pill { padding: 7px 10px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); font-size: 11px; font-weight: 900; text-align: center; }
+.order-lines { display: grid; gap: 8px; margin: 16px 0; padding: 14px 0; border-block: 1px solid var(--line); font-size: 13px; }
+.order-lines span { color: var(--muted); }
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.waste-form { display: grid; gap: 11px; }
+.weighing-lines { display: grid; gap: 13px; margin: 20px 0; }
+.weighing-line { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface-2); }
+.weighing-line small { display: block; margin-top: 5px; color: var(--muted); }
+.calculation { grid-column: 1 / -1; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 800; }
+.calculation.success { background: color-mix(in srgb, var(--success) 13%, transparent); color: var(--success); }
+.calculation.warning { background: color-mix(in srgb, var(--warning) 13%, transparent); color: var(--warning); }
+.dialog-actions { display: flex; justify-content: end; gap: 10px; }
+@media (max-width: 1000px) {
+  .metrics { grid-template-columns: repeat(3, 1fr); }
+  .admin-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .metrics { grid-template-columns: 1fr 1fr; }
+  .weighing-line { grid-template-columns: 1fr; }
+  .calculation { grid-column: auto; }
+}
