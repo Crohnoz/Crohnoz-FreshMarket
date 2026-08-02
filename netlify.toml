@@ -36,6 +36,10 @@
   to = "/validacion.html"
   status = 200
 [[redirects]]
+  from = "/integridad"
+  to = "/integridad.html"
+  status = 200
+[[redirects]]
   from = "/cierre"
   to = "/cierre.html"
   status = 200
