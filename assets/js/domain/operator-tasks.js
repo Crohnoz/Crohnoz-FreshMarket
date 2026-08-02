@@ -60,6 +60,16 @@ export const OPERATOR_TASKS = Object.freeze([
     tone: "neutral",
   },
   {
+    id: "close-day",
+    title: "Cerrar el día",
+    shortTitle: "Cerrar",
+    description: "Compara la caja esperada con el efectivo contado y revisa cualquier diferencia.",
+    icon: "✅",
+    href: "cierre.html",
+    group: "daily",
+    tone: "success",
+  },
+  {
     id: "voice",
     title: "Hablar con el copiloto",
     shortTitle: "Hablar",
