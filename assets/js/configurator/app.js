@@ -3,6 +3,7 @@ import { readStorage, replaceStorageSnapshot, resetDemoStorage, snapshotStorage,
 import { confirmAction, setButtonPending, setStatus, showToast } from "../core/ui-feedback.js";
 import { products, initialOrders } from "../data/demo-data.js";
 import { initialInventoryLots, initialOrderPayments, initialPurchases, initialSuppliers } from "../data/operations-demo.js";
+import { materializePilotEntries } from "../data/pilot-state.js";
 import { initialCustomers, initialDailyTransactions, initialLedgerEntries } from "../data/receivables-demo.js";
 import { buildBackupFilename, createBackupEnvelope, formatBackupSize, parseBackupText, serializeBackup, summarizeBackupEntries } from "../domain/backup.js";
 import { auditDataIntegrity, integrityStatusLabel } from "../domain/data-integrity.js";
@@ -86,8 +87,9 @@ function renderPreview() {
 
 function renderContinuity() {
   const snapshot = snapshotStorage();
-  const summary = summarizeBackupEntries(snapshot.entries);
-  const integrity = auditDataIntegrity(snapshot.entries, { products });
+  const effectiveEntries = materializePilotEntries(snapshot.entries);
+  const summary = summarizeBackupEntries(effectiveEntries);
+  const integrity = auditDataIntegrity(effectiveEntries, { products });
   const meta = continuityMeta();
   document.querySelector("#continuity-collections").textContent = summary.collections;
   document.querySelector("#continuity-records").textContent = summary.estimatedRecords;
@@ -167,7 +169,8 @@ async function exportBackup() {
     const filename = buildBackupFilename(business.name, exportedAt);
     const snapshot = snapshotStorage();
     if (snapshot.invalidKeys.length) throw new Error("Existen colecciones ilegibles y el respaldo fue bloqueado.");
-    const envelope = createBackupEnvelope(snapshot.entries, {
+    const effectiveEntries = materializePilotEntries(snapshot.entries);
+    const envelope = createBackupEnvelope(effectiveEntries, {
       namespace: APP_CONFIG.storageNamespace,
       appVersion: APP_CONFIG.version,
       exportedAt: exportedAt.toISOString(),
@@ -180,8 +183,8 @@ async function exportBackup() {
       lastBackupChecksum: envelope.checksum,
       lastBackupVersion: envelope.version,
     });
-    setStatus("#continuity-status", `Respaldo descargado y checksum generado: ${filename}.`, "success");
-    showToast({ message: "Respaldo con checksum descargado.", state: "success" });
+    setStatus("#continuity-status", `Respaldo completo descargado y checksum generado: ${filename}.`, "success");
+    showToast({ message: "Respaldo completo con checksum descargado.", state: "success" });
     renderContinuity();
   } catch (error) {
     setStatus("#continuity-status", error.message, "error");
@@ -219,9 +222,10 @@ async function inspectSelectedBackup() {
   if (!file) return;
   try {
     const envelope = parseBackupText(await file.text(), { expectedNamespace: APP_CONFIG.storageNamespace });
-    const summary = summarizeBackupEntries(envelope.entries);
-    const integrity = auditDataIntegrity(envelope.entries, { products });
-    pendingBackup = { envelope, fileName: file.name, summary, integrity };
+    const effectiveEntries = materializePilotEntries(envelope.entries);
+    const summary = summarizeBackupEntries(effectiveEntries);
+    const integrity = auditDataIntegrity(effectiveEntries, { products });
+    pendingBackup = { envelope, entries: effectiveEntries, fileName: file.name, summary, integrity };
 
     const backupPreview = document.querySelector("#backup-preview");
     backupPreview.dataset.state = integrity.status === "blocked"
@@ -230,7 +234,7 @@ async function inspectSelectedBackup() {
         ? "warning"
         : "success";
     document.querySelector("#backup-preview-title").textContent = file.name;
-    document.querySelector("#backup-preview-detail").textContent = `${summary.collections} colecciones · ${summary.estimatedRecords} registros estimados · exportado ${formatDateTime(envelope.exportedAt)}.`;
+    document.querySelector("#backup-preview-detail").textContent = `${summary.collections} colecciones efectivas · ${summary.estimatedRecords} registros estimados · exportado ${formatDateTime(envelope.exportedAt)}.`;
     document.querySelector("#backup-preview-integrity").textContent = backupInspectionText(envelope, integrity);
     backupPreview.hidden = false;
 
@@ -257,7 +261,7 @@ async function importBackup() {
   if (!pendingBackup || pendingBackup.integrity.status === "blocked") return;
   const accepted = await confirmAction({
     title: "¿Restaurar este respaldo?",
-    message: "Los datos actuales de este navegador serán reemplazados por el contenido del archivo.",
+    message: "Los datos actuales de este navegador serán reemplazados por el contenido materializado del archivo.",
     detail: `${pendingBackup.fileName} · ${pendingBackup.summary.collections} colecciones · ${pendingBackup.summary.estimatedRecords} registros · ${backupInspectionText(pendingBackup.envelope, pendingBackup.integrity)}`,
     confirmLabel: "Sí, restaurar",
     cancelLabel: "Conservar datos actuales",
@@ -267,7 +271,7 @@ async function importBackup() {
 
   setButtonPending(importButton, true, "Restaurando…");
   try {
-    replaceStorageSnapshot(pendingBackup.envelope.entries);
+    replaceStorageSnapshot(pendingBackup.entries);
     const restoredAt = new Date().toISOString();
     const importedMeta = continuityMeta();
     updateContinuityMeta({
