@@ -17,6 +17,31 @@ function applyTheme() {
   document.querySelector("#demo-notice").textContent = APP_CONFIG.demoNotice;
 }
 
+function productById(productId) {
+  return products.find((product) => product.id === productId) ?? null;
+}
+
+function applyProductImage(container, product) {
+  const image = container.querySelector("img");
+  const fallback = container.querySelector("[data-fallback]");
+  if (!image || !fallback || !product?.image) {
+    if (image) image.hidden = true;
+    if (fallback) {
+      fallback.hidden = false;
+      fallback.textContent = product?.emoji ?? "🥬";
+    }
+    return;
+  }
+  image.src = product.image;
+  image.alt = product.imageAlt;
+  image.style.objectPosition = product.imagePosition ?? "center";
+  fallback.textContent = product.emoji;
+  image.addEventListener("error", () => {
+    image.hidden = true;
+    fallback.hidden = false;
+  }, { once: true });
+}
+
 function statusLabel(status) {
   return ({
     new: "Nuevo",
@@ -62,9 +87,13 @@ function renderOrders() {
     article.querySelector("footer span").textContent = `Estimado ${formatCLP(orderEstimatedTotal(order))}`;
     const lines = article.querySelector(".order-lines");
     order.lines.forEach((line) => {
+      const product = productById(line.productId);
       const row = document.createElement("div");
-      row.innerHTML = `<span></span><b></b>`;
-      row.querySelector("span").textContent = `${line.name} · ${line.preference}`;
+      row.className = "order-product-line";
+      row.innerHTML = `<span class="product-thumb"><img loading="lazy" decoding="async"><span data-fallback hidden aria-hidden="true"></span></span><span class="order-product-copy"><strong></strong><small></small></span><b></b>`;
+      applyProductImage(row, product);
+      row.querySelector(".order-product-copy strong").textContent = line.name;
+      row.querySelector(".order-product-copy small").textContent = line.preference;
       row.querySelector("b").textContent = formatQuantity(line.requestedQuantity, line.unit);
       lines.append(row);
     });
@@ -137,8 +166,9 @@ function renderPrices() {
   tbody.replaceChildren();
   products.forEach((product) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td></td><td></td><td><input type="number" min="0" step="10"></td><td><button class="button small secondary" type="button">Guardar</button></td>`;
-    tr.children[0].textContent = product.name;
+    tr.innerHTML = `<td><span class="table-product"><span class="product-thumb"><img loading="lazy" decoding="async"><span data-fallback hidden aria-hidden="true"></span></span><strong></strong></span></td><td></td><td><input type="number" min="0" step="10"></td><td><button class="button small secondary" type="button">Guardar</button></td>`;
+    applyProductImage(tr, product);
+    tr.querySelector(".table-product strong").textContent = product.name;
     tr.children[1].textContent = `${product.stock} ${product.baseUnitLabel}`;
     const input = tr.querySelector("input");
     input.value = prices[product.id] ?? product.price;
