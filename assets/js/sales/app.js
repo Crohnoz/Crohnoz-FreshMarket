@@ -135,10 +135,11 @@ document.querySelector("#order-payment-form").addEventListener("submit", (event)
   const settlement = event.currentTarget.settlement.value;
   const payment = { id: crypto.randomUUID(), orderId: order.id, amount, settlement, status: "confirmed", createdAt: new Date().toISOString() };
   payments.push(payment);
-  transactions.push({ id: crypto.randomUUID(), type: "sale", counterparty: order.customer, settlement, customerId: null, lines: [{ product: `Cobro ${order.id}`, quantity: 1, unitPrice: amount }], total: amount, createdAt: payment.createdAt, referenceId: payment.id, orderId: order.id });
+  const transaction = { id: crypto.randomUUID(), type: "sale", counterparty: order.customer, settlement, customerId: null, lines: [{ product: `Cobro ${order.id}`, quantity: 1, unitPrice: amount }], total: amount, createdAt: payment.createdAt, referenceId: payment.id, orderId: order.id };
+  transactions.push(transaction);
   if (settlement === "credit") {
     const customer = customerForOrder(order);
-    ledger.push({ id: crypto.randomUUID(), customerId: customer.id, type: "charge", amount, settlement: "credit", description: `Pedido ${order.id}`, occurredAt: payment.createdAt.slice(0, 10), source: "order-payment", referenceId: payment.id });
+    ledger.push({ id: crypto.randomUUID(), customerId: customer.id, type: "charge", amount, settlement: "credit", description: `Pedido ${order.id}`, occurredAt: payment.createdAt.slice(0, 10), source: "daily-transaction", referenceId: transaction.id });
   }
   persist();
   document.querySelector("#sales-status").textContent = "Pago registrado y comprobante actualizado.";
