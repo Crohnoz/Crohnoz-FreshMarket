@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Libro digital de fiados y registro rápido de Crohnoz Fresh Market.">
+  <title>Crohnoz Fresh Market · Fiados y cuentas</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <link rel="stylesheet" href="assets/css/accounts.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong data-business-name></strong><small>Fiados y cuentas</small></span></a><nav class="nav"><a href="index.html">Tienda</a><a href="admin.html">Operación</a><a aria-current="page" href="cuentas.html">Fiados</a><a href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav></div></header>
+
+  <main class="accounts-main"><div class="shell">
+    <div class="section-title"><div><p class="eyebrow">Libro digital asistido</p><h1>Fiados y cuentas del día</h1><p>Registra ventas, abonos y deudas sin perder la cuenta. Todo lo de esta versión queda únicamente en este navegador.</p></div><span class="status warning">Piloto local · sin cobranza automática</span></div>
+
+    <section class="accounts-metrics" aria-label="Resumen de fiados">
+      <article class="card metric"><span>Total por cobrar</span><strong id="metric-outstanding">$0</strong></article>
+      <article class="card metric"><span>Personas con deuda</span><strong id="metric-debtors">0</strong></article>
+      <article class="card metric"><span>Deuda promedio</span><strong id="metric-average">$0</strong></article>
+      <article class="card metric"><span>Movimientos de hoy</span><strong id="metric-today">0</strong></article>
+    </section>
+
+    <div class="accounts-grid">
+      <div class="accounts-stack">
+        <section class="card accounts-panel">
+          <header><h2>¿Quién debe?</h2><p>Saldo bruto por persona, ordenado de mayor a menor.</p></header>
+          <div class="customer-list" id="customer-list"></div>
+        </section>
+
+        <section class="card accounts-panel">
+          <header><h2>Venta o compra rápida</h2><p>Agrega kilos, unidades y precios. El total se calcula al instante.</p></header>
+          <form class="transaction-form" id="transaction-form">
+            <div class="form-grid">
+              <label>Tipo<select name="type"><option value="sale">Venta</option><option value="purchase">Compra</option></select></label>
+              <label>Contraparte<input name="counterparty" maxlength="80" placeholder="Nombre del cliente o proveedor" required></label>
+            </div>
+            <div class="transaction-lines" id="transaction-lines"></div>
+            <button class="button secondary" id="add-line" type="button">+ Agregar producto</button>
+            <div class="form-grid">
+              <label>Forma<select name="settlement" id="settlement"><option value="cash">Contado</option><option value="transfer">Transferencia</option><option value="credit">Fiado</option></select></label>
+              <label id="credit-customer-label" hidden>Cuenta del cliente<select name="customerId" id="credit-customer"></select></label>
+            </div>
+            <div class="transaction-summary"><span>Total de la operación</span><strong id="transaction-total">$0</strong></div>
+            <button class="button primary" type="submit">Guardar operación</button>
+          </form>
+          <div class="daily-log" id="daily-log"></div>
+        </section>
+
+        <section class="card accounts-panel">
+          <header><h2>Importar el cuaderno</h2><p>Toma una foto y revisa el texto antes de agregar cualquier deuda.</p></header>
+          <div class="notice-box"><strong>Extracción IA pendiente:</strong> el piloto guarda y previsualiza la foto, pero todavía no envía imágenes a ningún servicio. Pega o corrige la transcripción para probar el análisis.</div>
+          <form class="import-form" id="import-form">
+            <label>Foto del cuaderno<input id="notebook-photo" type="file" accept="image/*" capture="environment"></label>
+            <img class="photo-preview" id="photo-preview" alt="Vista previa del cuaderno" hidden>
+            <label>Texto transcrito<textarea id="notebook-text" rows="7" placeholder="Ejemplo:
+Juan debe 15.000
+Ana 8.500
+Luis pagó 5.000"></textarea></label>
+            <button class="button secondary" type="submit">Analizar texto</button>
+          </form>
+          <div class="import-results" id="import-results"></div>
+          <button class="button primary" id="confirm-import" type="button" hidden>Agregar líneas seleccionadas</button>
+        </section>
+      </div>
+
+      <aside class="accounts-stack">
+        <section class="card accounts-panel">
+          <header><h2>Registrar fiado o abono</h2><p>Una sola acción, con números grandes y claros.</p></header>
+          <form class="ledger-form" id="ledger-form">
+            <label>Persona<select name="customerId" id="ledger-customer"></select></label>
+            <div class="form-grid">
+              <label>Movimiento<select name="type"><option value="charge">Nuevo fiado</option><option value="payment">Abono recibido</option></select></label>
+              <label>Monto<input name="amount" type="number" min="1" step="1" inputmode="numeric" required></label>
+            </div>
+            <label>Detalle<input name="description" maxlength="120" placeholder="Ej.: verduras para el fin de semana"></label>
+            <button class="button primary" type="submit">Guardar movimiento</button>
+          </form>
+        </section>
+
+        <section class="card accounts-panel">
+          <header><h2>Nueva persona</h2><p>Registra solo los datos necesarios para reconocerla y contactarla.</p></header>
+          <form class="ledger-form" id="customer-form">
+            <label>Nombre<input name="name" maxlength="80" required></label>
+            <label>Teléfono opcional<input name="phone" maxlength="30" inputmode="tel"></label>
+            <label>Nota opcional<input name="notes" maxlength="120"></label>
+            <button class="button secondary" type="submit">Crear cuenta</button>
+          </form>
+        </section>
+
+        <section class="card accounts-panel">
+          <header><h2>Asistente de cobranza</h2><p>Resumen automático basado en los registros, no asesoría financiera.</p></header>
+          <div class="assistant-report" id="assistant-report"></div>
+        </section>
+      </aside>
+    </div>
+  </div></main>
+
+  <footer class="page-footer"><div class="shell"><span>Datos demostrativos en este navegador</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/accounts/app.js"></script>
+</body>
+</html>
