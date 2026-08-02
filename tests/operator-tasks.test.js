@@ -9,7 +9,7 @@ test("operator tasks have unique safe identifiers and local destinations", () =>
     assert.match(task.id, /^[a-z0-9-]+$/);
     assert.ok(task.title.length >= 4);
     assert.ok(task.description.length >= 20);
-    assert.match(task.href, /^(admin|cuentas|scanner-lab|cierre|inventario|compras|ventas|asistente|validacion|configurador|integridad)\.html/);
+    assert.match(task.href, /^(admin|cuentas|scanner-lab|cierre|inventario|compras|ventas|asistente|validacion|configurador|integridad|auditoria)\.html/);
     assert.ok(!task.href.includes("javascript:"));
   }
 });
@@ -19,6 +19,7 @@ test("tasks can be resolved by id and group", () => {
   assert.equal(operatorTaskById("inventory")?.href, "inventario.html");
   assert.equal(operatorTaskById("backup")?.href, "configurador.html#continuidad");
   assert.equal(operatorTaskById("integrity")?.href, "integridad.html");
+  assert.equal(operatorTaskById("audit")?.href, "auditoria.html");
   assert.equal(operatorTaskById("missing"), null);
   assert.ok(operatorTasksByGroup("credit").length >= 3);
 });
@@ -30,5 +31,6 @@ test("task search supports everyday Spanish words", () => {
   assert.equal(operatorTaskSearch("probar piloto")[0]?.id, "validate-pilot");
   assert.equal(operatorTaskSearch("guardar copia")[0]?.id, "backup");
   assert.equal(operatorTaskSearch("referencias duplicadas")[0]?.id, "integrity");
+  assert.equal(operatorTaskSearch("historial cambios")[0]?.id, "audit");
   assert.ok(operatorTaskSearch("").length === OPERATOR_TASKS.length);
 });

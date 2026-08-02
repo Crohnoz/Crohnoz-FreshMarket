@@ -1,4 +1,5 @@
-const CACHE_NAME = "crohnoz-fresh-market-v6";
+const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v6";
+const CACHE_NAME = "crohnoz-fresh-market-v7";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -10,6 +11,7 @@ const CORE_ASSETS = [
   "/asistente.html",
   "/validacion.html",
   "/integridad.html",
+  "/auditoria.html",
   "/cierre.html",
   "/cuentas.html",
   "/admin.html",
@@ -25,10 +27,12 @@ const CORE_ASSETS = [
   "/assets/css/operator-home.css",
   "/assets/css/configurator.css",
   "/assets/css/data-integrity.css",
+  "/assets/css/audit.css",
   "/assets/css/daily-close.css",
   "/assets/css/store.css",
   "/assets/js/core/config.js",
   "/assets/js/core/storage.js",
+  "/assets/js/core/storage-audit.js",
   "/assets/js/core/format.js",
   "/assets/js/core/ui-feedback.js",
   "/assets/js/core/guided-shell.js",
@@ -42,6 +46,8 @@ const CORE_ASSETS = [
   "/assets/js/operator/home.js",
   "/assets/js/configurator/app.js",
   "/assets/js/integrity/app.js",
+  "/assets/js/audit/navigation.js",
+  "/assets/js/audit/app.js",
   "/assets/js/inventory/app.js",
   "/assets/js/purchasing/app.js",
   "/assets/js/sales/app.js",
@@ -50,6 +56,7 @@ const CORE_ASSETS = [
   "/assets/js/validation/app.js",
   "/assets/js/close/app.js",
   "/assets/js/domain/backup.js",
+  "/assets/js/domain/audit-trail.js",
   "/assets/js/domain/data-integrity.js",
   "/assets/js/domain/pricing.js",
   "/assets/js/domain/substitutions.js",
@@ -77,7 +84,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => ![CACHE_NAME].includes(key)).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });

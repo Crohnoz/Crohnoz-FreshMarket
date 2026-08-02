@@ -1,6 +1,7 @@
 const KNOWN_OPERATOR_PAGES = new Set([
   "admin.html",
   "asistente.html",
+  "auditoria.html",
   "cierre.html",
   "compras.html",
   "configurador.html",

@@ -19,6 +19,7 @@ function normalizedPage() {
     asistente: "asistente.html",
     validacion: "validacion.html",
     integridad: "integridad.html",
+    auditoria: "auditoria.html",
     configurar: "configurador.html",
     scanner: "scanner-lab.html",
   })[segment] ?? segment;
