@@ -13,6 +13,7 @@ const PAGE_ALIASES = Object.freeze({
   ventas: "ventas.html",
   asistente: "asistente.html",
   validacion: "validacion.html",
+  integridad: "integridad.html",
   cierre: "cierre.html",
   dashboard: "admin.html",
   cuentas: "cuentas.html",
@@ -27,6 +28,7 @@ const OPERATOR_PAGE_META = Object.freeze({
   "compras.html": { label: "Compras y proveedores" },
   "configurador.html": { label: "Configuración y respaldo" },
   "cuentas.html": { label: "Ventas y fiados" },
+  "integridad.html": { label: "Integridad de datos" },
   "inventario.html": { label: "Inventario perecible" },
   "operar.html": { label: "Inicio del negocio" },
   "scanner-lab.html": { label: "Prueba de lector" },
@@ -45,7 +47,7 @@ const onboardingSteps = [
     icon: "🧭",
     eyebrow: "Prioridades",
     title: "Sigue el siguiente paso recomendado",
-    text: "El inicio revisa pedidos, pesaje, inventario y cierre para mostrar primero la tarea que necesita atención.",
+    text: "El inicio revisa pedidos, pesaje, inventario, integridad y cierre para mostrar primero la tarea que necesita atención.",
   },
   {
     icon: "🎙️",
@@ -60,10 +62,10 @@ const onboardingSteps = [
     text: "Fiados, pagos, mermas y cambios de peso requieren una acción explícita. Puedes corregir, cancelar o deshacer el cambio más reciente.",
   },
   {
-    icon: "💾",
-    eyebrow: "Continuidad",
-    title: "Descarga respaldos periódicos",
-    text: "Los datos viven en este navegador. Desde Configuración puedes descargar una copia JSON y restaurarla después de una revisión previa.",
+    icon: "🛡️",
+    eyebrow: "Integridad y continuidad",
+    title: "Comprueba y respalda",
+    text: "Revisa que IDs, referencias, montos y fechas sean coherentes. Después descarga una copia con checksum desde Configuración.",
   },
 ];
 
@@ -187,7 +189,7 @@ function mountOnboarding() {
 
   function render() {
     const step = onboardingSteps[stepIndex];
-    eyebrow.textContent = step.eyebrow;
+    eyebrow.textContent = step.eyrow ?? step.eyebrow;
     progress.textContent = `${stepIndex + 1} de ${onboardingSteps.length}`;
     icon.textContent = step.icon;
     title.textContent = step.title;
