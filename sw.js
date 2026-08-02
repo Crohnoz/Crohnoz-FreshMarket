@@ -1,3 +1,4 @@
+const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v6";
 const CACHE_NAME = "crohnoz-fresh-market-v7";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
@@ -82,7 +83,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => ![CACHE_NAME].includes(key)).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });
