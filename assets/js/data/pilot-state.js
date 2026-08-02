@@ -1,4 +1,5 @@
 import { DEFAULT_BUSINESS } from "../core/config.js";
+import { AUDIT_VERSION } from "../domain/audit-trail.js";
 import { initialOrders, products } from "./demo-data.js";
 import {
   initialAssistantProposals,
@@ -35,6 +36,15 @@ export function pilotDefaultEntries() {
     cart: [],
     waste: [],
     "daily-closes": [],
+    "audit-log": [],
+    "audit-meta": {
+      version: AUDIT_VERSION,
+      status: "empty",
+      lastSequence: 0,
+      lastEventHash: null,
+      eventCount: 0,
+      updatedAt: null,
+    },
   };
 }
 
