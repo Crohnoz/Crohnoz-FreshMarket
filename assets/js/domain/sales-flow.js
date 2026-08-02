@@ -65,6 +65,7 @@ export function nextOrderState(order, action) {
     confirm_difference: ["pending_customer_confirmation", "confirmed"],
     mark_ready: ["confirmed", "ready"],
     start_delivery: ["ready", "delivering"],
+    complete_pickup: ["ready", "delivered"],
     deliver: ["delivering", "delivered"],
   };
   const transition = transitions[action];
