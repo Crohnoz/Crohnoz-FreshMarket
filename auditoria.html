@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Historial local de cambios y paquete de migración de Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <title>Crohnoz Fresh Market · Auditoría</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/audit.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong data-business-name></strong><small>Trazabilidad local</small></span></a>
+      <nav class="nav"><a href="operar.html">Inicio</a><a href="integridad.html">Integridad</a><a aria-current="page" href="auditoria.html">Auditoría</a><a href="configurador.html#continuidad">Respaldos</a></nav>
+    </div>
+  </header>
+
+  <main class="audit-main" id="main-content">
+    <div class="shell">
+      <section class="audit-hero">
+        <div><p class="eyebrow">Puente hacia Crohnoz Kernel</p><h1>¿Qué cambió y en qué orden?</h1><p>El piloto registra cambios comerciales con una cadena de hashes. No guarda el contenido completo dentro del evento y todavía no puede verificar la identidad real de quien operó.</p></div>
+        <div class="audit-hero-actions"><button class="button primary" id="refresh-audit" type="button">Verificar cadena</button><button class="button secondary" id="export-kernel-package" type="button">Descargar paquete Kernel</button></div>
+      </section>
+
+      <section class="audit-status card" id="audit-status-card" data-state="empty" aria-live="polite">
+        <span class="audit-status-icon" id="audit-status-icon" aria-hidden="true">…</span>
+        <div><p class="eyebrow">Estado de la cadena</p><h2 id="audit-status-title">Revisando historial</h2><p id="audit-status-description"></p><small id="audit-status-detail"></small></div>
+      </section>
+
+      <section class="audit-metrics" aria-label="Resumen de auditoría">
+        <article class="card"><span>Eventos</span><strong id="audit-event-count">0</strong></article>
+        <article class="card"><span>Colecciones tocadas</span><strong id="audit-collection-count">0</strong></article>
+        <article class="card"><span>Última secuencia</span><strong id="audit-last-sequence">0</strong></article>
+        <article class="card"><span>Actores no verificados</span><strong id="audit-unverified-count">0</strong></article>
+      </section>
+
+      <section class="card audit-controls" aria-label="Filtrar historial">
+        <label>Buscar<input id="audit-search" type="search" placeholder="Ej.: inventario, cierre, restauración…" autocomplete="off"></label>
+        <label>Colección<select id="audit-collection-filter"><option value="all">Todas</option></select></label>
+        <label>Acción<select id="audit-action-filter"><option value="all">Todas</option></select></label>
+      </section>
+
+      <section class="audit-content">
+        <div>
+          <div class="section-title"><div><p class="eyebrow">Bitácora append-only</p><h2>Eventos registrados</h2><p id="audit-result-count"></p></div></div>
+          <div class="audit-list" id="audit-list"></div>
+          <div class="empty-state" id="audit-empty" hidden>No hay eventos que coincidan con los filtros.</div>
+        </div>
+        <aside class="card audit-boundary">
+          <p class="eyebrow">Límite de confianza</p><h2>No es autenticación</h2>
+          <p>El navegador puede demostrar que la secuencia local no cambió desde que fue encadenada, pero no puede probar quién realizó una acción.</p>
+          <ul>
+            <li>Actor actual: local y no verificado.</li>
+            <li>Persistencia actual: este navegador.</li>
+            <li>Hash actual: control de integridad accidental.</li>
+            <li>Producción: JWT, membresías, RBAC y auditoría servidor.</li>
+          </ul>
+          <a class="button secondary full" href="docs/KERNEL_MIGRATION_BRIDGE.md">Ver contrato de migración</a>
+        </aside>
+      </section>
+
+      <div class="audit-live-status" id="audit-live-status" role="status" aria-live="polite"></div>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>Auditoría local no autenticada</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/audit/app.js"></script>
+  <script type="module" src="assets/js/core/guided-shell.js"></script>
+</body>
+</html>
