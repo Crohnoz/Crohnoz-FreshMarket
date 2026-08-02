@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Dashboard operacional demo de Crohnoz Fresh Market.">
+  <title>Crohnoz Fresh Market · Operación</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong data-business-name></strong><small>Panel operacional</small></span></a><nav class="nav"><a href="index.html">Tienda</a><a aria-current="page" href="admin.html">Operación</a><a href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav></div></header>
+
+  <main class="admin-main">
+    <div class="shell">
+      <div class="section-title"><div><p class="eyebrow">Modo operador</p><h1>Operación de hoy</h1><p>Pedidos, pesaje, precios y merma desde una vista compacta.</p></div><span class="status success">Turno abierto · Demo</span></div>
+      <section class="metrics" aria-label="Métricas del día">
+        <article class="card metric"><span>Pedidos activos</span><strong id="metric-active">0</strong></article>
+        <article class="card metric"><span>Pendientes de pesar</span><strong id="metric-weighing">0</strong></article>
+        <article class="card metric"><span>Por confirmar</span><strong id="metric-confirmation">0</strong></article>
+        <article class="card metric"><span>Venta estimada</span><strong id="metric-sales">$0</strong></article>
+        <article class="card metric"><span>Merma registrada</span><strong id="metric-waste">0 kg</strong></article>
+      </section>
+
+      <div class="admin-grid">
+        <div>
+          <section class="card panel">
+            <header class="panel-header"><div><h2>Pedidos activos</h2><p>Abre un pedido para registrar el peso real.</p></div></header>
+            <div class="orders-list" id="orders-list"></div>
+          </section>
+          <section class="card panel">
+            <header class="panel-header"><div><h2>Precios rápidos</h2><p>Los cambios quedan guardados solo en este navegador.</p></div></header>
+            <div class="table-wrap"><table><thead><tr><th>Producto</th><th>Stock demo</th><th>Precio</th><th>Acción</th></tr></thead><tbody id="price-table-body"></tbody></table></div>
+          </section>
+        </div>
+        <aside>
+          <section class="card panel"><header class="panel-header"><div><h2>Accesos rápidos</h2><p>Flujos principales del piloto.</p></div></header><div class="quick-actions"><a class="button secondary" href="scanner-lab.html">Escanear</a><a class="button secondary" href="index.html">Abrir tienda</a><a class="button secondary" href="#waste-form">Registrar merma</a><a class="button secondary" href="configurador.html">Personalizar</a></div></section>
+          <section class="card panel"><header class="panel-header"><div><h2>Registrar merma</h2><p>Movimiento demostrativo, sin transacción productiva.</p></div></header><form class="waste-form" id="waste-form"><label>Producto<select id="waste-product" name="product"></select></label><label>Cantidad en kg<input name="quantity" type="number" min="0.01" step="0.01" required></label><label>Motivo<select name="reason"><option>Deterioro</option><option>Sobremaduración</option><option>Daño</option><option>Error de pesaje</option><option>Consumo interno</option><option>Diferencia de inventario</option></select></label><button class="button primary" type="submit">Registrar merma</button></form></section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="weighing-dialog">
+    <div class="dialog-header"><div><p class="eyebrow">Preparación y pesaje</p><h2></h2><p data-customer></p></div><button class="icon-button" id="close-weighing" type="button">×</button></div>
+    <div class="weighing-lines" data-lines></div>
+    <div class="dialog-actions"><button class="button secondary" type="button" id="cancel-weighing">Cancelar</button><button class="button primary" type="button" id="save-weighing">Guardar pesaje</button></div>
+  </dialog>
+
+  <footer class="page-footer"><div class="shell"><span>Dashboard demostrativo</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/admin/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Configurador comercial demo de Crohnoz Fresh Market.">
+  <title>Crohnoz Fresh Market · Configurador</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/configurator.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong>Crohnoz Fresh Market</strong><small>Configurador comercial</small></span></a><nav class="nav"><a href="index.html">Tienda</a><a href="admin.html">Operación</a><a aria-current="page" href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav></div></header>
+
+  <main class="config-main">
+    <div class="shell">
+      <div class="section-title"><div><p class="eyebrow">Identidad del negocio</p><h1>Personaliza la experiencia</h1><p>La configuración es local y demostrativa. No representa una cuenta autenticada.</p></div></div>
+      <div class="config-grid">
+        <form class="card config-form" id="business-form">
+          <label>Nombre del negocio<input name="name" maxlength="60" required></label>
+          <label>Eslogan<textarea name="tagline" rows="3" maxlength="160"></textarea></label>
+          <label>WhatsApp comercial<input name="whatsapp" inputmode="tel" placeholder="56912345678"></label>
+          <div class="form-row"><label>Color principal<input name="primaryColor" type="color"></label><label>Color de acento<input name="accentColor" type="color"></label></div>
+          <div class="form-row"><label>Delivery en CLP<input name="deliveryFee" type="number" min="0" step="100"></label><label>Tolerancia de pesaje %<input name="tolerancePercent" type="number" min="0" step="0.5"></label></div>
+          <label>Máximo adicional autorizado en CLP<input name="maxExtraAmount" type="number" min="0" step="100"></label>
+          <label class="check-row"><input name="darkMode" type="checkbox"> Usar modo oscuro</label>
+          <label class="check-row"><input name="isOpen" type="checkbox"> Mostrar negocio abierto</label>
+          <div class="form-actions"><button class="button primary" type="submit">Guardar configuración</button><button class="button secondary" id="reset-demo" type="button">Restablecer demo</button></div>
+          <div class="save-status" id="save-status" role="status"></div>
+        </form>
+
+        <section class="card preview-shell">
+          <div class="business-preview" id="business-preview">
+            <div class="preview-top"><div class="preview-logo">FM</div><span class="status success" data-status></span></div>
+            <div class="preview-hero"><span class="status success" data-tolerance></span><h2></h2><p></p><a class="button primary" href="index.html">Ver tienda demo</a></div>
+            <div class="preview-products"><div class="preview-product">🍅</div><div class="preview-product">🥑</div><div class="preview-product">🥬</div></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>Configuración guardada localmente</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/configurator/app.js"></script>
+</body>
+</html>

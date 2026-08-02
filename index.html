@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Piloto comercial de Crohnoz Fresh Market para venta directa de productos frescos.">
+  <meta name="theme-color" content="#2f7d4a">
+  <title>Crohnoz Fresh Market · Tienda demo</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#inicio">
+        <span class="brand-mark">FM</span>
+        <span class="brand-copy"><strong data-business-name></strong><small>Crohnoz Fresh Market</small></span>
+      </a>
+      <nav class="nav" aria-label="Navegación principal">
+        <a href="#catalogo">Productos</a>
+        <a href="admin.html">Operación</a>
+        <a href="configurador.html">Configurar</a>
+        <a href="scanner-lab.html">Scanner Lab</a>
+        <button class="button secondary cart-button" id="open-cart" type="button">Pedido <span class="cart-count" id="cart-count">0</span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="shell hero-grid">
+        <div class="hero-copy">
+          <span class="status success" id="business-status"></span>
+          <h1>Productos frescos, <span>pedido directo</span> y total transparente.</h1>
+          <p data-business-tagline></p>
+          <div class="hero-actions">
+            <a class="button primary" href="#catalogo">Ver productos</a>
+            <a class="button secondary" href="admin.html">Explorar operación</a>
+          </div>
+          <div class="hero-notes"><span>✓ Compra sin intermediarios</span><span>✓ Preferencias de maduración</span><span>✓ Ajuste por peso real</span></div>
+        </div>
+        <div class="hero-visual" aria-label="Selección ilustrada de productos frescos">
+          <span class="produce-orbit">🥑</span><span class="produce-orbit">🍅</span><span class="produce-orbit">🥬</span>
+          <div class="hero-badge"><strong>Total estimado y final</strong><span>El comercio registra el peso real y confirma cualquier diferencia relevante.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="catalog" id="catalogo">
+      <div class="shell">
+        <div class="section-title"><div><p class="eyebrow">Catálogo demo</p><h2>Elige cómo quieres cada producto</h2><p>Peso, presentación, maduración y política de sustitución en un mismo flujo.</p></div></div>
+        <div class="catalog-tools">
+          <div class="chips" id="category-list" aria-label="Categorías"></div>
+          <label class="search"><span class="sr-only">Buscar productos</span><input id="product-search" type="search" placeholder="Buscar fruta, verdura o caja…" autocomplete="off"></label>
+        </div>
+        <div class="product-grid" id="product-grid"></div>
+        <div class="empty-state" id="empty-products" hidden>No encontramos productos con esos filtros.</div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Carrito de compra">
+    <header class="cart-header"><div><p class="eyebrow">Compra directa</p><h2>Tu pedido</h2></div><button class="icon-button" id="close-cart" type="button" aria-label="Cerrar carrito">×</button></header>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="checkout">
+      <div class="fulfillment"><label><input type="radio" name="fulfillment" value="Retiro" checked> Retiro</label><label><input type="radio" name="fulfillment" value="Delivery"> Delivery</label></div>
+      <label>Nombre<input id="customer-name" maxlength="60" placeholder="Nombre del cliente"></label>
+      <label>Notas<textarea id="order-notes" maxlength="240" rows="2" placeholder="Maduración, horario u observaciones"></textarea></label>
+      <div class="cart-total"><span>Total estimado</span><strong id="cart-total">$0</strong></div>
+      <button class="button primary full" id="submit-order" type="button">Preparar pedido para WhatsApp</button>
+      <small>El monto final puede variar según el peso real preparado.</small>
+    </div>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+  <button class="button primary mobile-cart" id="mobile-cart" type="button">Pedido <span class="cart-count" id="mobile-cart-count">0</span></button>
+  <div class="toast" id="toast" role="status"></div>
+
+  <dialog id="message-dialog">
+    <div class="dialog-header"><div><p class="eyebrow">Vista previa</p><h2>Mensaje del pedido</h2></div><button class="icon-button" id="close-message" type="button">×</button></div>
+    <p>El texto fue preparado para copiar y enviar. No se contactará a un número real mientras no se configure uno.</p>
+    <textarea class="message-preview" id="message-preview" readonly></textarea>
+  </dialog>
+
+  <footer class="page-footer"><div class="shell"><span>© 2026 <span data-business-name></span></span><span>Impulsado por Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/store/app.js"></script>
+</body>
+</html>
