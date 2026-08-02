@@ -1,4 +1,6 @@
 import { APP_CONFIG } from "./config.js";
+import { isAuditedCollection } from "../domain/audit-trail.js";
+import { recordSnapshotRestore, recordStorageMutation } from "./storage-audit.js";
 
 const memory = new Map();
 
@@ -11,9 +13,32 @@ function prefix() {
 }
 
 function clone(value) {
+  if (value === undefined) return undefined;
   return typeof structuredClone === "function"
     ? structuredClone(value)
     : JSON.parse(JSON.stringify(value));
+}
+
+function persistRaw(name, value) {
+  const storageKey = key(name);
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(value));
+    memory.delete(storageKey);
+  } catch (error) {
+    console.warn("No se pudo persistir en localStorage.", error);
+    memory.set(storageKey, clone(value));
+  }
+  return value;
+}
+
+function removeRaw(name) {
+  const storageKey = key(name);
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch (error) {
+    console.warn("No se pudo limpiar localStorage.", error);
+  }
+  memory.delete(storageKey);
 }
 
 export function readStorage(name, fallback) {
@@ -27,26 +52,47 @@ export function readStorage(name, fallback) {
   }
 }
 
-export function writeStorage(name, value) {
-  const storageKey = key(name);
-  try {
-    window.localStorage.setItem(storageKey, JSON.stringify(value));
-    memory.delete(storageKey);
-  } catch (error) {
-    console.warn("No se pudo persistir en localStorage.", error);
-    memory.set(storageKey, clone(value));
+export function writeStorage(name, value, options = {}) {
+  const before = options.audit === false || !isAuditedCollection(name)
+    ? null
+    : readStorage(name, null);
+  persistRaw(name, value);
+  if (options.audit !== false) {
+    recordStorageMutation({
+      collection: name,
+      action: options.action ?? "storage.write",
+      before,
+      after: value,
+      read: readStorage,
+      persist: persistRaw,
+      actor: options.actor,
+      organizationId: options.organizationId,
+      source: options.source,
+      reason: options.reason,
+    });
   }
   return value;
 }
 
-export function removeStorage(name) {
-  const storageKey = key(name);
-  try {
-    window.localStorage.removeItem(storageKey);
-  } catch (error) {
-    console.warn("No se pudo limpiar localStorage.", error);
+export function removeStorage(name, options = {}) {
+  const before = options.audit === false || !isAuditedCollection(name)
+    ? null
+    : readStorage(name, null);
+  removeRaw(name);
+  if (options.audit !== false && before !== null && before !== undefined) {
+    recordStorageMutation({
+      collection: name,
+      action: options.action ?? "storage.remove",
+      before,
+      after: null,
+      read: readStorage,
+      persist: persistRaw,
+      actor: options.actor,
+      organizationId: options.organizationId,
+      source: options.source,
+      reason: options.reason,
+    });
   }
-  memory.delete(storageKey);
 }
 
 export function snapshotStorage() {
@@ -94,12 +140,23 @@ export function snapshotStorage() {
   };
 }
 
-export function replaceStorageSnapshot(entries) {
+export function replaceStorageSnapshot(entries, options = {}) {
   if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
     throw new Error("No se puede restaurar una colección de datos inválida.");
   }
+  const previous = snapshotStorage();
   resetDemoStorage();
-  Object.entries(entries).forEach(([name, value]) => writeStorage(name, value));
+  Object.entries(entries).forEach(([name, value]) => persistRaw(name, value));
+  recordSnapshotRestore({
+    previousSummary: { collections: previous.collections, backend: previous.backend },
+    restoredSummary: { collections: Object.keys(entries).length, namespace: APP_CONFIG.storageNamespace },
+    read: readStorage,
+    persist: persistRaw,
+    actor: options.actor,
+    organizationId: options.organizationId,
+    source: options.source,
+    reason: options.reason,
+  });
   return snapshotStorage();
 }
 
