@@ -21,6 +21,7 @@ const customers = readStorage("credit-customers", initialCustomers);
 const entries = readStorage("credit-ledger", initialLedgerEntries);
 const transactions = readStorage("daily-transactions", initialDailyTransactions);
 const continuityMeta = readStorage("continuity-meta", {});
+const integrityMeta = readStorage("integrity-meta", {});
 const visitedPages = readStorage("visited-operator-pages-v1", []);
 const lastRoute = readStorage("last-operator-route", null);
 const receivables = buildReceivablesSummary(customers, entries);
@@ -190,6 +191,7 @@ function renderReadiness() {
     defaultBusiness: DEFAULT_BUSINESS,
     visitedPages,
     continuityMeta,
+    integrityMeta,
   });
   document.querySelector("#readiness-count").textContent = `${readiness.completed}/${readiness.total}`;
   const progress = document.querySelector("#readiness-progress");
