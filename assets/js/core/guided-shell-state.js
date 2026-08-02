@@ -45,6 +45,17 @@ function synchronizeNavigation() {
   });
 }
 
+function addOperatorHomeShortcut() {
+  const tools = document.querySelector(".guided-tools");
+  if (!tools || normalizedPage() === "operar.html") return;
+  const link = document.createElement("a");
+  link.className = "button secondary small";
+  link.href = "operar.html";
+  link.textContent = "Inicio del negocio";
+  link.hidden = window.matchMedia("(max-width: 760px)").matches;
+  tools.append(link);
+}
+
 function removeDuplicateMobileCart() {
   const legacyButton = document.querySelector("#mobile-cart");
   if (legacyButton && document.querySelector(".store-bottom-nav")) legacyButton.hidden = true;
@@ -57,5 +68,6 @@ function openFirstRunGuideFromAlias() {
 
 synchronizeEasyMode();
 synchronizeNavigation();
+addOperatorHomeShortcut();
 removeDuplicateMobileCart();
 openFirstRunGuideFromAlias();
