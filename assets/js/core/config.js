@@ -17,3 +17,7 @@ export const DEFAULT_BUSINESS = Object.freeze({
   tolerancePercent: 5,
   maxExtraAmount: 1500,
 });
+
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  import("./guided-shell.js");
+}
