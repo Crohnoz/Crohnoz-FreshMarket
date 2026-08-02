@@ -60,10 +60,6 @@ function enrichedWaste() {
   }));
 }
 
-function settlementLabel(value) {
-  return ({ cash: "Efectivo", transfer: "Transferencia", credit: "Fiado", unknown: "Sin clasificar" })[value] ?? value;
-}
-
 function stateLabel(status) {
   return ({
     pending_count: "Falta contar la caja",
@@ -166,15 +162,33 @@ function renderUnclassified() {
 }
 
 function assistantText() {
-  return [
+  const parts = [
     currentReport.headline,
-    ...currentReport.observations,
-    ...currentReport.warnings.map((item) => `Atención: ${item}`),
-  ].join(" ")
-    .replaceAll(String(currentSummary.sales.total), formatCLP(currentSummary.sales.total))
-    .replaceAll(String(currentSummary.creditGenerated), formatCLP(currentSummary.creditGenerated))
-    .replaceAll(String(currentSummary.purchases.total), formatCLP(currentSummary.purchases.total))
-    .replaceAll(String(Math.abs(currentReconciliation.difference ?? 0)), formatCLP(Math.abs(currentReconciliation.difference ?? 0)));
+    `Las ventas del día suman ${formatCLP(currentSummary.sales.total)}.`,
+    `El efectivo esperado en caja es ${formatCLP(currentReconciliation.expectedCash)}.`,
+  ];
+  if (currentSummary.sales.transfer || currentSummary.payments.transfer) {
+    parts.push(`Se registraron ${formatCLP(currentSummary.sales.transfer + currentSummary.payments.transfer)} por transferencia.`);
+  }
+  if (currentSummary.creditGenerated) {
+    parts.push(`Se generaron ${formatCLP(currentSummary.creditGenerated)} en nuevas cuentas por cobrar.`);
+  }
+  if (currentSummary.purchases.total) {
+    parts.push(`Las compras registradas suman ${formatCLP(currentSummary.purchases.total)}.`);
+  }
+  if (currentSummary.waste.count) {
+    parts.push(`La merma registrada es de ${currentSummary.waste.quantity.toFixed(2)} kilos.`);
+  }
+  if (currentReconciliation.countedCash === null) {
+    parts.push("Todavía falta ingresar el efectivo contado.");
+  } else {
+    parts.push(`Se contaron ${formatCLP(currentReconciliation.countedCash)}.`);
+    parts.push(currentReconciliation.difference === 0
+      ? "No existe diferencia de caja."
+      : `La diferencia es de ${formatCLP(currentReconciliation.difference)}.`);
+  }
+  currentReport.warnings.forEach((warning) => parts.push(`Atención: ${warning}`));
+  return parts.join(" ");
 }
 
 function renderAssistant() {
@@ -199,10 +213,12 @@ function renderAssistant() {
   currentReport.warnings.forEach((warning) => {
     const item = document.createElement("div");
     item.className = "close-assistant-warning";
-    item.textContent = warning.replace(
-      String(Math.abs(currentReconciliation.difference ?? 0)),
-      formatCLP(Math.abs(currentReconciliation.difference ?? 0)),
-    );
+    item.textContent = currentReconciliation.difference === null
+      ? warning
+      : warning.replace(
+        String(Math.abs(currentReconciliation.difference)),
+        formatCLP(Math.abs(currentReconciliation.difference)),
+      );
     warnings.append(item);
   });
   container.append(headline, list, warnings);
@@ -234,33 +250,41 @@ function renderSavedCloses() {
 }
 
 function recalculate() {
-  const dateKey = dateInput.value || localDateKey();
-  currentSummary = summarizeDailyOperations({
-    transactions,
-    ledgerEntries,
-    waste: enrichedWaste(),
-    dateKey,
-  });
-  currentReconciliation = buildCashReconciliation({
-    summary: currentSummary,
-    openingCash: numberField("openingCash"),
-    countedCash: countedCashValue(),
-    otherCashIn: numberField("otherCashIn"),
-    cashExpenses: numberField("cashExpenses"),
-    cashWithdrawals: numberField("cashWithdrawals"),
-    tolerance: numberField("tolerance"),
-  });
-  currentReport = createDailyCloseAssistant(currentSummary, currentReconciliation);
-  renderMetrics();
-  renderBreakdown();
-  renderUnclassified();
-  renderAssistant();
-  setCloseState();
-  saveButton.disabled = !canSaveDailyClose({
-    summary: currentSummary,
-    reconciliation: currentReconciliation,
-    checklist: readChecklist(),
-  });
+  try {
+    const dateKey = dateInput.value || localDateKey();
+    currentSummary = summarizeDailyOperations({
+      transactions,
+      ledgerEntries,
+      waste: enrichedWaste(),
+      dateKey,
+    });
+    currentReconciliation = buildCashReconciliation({
+      summary: currentSummary,
+      openingCash: numberField("openingCash"),
+      countedCash: countedCashValue(),
+      otherCashIn: numberField("otherCashIn"),
+      cashExpenses: numberField("cashExpenses"),
+      cashWithdrawals: numberField("cashWithdrawals"),
+      tolerance: numberField("tolerance"),
+    });
+    currentReport = createDailyCloseAssistant(currentSummary, currentReconciliation);
+    renderMetrics();
+    renderBreakdown();
+    renderUnclassified();
+    renderAssistant();
+    setCloseState();
+    saveButton.disabled = !canSaveDailyClose({
+      summary: currentSummary,
+      reconciliation: currentReconciliation,
+      checklist: readChecklist(),
+    });
+    document.querySelector("#close-save-status").dataset.error = "false";
+  } catch (error) {
+    saveButton.disabled = true;
+    const status = document.querySelector("#close-save-status");
+    status.dataset.error = "true";
+    status.textContent = error.message || "Revisa los montos ingresados.";
+  }
 }
 
 function resetFormForDate() {
