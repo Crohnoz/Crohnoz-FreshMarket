@@ -16,6 +16,14 @@
   <main class="admin-main">
     <div class="shell">
       <div class="section-title"><div><p class="eyebrow">Modo operador</p><h1>Operación de hoy</h1><p>Pedidos, pesaje, precios y merma desde una vista compacta.</p></div><span class="status success">Turno abierto · Demo</span></div>
+
+      <section class="operations-hero" aria-label="Resumen visual de la operación">
+        <img src="https://images.pexels.com/photos/3978831/pexels-photo-3978831.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="Operador transportando una caja con verduras frescas" loading="eager">
+        <div class="operations-shade" aria-hidden="true"></div>
+        <div class="operations-copy"><p class="eyebrow">Preparación en curso</p><h2>De la caja al pedido, con cada diferencia registrada.</h2><p>El operador puede pesar, confirmar montos y descontar inventario sin perder el contexto del cliente.</p></div>
+        <div class="operations-live"><span>Ahora</span><strong>2 pedidos por preparar</strong><small>1 pendiente de confirmación</small></div>
+      </section>
+
       <section class="metrics" aria-label="Métricas del día">
         <article class="card metric"><span>Pedidos activos</span><strong id="metric-active">0</strong></article>
         <article class="card metric"><span>Pendientes de pesar</span><strong id="metric-weighing">0</strong></article>
@@ -37,6 +45,7 @@
         </div>
         <aside>
           <section class="card panel"><header class="panel-header"><div><h2>Accesos rápidos</h2><p>Flujos principales del piloto.</p></div></header><div class="quick-actions"><a class="button secondary" href="cuentas.html">Fiados y cuentas</a><a class="button secondary" href="scanner-lab.html">Escanear</a><a class="button secondary" href="index.html">Abrir tienda</a><a class="button secondary" href="#waste-form">Registrar merma</a><a class="button secondary" href="configurador.html">Personalizar</a></div></section>
+          <section class="card panel visual-side-card"><img src="https://images.pexels.com/photos/4451871/pexels-photo-4451871.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Caja surtida con frutas y verduras" loading="lazy" decoding="async"><div><p class="eyebrow">Producto compuesto</p><h2>Caja familiar</h2><p>Disponible para preparar hoy. Stock demo: 6 unidades.</p></div></section>
           <section class="card panel"><header class="panel-header"><div><h2>Registrar merma</h2><p>Movimiento demostrativo, sin transacción productiva.</p></div></header><form class="waste-form" id="waste-form"><label>Producto<select id="waste-product" name="product"></select></label><label>Cantidad en kg<input name="quantity" type="number" min="0.01" step="0.01" required></label><label>Motivo<select name="reason"><option>Deterioro</option><option>Sobremaduración</option><option>Daño</option><option>Error de pesaje</option><option>Consumo interno</option><option>Diferencia de inventario</option></select></label><button class="button primary" type="submit">Registrar merma</button></form></section>
         </aside>
       </div>
