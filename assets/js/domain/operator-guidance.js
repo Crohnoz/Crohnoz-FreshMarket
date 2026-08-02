@@ -19,6 +19,7 @@ function dateKey(value = new Date()) {
 export function chooseOperatorRecommendation({
   orders = [],
   inventorySummary = {},
+  integritySummary = {},
   closes = [],
   outstanding = 0,
   activityCount = 0,
@@ -31,6 +32,14 @@ export function chooseOperatorRecommendation({
     return {
       taskId: "sales-control",
       reason: `${confirmations.length} pedido(s) esperan confirmación del cliente antes de cobrar o entregar.`,
+      urgency: "high",
+    };
+  }
+
+  if (integritySummary.status === "blocked" || Number(integritySummary.counts?.critical ?? 0) > 0) {
+    return {
+      taskId: "integrity",
+      reason: `${integritySummary.counts?.critical ?? 1} error(es) crítico(s) pueden afectar referencias o cálculos. Revisa los datos antes de registrar más operaciones.`,
       urgency: "high",
     };
   }
@@ -68,6 +77,14 @@ export function chooseOperatorRecommendation({
     return {
       taskId: "close-day",
       reason: "El día está terminando y todavía no existe un cierre guardado para hoy.",
+      urgency: "medium",
+    };
+  }
+
+  if (integritySummary.status === "review" || Number(integritySummary.counts?.warning ?? 0) > 0) {
+    return {
+      taskId: "integrity",
+      reason: `${integritySummary.counts?.warning ?? 1} advertencia(s) de coherencia conviene revisar antes del próximo respaldo o migración.`,
       urgency: "medium",
     };
   }
