@@ -22,6 +22,7 @@ function normalizedPage() {
     operar: "operar.html",
     dashboard: "admin.html",
     cuentas: "cuentas.html",
+    cierre: "cierre.html",
     configurar: "configurador.html",
     scanner: "scanner-lab.html",
   })[segment] ?? segment;
@@ -34,6 +35,16 @@ function synchronizeEasyMode() {
     button.setAttribute("aria-pressed", String(enabled));
     button.textContent = enabled ? "Vista normal" : "Modo fácil";
   });
+}
+
+function installCloseNavigation() {
+  const nav = document.querySelector(".operator-bottom-nav");
+  if (!nav) return;
+  const links = [...nav.querySelectorAll("a")];
+  const last = links.at(-1);
+  if (!last) return;
+  last.href = "cierre.html";
+  last.innerHTML = '<span aria-hidden="true">✓</span><b>Cerrar</b>';
 }
 
 function synchronizeNavigation() {
@@ -67,6 +78,7 @@ function openFirstRunGuideFromAlias() {
 }
 
 synchronizeEasyMode();
+installCloseNavigation();
 synchronizeNavigation();
 addOperatorHomeShortcut();
 removeDuplicateMobileCart();

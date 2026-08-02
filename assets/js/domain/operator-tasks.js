@@ -60,6 +60,16 @@ export const OPERATOR_TASKS = Object.freeze([
     tone: "neutral",
   },
   {
+    id: "close-day",
+    title: "Cerrar el día",
+    shortTitle: "Cerrar",
+    description: "Compara la caja esperada con el efectivo contado y revisa cualquier diferencia.",
+    icon: "✅",
+    href: "cierre.html",
+    group: "daily",
+    tone: "success",
+  },
+  {
     id: "voice",
     title: "Hablar con el copiloto",
     shortTitle: "Hablar",
@@ -92,9 +102,9 @@ export function operatorTasksByGroup(group) {
 export function operatorTaskSearch(query) {
   const normalized = String(query ?? "").trim().toLocaleLowerCase("es");
   if (!normalized) return [...OPERATOR_TASKS];
-  return OPERATOR_TASKS.filter((task) => (
-    `${task.title} ${task.shortTitle} ${task.description}`
-      .toLocaleLowerCase("es")
-      .includes(normalized)
-  ));
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  return OPERATOR_TASKS.filter((task) => {
+    const haystack = `${task.title} ${task.shortTitle} ${task.description}`.toLocaleLowerCase("es");
+    return tokens.every((token) => haystack.includes(token));
+  });
 }
