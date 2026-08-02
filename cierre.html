@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cierre diario asistido de Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <title>Crohnoz Fresh Market · Cierre diario</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/guided-shell.css">
+  <link rel="stylesheet" href="assets/css/daily-close.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong data-business-name></strong><small>Cierre diario</small></span></a><nav class="nav"><a href="operar.html">Inicio</a><a href="admin.html">Pedidos</a><a href="cuentas.html">Fiados</a><a aria-current="page" href="cierre.html">Cerrar día</a><a href="configurador.html">Configurar</a><a class="keep-mobile button secondary" href="index.html">Ver tienda</a></nav></div></header>
+
+  <main class="close-main"><div class="shell">
+    <section class="close-hero">
+      <div><p class="eyebrow">Conciliación asistida</p><h1>Revisa el día antes de cerrar.</h1><p>El sistema reúne ventas, compras, fiados, abonos y merma. Tú cuentas el efectivo, revisas la diferencia y decides cuándo guardar el cierre.</p></div>
+      <div class="close-date-card"><label>Fecha del cierre<input id="close-date" type="date"></label><span class="status warning" id="close-state">Pendiente de revisión</span></div>
+    </section>
+
+    <section class="close-metrics" aria-label="Resumen del cierre">
+      <article class="card close-metric"><span>Ventas del día</span><strong id="close-sales">$0</strong><small id="close-sales-count">0 operaciones</small></article>
+      <article class="card close-metric"><span>Nuevos fiados</span><strong id="close-credit">$0</strong><small>Dinero que aún no entra</small></article>
+      <article class="card close-metric"><span>Abonos recibidos</span><strong id="close-payments">$0</strong><small id="close-payments-detail">Efectivo y transferencias</small></article>
+      <article class="card close-metric"><span>Efectivo esperado</span><strong id="close-expected">$0</strong><small>Según los movimientos registrados</small></article>
+      <article class="card close-metric"><span>Diferencia de caja</span><strong id="close-difference">—</strong><small id="close-difference-detail">Falta contar la caja</small></article>
+    </section>
+
+    <div class="close-layout">
+      <div class="close-stack">
+        <section class="card close-panel">
+          <header><div><p class="eyebrow">Paso 1</p><h2>Qué quedó registrado</h2><p>Estos montos provienen de las operaciones guardadas en el piloto.</p></div></header>
+          <div class="close-breakdown" id="close-breakdown"></div>
+        </section>
+
+        <section class="card close-panel" id="unclassified-panel" hidden>
+          <header><div><p class="eyebrow">Revisión obligatoria</p><h2>Abonos sin medio de pago</h2><p>Indica si cada abono fue en efectivo o transferencia. Hasta entonces no puede calcularse una caja confiable.</p></div></header>
+          <div class="unclassified-list" id="unclassified-list"></div>
+        </section>
+
+        <section class="card close-panel">
+          <header><div><p class="eyebrow">Paso 2</p><h2>Cuenta el dinero de la caja</h2><p>Completa solo movimientos de efectivo. Las transferencias y fiados se muestran aparte.</p></div></header>
+          <form class="close-form" id="close-form">
+            <div class="close-form-grid">
+              <label>Caja inicial<input name="openingCash" type="number" min="0" step="100" inputmode="numeric" value="20000"></label>
+              <label>Efectivo contado al final<input name="countedCash" type="number" min="0" step="100" inputmode="numeric" placeholder="Cuenta billetes y monedas"></label>
+              <label>Otros ingresos en efectivo<input name="otherCashIn" type="number" min="0" step="100" inputmode="numeric" value="0"></label>
+              <label>Gastos pagados en efectivo<input name="cashExpenses" type="number" min="0" step="100" inputmode="numeric" value="0"></label>
+              <label>Retiros de caja<input name="cashWithdrawals" type="number" min="0" step="100" inputmode="numeric" value="0"></label>
+              <label>Tolerancia aceptada<input name="tolerance" type="number" min="0" step="100" inputmode="numeric" value="100"></label>
+            </div>
+            <div class="cash-formula"><span>Caja inicial + ventas en efectivo + abonos en efectivo + otros ingresos − compras − gastos − retiros</span><strong id="formula-result">$0</strong></div>
+            <label>Observación del cierre<textarea name="notes" rows="3" maxlength="400" placeholder="Ej.: faltó registrar una compra menor o quedó sencillo para mañana"></textarea></label>
+            <fieldset class="close-checklist"><legend>Antes de guardar, confirma:</legend><label><input name="salesRecorded" type="checkbox"> Registré todas las ventas y compras que recuerdo.</label><label><input name="expensesRecorded" type="checkbox"> Revisé gastos, retiros y otros ingresos en efectivo.</label><label><input name="cashCounted" type="checkbox"> Conté físicamente billetes y monedas.</label></fieldset>
+            <div class="close-actions"><button class="button secondary" id="recalculate-close" type="button">Recalcular</button><button class="button primary" id="save-close" type="submit" disabled>Guardar cierre</button></div>
+            <div class="save-status" id="close-save-status" role="status"></div>
+          </form>
+        </section>
+      </div>
+
+      <aside class="close-stack">
+        <section class="card close-panel assistant-close-panel">
+          <header><div><p class="eyebrow">Paso 3</p><h2>Asistente del cierre</h2><p>Explica qué entró, qué quedó fiado y dónde revisar.</p></div></header>
+          <div class="close-assistant" id="close-assistant"></div>
+          <div class="close-actions vertical"><button class="button primary" id="speak-close" type="button">🔊 Leer resumen</button><button class="button secondary" id="copy-close" type="button">Copiar resumen</button></div>
+        </section>
+
+        <section class="card close-panel">
+          <header><div><p class="eyebrow">Registros anteriores</p><h2>Cierres guardados</h2><p>Historial local de esta demostración.</p></div></header>
+          <div class="saved-closes" id="saved-closes"></div>
+        </section>
+
+        <section class="card close-panel close-warning">
+          <p class="eyebrow">Límite del piloto</p><h2>No reemplaza contabilidad</h2><p>Este cierre ayuda a ordenar la operación diaria. No genera libro contable, declaración tributaria ni certifica que los registros sean completos.</p>
+        </section>
+      </aside>
+    </div>
+  </div></main>
+
+  <footer class="page-footer"><div class="shell"><span>Cierre demostrativo guardado localmente</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/close/app.js"></script>
+  <script type="module" src="assets/js/core/guided-shell.js"></script>
+</body>
+</html>
