@@ -1,4 +1,4 @@
-const CACHE_NAME = "crohnoz-fresh-market-v4";
+const CACHE_NAME = "crohnoz-fresh-market-v5";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -22,6 +22,7 @@ const CORE_ASSETS = [
   "/assets/css/ux-polish.css",
   "/assets/css/pilot-completion.css",
   "/assets/css/operator-home.css",
+  "/assets/css/configurator.css",
   "/assets/css/daily-close.css",
   "/assets/css/store.css",
   "/assets/js/core/config.js",
@@ -36,6 +37,7 @@ const CORE_ASSETS = [
   "/assets/js/data/operations-demo.js",
   "/assets/js/store/app.js",
   "/assets/js/operator/home.js",
+  "/assets/js/configurator/app.js",
   "/assets/js/inventory/app.js",
   "/assets/js/purchasing/app.js",
   "/assets/js/sales/app.js",
@@ -43,12 +45,15 @@ const CORE_ASSETS = [
   "/assets/js/assistant/speech.js",
   "/assets/js/validation/app.js",
   "/assets/js/close/app.js",
+  "/assets/js/domain/backup.js",
   "/assets/js/domain/pricing.js",
   "/assets/js/domain/substitutions.js",
   "/assets/js/domain/inventory.js",
   "/assets/js/domain/purchasing.js",
   "/assets/js/domain/sales-flow.js",
   "/assets/js/domain/operator-guidance.js",
+  "/assets/js/domain/operator-readiness.js",
+  "/assets/js/domain/operator-tasks.js",
   "/assets/js/domain/structured-assistance.js",
   "/assets/js/domain/pilot-validation.js",
   "/assets/js/domain/receivables.js",
