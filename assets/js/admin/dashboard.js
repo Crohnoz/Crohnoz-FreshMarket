@@ -1,6 +1,7 @@
 import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { readStorage, writeStorage } from "../core/storage.js";
 import { formatCLP, formatQuantity } from "../core/format.js";
+import { confirmAction, setStatus, showToast } from "../core/ui-feedback.js";
 import { calculateWeightAdjustment } from "../domain/weight-adjustment.js";
 import { applyLotMovement, lotRemaining, recommendFEFO } from "../domain/inventory.js";
 import { formatWasteQuantities } from "../domain/daily-close.js";
@@ -13,16 +14,39 @@ let prices = readStorage("prices", Object.fromEntries(products.map((product) => 
 let waste = readStorage("waste", []);
 let lots = readStorage("inventory-lots", initialInventoryLots);
 const wasteForm = document.querySelector("#waste-form");
+let mutationVersion = 0;
 
 function localDateKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+function cloneValue(value) {
+  return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+}
+
 function announce(selector, message, state = "success") {
-  const region = document.querySelector(selector);
-  region.textContent = message;
-  region.dataset.state = state;
+  setStatus(selector, message, state);
+}
+
+function offerUndo(message, restore) {
+  const version = ++mutationVersion;
+  showToast({
+    message,
+    state: "success",
+    actionLabel: "Deshacer",
+    onAction: () => {
+      if (version !== mutationVersion) throw new Error("Solo puede deshacerse la operación más reciente.");
+      restore();
+      mutationVersion += 1;
+      writeStorage("orders", orders);
+      writeStorage("prices", prices);
+      writeStorage("waste", waste);
+      writeStorage("inventory-lots", lots);
+      renderAll();
+      synchronizeWasteForm();
+    },
+  });
 }
 
 function applyTheme() {
@@ -202,6 +226,7 @@ function saveWeighing() {
   const order = orders.find((item) => item.id === dialog.dataset.orderId);
   const rows = [...dialog.querySelectorAll(".weighing-line")];
   if (!order || rows.some((row) => row.dataset.valid !== "true")) return;
+  const previousOrders = cloneValue(orders);
   let requiresConfirmation = false;
   rows.forEach((row) => {
     const index = Number(row.dataset.lineIndex);
@@ -214,6 +239,7 @@ function saveWeighing() {
   writeStorage("orders", orders);
   dialog.close();
   renderAll();
+  offerUndo(`Pesaje de ${order.id} guardado.`, () => { orders = previousOrders; });
 }
 
 function renderPrices() {
@@ -227,17 +253,34 @@ function renderPrices() {
     tr.children[1].textContent = `${product.stock} ${product.baseUnitLabel}`;
     const input = tr.querySelector("input");
     input.value = prices[product.id] ?? product.price;
-    tr.querySelector("button").addEventListener("click", () => {
+    tr.querySelector("button").addEventListener("click", async () => {
       const value = Math.round(Number(input.value));
+      const previousValue = prices[product.id] ?? product.price;
       if (!Number.isFinite(value) || value <= 0) {
         announce("#price-status", `Revisa el precio de ${product.name}.`, "error");
         input.focus();
         return;
       }
+      if (value === previousValue) {
+        announce("#price-status", `El precio de ${product.name} no cambió.`, "warning");
+        return;
+      }
+      const accepted = await confirmAction({
+        title: `Cambiar precio de ${product.name}`,
+        message: "El nuevo valor se usará en la operación demo y en los cálculos siguientes.",
+        detail: `${formatCLP(previousValue)} → ${formatCLP(value)} por ${product.baseUnitLabel}`,
+        confirmLabel: "Cambiar precio",
+      });
+      if (!accepted) {
+        input.value = previousValue;
+        return;
+      }
+      const previousPrices = cloneValue(prices);
       prices[product.id] = value;
       writeStorage("prices", prices);
       announce("#price-status", `Precio de ${product.name} actualizado a ${formatCLP(value)}.`, "success");
       renderMetrics();
+      offerUndo(`Precio de ${product.name} actualizado.`, () => { prices = previousPrices; });
     });
     tbody.append(tr);
   });
@@ -280,7 +323,7 @@ function consumeWaste(product, quantity) {
   return { estimatedCost, lotIds };
 }
 
-function registerWaste(event) {
+async function registerWaste(event) {
   event.preventDefault();
   const product = productById(wasteForm.product.value);
   const quantity = Number(wasteForm.quantity.value);
@@ -288,6 +331,16 @@ function registerWaste(event) {
     announce("#waste-status", "Selecciona un producto e ingresa una cantidad válida.", "error");
     return;
   }
+  const accepted = await confirmAction({
+    title: `Registrar merma de ${product.name}`,
+    message: "La cantidad se descontará de los lotes que deben salir primero.",
+    detail: `${quantityLabel(quantity, product.baseUnit)} · motivo: ${wasteForm.reason.value}`,
+    confirmLabel: "Registrar merma",
+    tone: "danger",
+  });
+  if (!accepted) return;
+
+  const snapshot = { waste: cloneValue(waste), lots: cloneValue(lots) };
   try {
     const allocation = consumeWaste(product, quantity);
     waste.push({
@@ -309,6 +362,10 @@ function registerWaste(event) {
     announce("#waste-status", `Merma registrada: ${quantityLabel(quantity, product.baseUnit)} de ${product.name}.`, "success");
     renderAll();
     synchronizeWasteForm();
+    offerUndo(`Merma de ${product.name} registrada.`, () => {
+      waste = snapshot.waste;
+      lots = snapshot.lots;
+    });
   } catch (error) {
     announce("#waste-status", error.message, "error");
   }
