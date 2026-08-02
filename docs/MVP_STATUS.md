@@ -9,8 +9,8 @@ El producto tiene tres porcentajes distintos y no deben confundirse:
 | Alcance | Avance estimado | Interpretación |
 |---|---:|---|
 | Piloto navegable y demostrable | 90% | La experiencia visual y los flujos principales existen y se pueden recorrer con datos ficticios. |
-| MVP real para Camila y Carmelo | 60% | Falta conectar la interfaz al backend, desplegar la API, crear cuentas y completar la validación presencial. |
-| Producto comercial endurecido | 35% | Faltan operación multiusuario madura, backups automáticos, observabilidad, privacidad, soporte y preparación tributaria. |
+| MVP real para Camila y Carmelo | 66% | La fundación Django está implementada y probada; falta conectar la interfaz, desplegar la API, crear cuentas y completar la validación presencial. |
+| Producto comercial endurecido | 38% | Ya existe una base multiempresa y auditable, pero faltan operación multiusuario madura, backups automáticos, observabilidad, privacidad, soporte y preparación tributaria. |
 
 Los porcentajes son una estimación de gestión basada en entregables verificables, no una medición automática de líneas de código.
 
@@ -21,10 +21,10 @@ Los porcentajes son una estimación de gestión basada en entregables verificabl
 | Descubrimiento, alcance y UX/UI | 20% | 95% | 19% |
 | Flujos operacionales del frontend | 25% | 88% | 22% |
 | Reglas de negocio, integridad y continuidad | 15% | 87% | 13% |
-| Backend, API y persistencia | 20% | 20% | 4% |
+| Backend, API y persistencia | 20% | 50% | 10% |
 | Seguridad mínima y despliegue | 10% | 20% | 2% |
 | Validación real con usuarios | 10% | 0% | 0% |
-| **Total** | **100%** |  | **60%** |
+| **Total** | **100%** |  | **66%** |
 
 ## Lo que ya está listo
 
@@ -38,9 +38,11 @@ Los porcentajes son una estimación de gestión basada en entregables verificabl
 - Cierre diario y conciliación de caja.
 - Integridad local, respaldo, restauración y auditoría encadenada.
 - Navegación móvil, modo fácil, confirmaciones y acciones reversibles.
-- 110 pruebas del piloto aprobadas antes de iniciar este bloque.
+- 110 pruebas del piloto aprobadas.
+- Fundación Django con 7 pruebas API aprobadas.
+- `manage.py check` sin observaciones y migraciones sincronizadas.
 
-## Bloque backend en construcción
+## Fundación backend completada
 
 La primera fundación Django incorpora:
 
@@ -55,9 +57,9 @@ La primera fundación Django incorpora:
 - Control optimista por versión.
 - Auditoría servidor append-only con HMAC-SHA256.
 - Admin Django para preparar el piloto.
-- Docker Compose y pruebas API.
+- Docker Compose y CI dual para frontend/backend.
 
-Al completar y fusionar esta fundación, el MVP real debería subir aproximadamente a **66%**. El incremento siguiente vendrá de conectar la UI al backend, no de agregar más pantallas.
+El siguiente incremento debe venir de conectar la UI al backend, no de agregar más pantallas.
 
 ## Criterio de MVP para Camila y Carmelo
 
