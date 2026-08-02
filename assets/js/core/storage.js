@@ -1,5 +1,5 @@
 import { APP_CONFIG } from "./config.js";
-import { isAuditedCollection } from "../domain/audit-trail.js";
+import { isAuditedCollection, verifyAuditTrail } from "../domain/audit-trail.js";
 import { recordSnapshotRestore, recordStorageMutation } from "./storage-audit.js";
 
 const memory = new Map();
@@ -143,6 +143,10 @@ export function snapshotStorage() {
 export function replaceStorageSnapshot(entries, options = {}) {
   if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
     throw new Error("No se puede restaurar una colección de datos inválida.");
+  }
+  const importedAudit = entries["audit-log"] ?? [];
+  if (verifyAuditTrail(importedAudit).status === "blocked") {
+    throw new Error("No se puede restaurar el respaldo porque su cadena de auditoría está dañada.");
   }
   const previous = snapshotStorage();
   resetDemoStorage();
