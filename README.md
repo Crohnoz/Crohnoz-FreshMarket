@@ -1,75 +1,83 @@
 # Crohnoz Fresh Market
 
-Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios de productos frescos. Reutiliza patrones de experiencia de **Crohnoz Sushi** y reserva las capacidades compartidas para **Crohnoz Kernel**.
+Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios de productos frescos. Reutiliza patrones de experiencia de **Crohnoz Sushi** y reserva capacidades transversales para **Crohnoz Kernel**.
 
 ## Estado
 
-**Piloto comercial v0.1 en construcción.** La interfaz es navegable y usa datos ficticios guardados en el navegador. No existe autenticación, persistencia central ni seguridad multiempresa en esta fase.
-
-La presentación comercial incluye fotografías de productos, cajas y operación cotidiana, catálogo visual, carga diferida, texto alternativo y respaldo visual cuando una imagen externa no está disponible.
+**Piloto comercial funcionalmente completo, pendiente de validación física.** La interfaz usa datos ficticios y `localStorage`. No existe autenticación, persistencia central, aislamiento multiempresa ni garantía transaccional.
 
 ## Páginas
 
 - `/index.html`: tienda pública.
-- `/operar.html`: inicio guiado del negocio con tareas grandes y resumen operacional.
-- `/admin.html`: dashboard operacional y pesaje.
-- `/cuentas.html`: libro de fiados, abonos, registro rápido de operaciones y copiloto por voz.
-- `/cierre.html`: cierre diario asistido y conciliación de efectivo.
-- `/configurador.html`: identidad del negocio y configuración demo.
-- `/scanner-lab.html`: laboratorio de lector USB tipo teclado HID.
+- `/operar.html`: inicio guiado por tareas.
+- `/admin.html`: preparación, pesaje, precios rápidos y merma.
+- `/cuentas.html`: fiados, abonos, operaciones rápidas y voz.
+- `/cierre.html`: conciliación diaria de efectivo.
+- `/inventario.html`: inventario perecible por lotes y prioridad FEFO.
+- `/compras.html`: proveedores, costos, recepción y precio sugerido.
+- `/ventas.html`: confirmación, cobro, entrega y comprobante interno.
+- `/asistente.html`: contexto operacional y propuestas revisables.
+- `/validacion.html`: diagnóstico técnico y pruebas de usuario.
+- `/configurador.html`: identidad y parámetros demo.
+- `/scanner-lab.html`: laboratorio HID para lector de códigos.
 
-Netlify también expone alias:
+Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
 
-- `/operar`
-- `/cierre`
-- `/dashboard`
-- `/cuentas`
-- `/configurar`
-- `/scanner`
+## Cinco bloques completados
 
-## Operación guiada
+### Inventario perecible
 
-La capa guiada prioriza acciones cotidianas por sobre nombres técnicos de módulos:
+- lotes por recepción;
+- costo, condición y maduración;
+- fecha de consumo preferente;
+- saldo por lote;
+- venta, merma y ajuste;
+- prioridad FEFO y valor en riesgo.
 
-- Nueva venta.
-- Venta fiada.
-- Recibir un abono.
-- Anotar un fiado.
-- Preparar pedidos.
-- Cambiar precios.
-- Cerrar el día.
-- Hablar con el copiloto.
-- Probar el lector.
+### Compras y precios
 
-Incluye navegación inferior móvil, búsqueda de tareas, enlaces directos a formularios, instrucciones contextuales, recorrido de primera vez y un modo fácil persistente con controles mayores.
+- proveedores demo;
+- costo unitario;
+- historial de compras;
+- creación automática de lote;
+- sugerencia por margen y merma;
+- aplicación de precio solo con confirmación.
 
-La política de permisos permite cámara y micrófono únicamente desde el propio dominio. La geolocalización permanece deshabilitada.
+### Venta completa
 
-## Cierre diario asistido
+- historial de pedidos;
+- cantidades solicitadas y reales;
+- confirmación de diferencias;
+- transiciones de preparación y entrega;
+- pagos en efectivo, transferencia o fiado;
+- comprobante interno no tributario.
 
-El cierre reúne las operaciones de una fecha y separa:
+### Asistencia preparada para IA
 
-- ventas en efectivo;
-- ventas por transferencia;
-- ventas fiadas;
-- compras por medio de pago;
-- abonos en efectivo o transferencia;
-- fiados manuales;
-- merma registrada.
+- contexto de inventario, deuda, compras y cierres;
+- respuesta con confianza y evidencia;
+- cola de propuestas;
+- aprobación o rechazo humano;
+- importación desde transcripción revisada;
+- contrato JSON Schema para backend futuro.
 
-La caja esperada se calcula desde la caja inicial, entradas y salidas de efectivo. Luego se compara con el efectivo contado. Los abonos sin medio de pago deben clasificarse antes de guardar y las ventas fiadas vinculadas al libro de cuentas no se duplican.
+### Hardening del piloto
 
-El resumen puede leerse mediante síntesis de voz. Los cierres se guardan como snapshots locales demostrativos y no sustituyen contabilidad formal.
+- service worker y fallback offline;
+- manifest instalable;
+- enlace de salto, alto contraste y movimiento reducido;
+- aviso de conectividad;
+- diagnóstico de capacidades;
+- cinco escenarios cronometrados;
+- historial local de validación.
 
 ## Ejecutar
-
-No hay build de frontend. Para servir localmente:
 
 ```bash
 python -m http.server 8000
 ```
 
-Abrir `http://localhost:8000`.
+Abrir `http://localhost:8000/operar.html`.
 
 ## Pruebas
 
@@ -77,70 +85,26 @@ Abrir `http://localhost:8000`.
 npm test
 ```
 
-Las pruebas cubren:
+La suite cubre mediciones, pesaje, códigos de barra, fiados, voz, imágenes, cierre diario, inventario, compras, márgenes, flujo de pedidos, propuestas asistidas, rutas y validación del piloto.
 
-- Conversión de unidades.
-- Cálculo estimado y final.
-- Tolerancias de pesaje.
-- Checksum EAN-13, EAN-8 y UPC-A.
-- Clasificación básica de secuencias rápidas del escáner.
-- Cálculo de ventas por líneas.
-- Saldos de fiado y abonos.
-- Resumen de deuda bruta.
-- Extracción simple desde transcripciones de cuadernos.
-- Interpretación de instrucciones por voz.
-- Presencia de imágenes, textos alternativos y etiquetas comerciales en el catálogo demo.
-- Integridad de las tareas operacionales y sus destinos.
-- Montaje global de navegación guiada y permisos de voz.
-- Separación de efectivo, transferencia y fiado en el cierre.
-- Conciliación de caja esperada contra efectivo contado.
-- Bloqueo de cierres con abonos sin clasificar.
-- Ruta y regiones obligatorias de la pantalla de cierre.
+## Seguridad y límites
 
-## Presentación visual
+- No ingresar datos reales o sensibles.
+- `localStorage` no sincroniza dispositivos y puede perderse.
+- El service worker mejora continuidad local, pero no constituye respaldo.
+- La voz y cámara dependen del navegador y permisos del usuario.
+- El soporte del escáner debe probarse físicamente.
+- Las fotografías externas son del piloto y deben migrarse a infraestructura controlada.
+- Los precios son sugerencias, no decisiones automáticas.
+- El comprobante interno no es documento tributario.
+- El cierre no reemplaza contabilidad formal ni conciliación bancaria.
+- La IA actual es determinista y no llama a un modelo externo.
 
-El piloto usa fotografías optimizadas desde proveedores autorizados para representar:
+La separación entre piloto y producción está documentada en `docs/PILOT_COMPLETION.md`.
 
-- Productos por peso y unidad.
-- Cajas y packs familiares.
-- Preparación y reparto.
-- Operación en una feria o verdulería.
-- Asistencia por voz y cobranza digital.
+## Producción futura
 
-Los dominios de imágenes están restringidos mediante Content Security Policy. La atribución, política del piloto y estrategia de migración a almacenamiento propio están documentadas en `docs/IMAGE_CREDITS.md`.
-
-## Fiados y registro diario
-
-El módulo demostrativo permite:
-
-- Crear cuentas de clientes.
-- Registrar nuevos fiados y abonos.
-- Visualizar el total bruto por cobrar.
-- Ordenar clientes por saldo.
-- Registrar ventas o compras con múltiples productos, cantidades y precios.
-- Convertir una venta marcada como fiada en un cargo de la cuenta seleccionada.
-- Previsualizar una foto del cuaderno y analizar una transcripción revisable.
-- Preparar operaciones mediante comandos de voz y confirmación humana.
-
-La extracción visual real mediante OCR/IA todavía no está conectada. La foto permanece local en el navegador y ninguna línea se importa sin confirmación humana.
-
-## Despliegue Netlify
-
-- Rama productiva: `main`.
-- Directorio de publicación: `.`
-- Comando de build: `npm test`
-- Archivo de configuración: `netlify.toml`
-
-## Advertencias del piloto
-
-- No ingresar datos sensibles ni información real de clientes.
-- Los enlaces y modos visuales no equivalen a autenticación.
-- `localStorage` no es una base de datos productiva ni sincroniza dispositivos.
-- El soporte físico del lector debe validarse con el dispositivo real.
-- Los cálculos del piloto son demostrativos; el backend productivo usará `Decimal`, transacciones, auditoría e idempotencia.
-- El módulo de fiados no ejecuta cobranza automática, no calcula intereses y no sustituye contabilidad formal.
-- El cierre diario no genera libros contables ni conciliación bancaria certificada.
-- Las fotografías remotas son activos del piloto y deben migrarse a infraestructura controlada antes de producción.
+Django, DRF, PostgreSQL, autenticación, organizaciones, RBAC, auditoría, transacciones, idempotencia, almacenamiento privado, OCR/IA backend, backups, observabilidad, privacidad, pagos e integración tributaria.
 
 ## Referencia de reutilización
 

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crohnozlabs.cl/schemas/fresh-market/assistant-proposal.json",
+  "title": "Crohnoz Fresh Market Assistant Proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "intent", "sourceText", "data", "confidence", "evidence", "status", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "intent": { "type": "string", "enum": ["charge", "payment", "sale", "purchase", "inventory_priority", "receivables", "daily_close", "purchase_context", "advice", "unknown"] },
+    "sourceText": { "type": "string" },
+    "data": { "type": "object" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "evidence": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "status": { "type": "string", "enum": ["pending_review", "approved", "rejected"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "reviewedAt": { "type": ["string", "null"], "format": "date-time" },
+    "reviewerDecision": { "type": ["string", "null"], "enum": ["approved", "rejected", null] }
+  }
+}
