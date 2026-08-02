@@ -12,8 +12,12 @@ function readBoolean(name) {
   }
 }
 
+function currentSegment() {
+  return window.location.pathname.split("/").filter(Boolean).at(-1) ?? "index.html";
+}
+
 function normalizedPage() {
-  const segment = window.location.pathname.split("/").filter(Boolean).at(-1) ?? "index.html";
+  const segment = currentSegment();
   return ({
     operar: "operar.html",
     dashboard: "admin.html",
@@ -47,7 +51,7 @@ function removeDuplicateMobileCart() {
 }
 
 function openFirstRunGuideFromAlias() {
-  if (normalizedPage() !== "operar.html" || readBoolean("guided-onboarding-v1")) return;
+  if (currentSegment() !== "operar" || readBoolean("guided-onboarding-v1")) return;
   window.setTimeout(() => document.querySelector("[data-guide-open]")?.click(), 550);
 }
 
