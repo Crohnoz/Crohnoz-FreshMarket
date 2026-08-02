@@ -19,5 +19,5 @@ export const DEFAULT_BUSINESS = Object.freeze({
 });
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {
-  import("./guided-shell.js");
+  import("./guided-shell.js").then(() => import("./guided-shell-state.js"));
 }
