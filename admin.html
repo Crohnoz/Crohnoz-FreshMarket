@@ -11,9 +11,9 @@
 </head>
 <body>
   <div class="demo-banner" id="demo-notice"></div>
-  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong data-business-name></strong><small>Panel operacional</small></span></a><nav class="nav"><a href="index.html">Tienda</a><a aria-current="page" href="admin.html">Operación</a><a href="cuentas.html">Fiados</a><a href="configurador.html">Configurar</a><a href="scanner-lab.html">Scanner Lab</a></nav></div></header>
+  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong data-business-name></strong><small>Panel operacional</small></span></a><nav class="nav"><a href="index.html">Tienda</a><a href="operar.html">Inicio negocio</a><a aria-current="page" href="admin.html">Pedidos</a><a href="inventario.html">Inventario</a><a href="cuentas.html">Fiados</a></nav></div></header>
 
-  <main class="admin-main">
+  <main class="admin-main" id="main-content">
     <div class="shell">
       <div class="section-title"><div><p class="eyebrow">Modo operador</p><h1>Operación de hoy</h1><p>Pedidos, pesaje, precios y merma desde una vista compacta.</p></div><span class="status success">Turno abierto · Demo</span></div>
 
@@ -21,7 +21,7 @@
         <img src="https://images.pexels.com/photos/3978831/pexels-photo-3978831.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="Operador transportando una caja con verduras frescas" loading="eager">
         <div class="operations-shade" aria-hidden="true"></div>
         <div class="operations-copy"><p class="eyebrow">Preparación en curso</p><h2>De la caja al pedido, con cada diferencia registrada.</h2><p>El operador puede pesar, confirmar montos y descontar inventario sin perder el contexto del cliente.</p></div>
-        <div class="operations-live"><span>Ahora</span><strong>2 pedidos por preparar</strong><small>1 pendiente de confirmación</small></div>
+        <div class="operations-live"><span>Ahora</span><strong id="operations-live-active">Pedidos por preparar</strong><small id="operations-live-confirmation">Confirmaciones pendientes</small></div>
       </section>
 
       <section class="metrics" aria-label="Métricas del día">
@@ -29,7 +29,7 @@
         <article class="card metric"><span>Pendientes de pesar</span><strong id="metric-weighing">0</strong></article>
         <article class="card metric"><span>Por confirmar</span><strong id="metric-confirmation">0</strong></article>
         <article class="card metric"><span>Venta estimada</span><strong id="metric-sales">$0</strong></article>
-        <article class="card metric"><span>Merma registrada</span><strong id="metric-waste">0 kg</strong></article>
+        <article class="card metric"><span>Merma registrada</span><strong id="metric-waste">Sin merma</strong></article>
       </section>
 
       <div class="admin-grid">
@@ -41,19 +41,20 @@
           <section class="card panel">
             <header class="panel-header"><div><h2>Precios rápidos</h2><p>Los cambios quedan guardados solo en este navegador.</p></div></header>
             <div class="table-wrap"><table><thead><tr><th>Producto</th><th>Stock demo</th><th>Precio</th><th>Acción</th></tr></thead><tbody id="price-table-body"></tbody></table></div>
+            <div class="pilot-status" id="price-status" role="status" aria-live="polite"></div>
           </section>
         </div>
         <aside>
-          <section class="card panel"><header class="panel-header"><div><h2>Accesos rápidos</h2><p>Flujos principales del piloto.</p></div></header><div class="quick-actions"><a class="button secondary" href="cuentas.html">Fiados y cuentas</a><a class="button secondary" href="scanner-lab.html">Escanear</a><a class="button secondary" href="index.html">Abrir tienda</a><a class="button secondary" href="#waste-form">Registrar merma</a><a class="button secondary" href="configurador.html">Personalizar</a></div></section>
+          <section class="card panel"><header class="panel-header"><div><h2>Accesos rápidos</h2><p>Flujos principales del piloto.</p></div></header><div class="quick-actions"><a class="button secondary" href="ventas.html">Ventas y pagos</a><a class="button secondary" href="inventario.html">Inventario por lotes</a><a class="button secondary" href="cuentas.html">Fiados y cuentas</a><a class="button secondary" href="scanner-lab.html">Escanear</a><a class="button secondary" href="#waste-form">Registrar merma</a></div></section>
           <section class="card panel visual-side-card"><img src="https://images.pexels.com/photos/4451871/pexels-photo-4451871.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Caja surtida con frutas y verduras" loading="lazy" decoding="async"><div><p class="eyebrow">Producto compuesto</p><h2>Caja familiar</h2><p>Disponible para preparar hoy. Stock demo: 6 unidades.</p></div></section>
-          <section class="card panel"><header class="panel-header"><div><h2>Registrar merma</h2><p>Movimiento demostrativo, sin transacción productiva.</p></div></header><form class="waste-form" id="waste-form"><label>Producto<select id="waste-product" name="product"></select></label><label>Cantidad en kg<input name="quantity" type="number" min="0.01" step="0.01" required></label><label>Motivo<select name="reason"><option>Deterioro</option><option>Sobremaduración</option><option>Daño</option><option>Error de pesaje</option><option>Consumo interno</option><option>Diferencia de inventario</option></select></label><button class="button primary" type="submit">Registrar merma</button></form></section>
+          <section class="card panel"><header class="panel-header"><div><h2>Registrar merma</h2><p>Descuenta el lote que debe salir primero y conserva la unidad real del producto.</p></div></header><form class="waste-form" id="waste-form"><label>Producto<select id="waste-product" name="product"></select></label><label><span id="waste-quantity-label">Cantidad</span><input name="quantity" type="number" min="0.01" step="0.01" inputmode="decimal" required><small class="field-help" id="waste-stock-help"></small></label><label>Motivo<select name="reason"><option>Deterioro</option><option>Sobremaduración</option><option>Daño</option><option>Error de pesaje</option><option>Consumo interno</option><option>Diferencia de inventario</option></select></label><button class="button primary" type="submit">Registrar merma</button></form><div class="pilot-status" id="waste-status" role="status" aria-live="polite"></div></section>
         </aside>
       </div>
     </div>
   </main>
 
   <dialog id="weighing-dialog">
-    <div class="dialog-header"><div><p class="eyebrow">Preparación y pesaje</p><h2></h2><p data-customer></p></div><button class="icon-button" id="close-weighing" type="button">×</button></div>
+    <div class="dialog-header"><div><p class="eyebrow">Preparación y pesaje</p><h2></h2><p data-customer></p></div><button class="icon-button" id="close-weighing" type="button" aria-label="Cerrar pesaje">×</button></div>
     <div class="weighing-lines" data-lines></div>
     <div class="dialog-actions"><button class="button secondary" type="button" id="cancel-weighing">Cancelar</button><button class="button primary" type="button" id="save-weighing">Guardar pesaje</button></div>
   </dialog>
