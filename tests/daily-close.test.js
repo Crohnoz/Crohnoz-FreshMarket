@@ -52,6 +52,33 @@ test("no duplica la venta fiada vinculada al libro de cuentas", () => {
   assert.equal(summary.creditGenerated, 10000);
 });
 
+test("no duplica un fiado de pedido enlazado por referencia", () => {
+  const summary = summarizeDailyOperations({
+    dateKey,
+    transactions: [{
+      id: "tx-order-1",
+      referenceId: "payment-1",
+      type: "sale",
+      settlement: "credit",
+      total: 7500,
+      createdAt: "2026-08-02T17:00:00-04:00",
+    }],
+    ledgerEntries: [{
+      id: "ledger-order-1",
+      referenceId: "payment-1",
+      source: "order-payment",
+      type: "charge",
+      settlement: "credit",
+      amount: 7500,
+      occurredAt: dateKey,
+    }],
+  });
+  assert.equal(summary.sales.credit, 7500);
+  assert.equal(summary.manualCreditCharges, 0);
+  assert.equal(summary.creditGenerated, 7500);
+  assert.equal(summary.movementCount, 1);
+});
+
 test("calcula efectivo esperado y diferencia", () => {
   const summary = sampleSummary();
   const result = buildCashReconciliation({
