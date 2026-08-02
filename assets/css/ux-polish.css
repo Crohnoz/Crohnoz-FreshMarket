@@ -1,0 +1,78 @@
+/* UX polish round 2: consistent feedback, confirmation and task hierarchy. */
+.app-toast-region { position: fixed; z-index: 120; right: 18px; bottom: 92px; display: grid; gap: 10px; width: min(410px, calc(100% - 28px)); pointer-events: none; }
+.app-toast { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 16px; background: color-mix(in srgb, var(--surface) 96%, transparent); color: var(--text); box-shadow: 0 18px 48px rgba(4, 18, 8, .2); backdrop-filter: blur(16px); pointer-events: auto; animation: app-toast-in .2s ease both; }
+.app-toast.leaving { animation: app-toast-out .18s ease both; }
+.app-toast p { margin: 0; line-height: 1.4; }
+.app-toast-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 11px; background: var(--surface-2); font-weight: 900; }
+.app-toast-success .app-toast-icon { background: color-mix(in srgb, var(--success) 14%, var(--surface)); color: var(--success); }
+.app-toast-warning .app-toast-icon { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); }
+.app-toast-error .app-toast-icon { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
+.app-toast-actions { display: flex; align-items: center; gap: 5px; }
+.app-toast-action, .app-toast-close { min-height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--text); cursor: pointer; font-weight: 850; }
+.app-toast-action { padding: 7px 9px; color: var(--primary); }
+.app-toast-action:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.app-toast-close { width: 36px; padding: 0; color: var(--muted); font-size: 20px; }
+
+.app-confirm-dialog { width: min(500px, calc(100% - 24px)); padding: 0; overflow: visible; }
+.app-confirm-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 16px; padding: 24px; }
+.app-confirm-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; background: color-mix(in srgb, var(--primary) 13%, var(--surface-2)); color: var(--primary); }
+.app-confirm-icon::before { content: "✓"; font-size: 22px; font-weight: 950; }
+.app-confirm-dialog[data-tone="danger"] .app-confirm-icon { background: color-mix(in srgb, var(--danger) 13%, var(--surface-2)); color: var(--danger); }
+.app-confirm-dialog[data-tone="danger"] .app-confirm-icon::before { content: "!"; }
+.app-confirm-copy h2 { margin: 0; font-size: 24px; letter-spacing: -.035em; }
+.app-confirm-copy > p:not(.eyebrow) { margin: 9px 0 0; color: var(--muted); line-height: 1.55; }
+.app-confirm-detail { margin-top: 14px; padding: 12px 13px; border-radius: 12px; background: var(--surface-2); color: var(--text); line-height: 1.45; white-space: pre-line; }
+.app-confirm-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 9px; margin-top: 4px; }
+
+.task-filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.task-filter { min-height: 40px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); cursor: pointer; font-weight: 800; }
+.task-filter[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: white; }
+.operator-recommendation { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 16px; margin-bottom: 18px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--line)); border-radius: 22px; background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 9%, var(--surface)), var(--surface)); box-shadow: 0 14px 38px rgba(13, 48, 22, .08); }
+.operator-recommendation-icon { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); font-size: 29px; }
+.operator-recommendation-copy { min-width: 0; }
+.operator-recommendation-copy h2 { margin: 0; font-size: clamp(21px, 3vw, 28px); letter-spacing: -.035em; }
+.operator-recommendation-copy p { margin: 6px 0 0; color: var(--muted); line-height: 1.5; }
+.operator-recommendation .button { white-space: nowrap; }
+.operator-task-grid[data-density="secondary"] .operator-task { min-height: 104px; box-shadow: none; }
+.operator-task-grid[data-density="secondary"] .operator-task-icon { width: 48px; height: 48px; border-radius: 15px; font-size: 24px; }
+.operator-task-grid[data-density="secondary"] .operator-task p { display: none; }
+.operator-task-grid[data-density="secondary"] .operator-task h2 { font-size: 17px; }
+.operator-section-label { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 12px; }
+.operator-section-label h3 { margin: 0; font-size: 17px; }
+.operator-section-label span { color: var(--muted); font-size: 12px; }
+
+.result-count { color: var(--muted); font-size: 12px; font-weight: 750; }
+.inline-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -3px 0 14px; }
+.inline-toolbar .button { min-height: 38px; }
+
+.product-customization { margin: 15px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.product-customization summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 11px 13px; cursor: pointer; color: var(--text); font-size: 13px; font-weight: 850; list-style: none; }
+.product-customization summary::-webkit-details-marker { display: none; }
+.product-customization summary::after { content: "+"; color: var(--primary); font-size: 20px; line-height: 1; }
+.product-customization[open] summary::after { content: "−"; }
+.product-customization .product-controls { margin: 0; padding: 0 13px 13px; }
+.product-defaults { color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+@keyframes app-toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes app-toast-out { to { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+@media (max-width: 720px) {
+  .app-toast-region { right: 11px; bottom: 86px; width: calc(100% - 22px); }
+  .app-toast { grid-template-columns: 32px minmax(0, 1fr); }
+  .app-toast-actions { grid-column: 2; justify-content: flex-end; }
+  .app-confirm-card { grid-template-columns: 42px minmax(0, 1fr); padding: 20px; }
+  .app-confirm-icon { width: 42px; height: 42px; border-radius: 14px; }
+  .app-confirm-actions { display: grid; grid-template-columns: 1fr; }
+  .app-confirm-actions .button { width: 100%; }
+  .operator-recommendation { grid-template-columns: 50px minmax(0, 1fr); padding: 16px; }
+  .operator-recommendation-icon { width: 50px; height: 50px; border-radius: 16px; font-size: 25px; }
+  .operator-recommendation .button { grid-column: 1 / -1; width: 100%; }
+  .task-filter-bar { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .task-filter-bar::-webkit-scrollbar { display: none; }
+  .task-filter { flex: 0 0 auto; }
+  .inline-toolbar { align-items: flex-start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast, .app-toast.leaving { animation: none; }
+}
