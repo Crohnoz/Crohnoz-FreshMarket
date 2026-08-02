@@ -46,6 +46,7 @@ const CORE_ASSETS = [
   "/assets/js/operator/home.js",
   "/assets/js/configurator/app.js",
   "/assets/js/integrity/app.js",
+  "/assets/js/audit/navigation.js",
   "/assets/js/audit/app.js",
   "/assets/js/inventory/app.js",
   "/assets/js/purchasing/app.js",
