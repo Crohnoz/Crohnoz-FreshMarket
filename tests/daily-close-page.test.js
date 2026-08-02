@@ -33,8 +33,11 @@ test("Netlify exposes the daily close alias", async () => {
   assert.match(netlify, /from = "\/cierre"\s+to = "\/cierre\.html"/);
 });
 
-test("mobile operator navigation is converted to close day", async () => {
+test("mobile operator navigation exposes daily work destinations", async () => {
   const state = await text("assets/js/core/guided-shell-state.js");
-  assert.match(state, /last\.href = "cierre\.html"/);
-  assert.match(state, /<b>Cerrar<\/b>/);
+  for (const destination of ["operar.html", "ventas.html", "inventario.html", "cuentas.html", "cierre.html"]) {
+    assert.match(state, new RegExp(destination.replace(".", "\\.")));
+  }
+  assert.match(state, /label: "Inventario"/);
+  assert.match(state, /label: "Cierre"/);
 });
