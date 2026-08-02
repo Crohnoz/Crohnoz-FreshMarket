@@ -19,13 +19,16 @@ test("five completion blocks expose their main regions", async () => {
   }
 });
 
-test("new application scripts pass syntax validation", () => {
+test("application scripts pass syntax validation", () => {
   for (const path of [
+    "assets/js/store/app.js",
+    "assets/js/operator/home.js",
     "assets/js/inventory/app.js",
     "assets/js/purchasing/app.js",
     "assets/js/sales/app.js",
     "assets/js/assistant/app.js",
     "assets/js/validation/app.js",
+    "assets/js/core/guided-shell-state.js",
     "assets/js/core/hardening.js",
     "sw.js",
   ]) {
@@ -33,14 +36,18 @@ test("new application scripts pass syntax validation", () => {
   }
 });
 
-test("offline hardening registers service worker and safe fallback", async () => {
+test("offline hardening registers service worker and exposes controlled updates", async () => {
   const hardening = await text("assets/js/core/hardening.js");
   const config = await text("assets/js/core/config.js");
   const worker = await text("sw.js");
   assert.match(config, /import\(["']\.\/hardening\.js["']\)/);
-  assert.match(hardening, /serviceWorker\.register\(["']\/sw\.js["']\)/);
+  assert.match(hardening, /serviceWorker\.register\(["']\/sw\.js["']/);
+  assert.match(hardening, /updateViaCache: ["']none["']/);
   assert.match(worker, /offline\.html/);
   assert.match(worker, /request\.mode === "navigate"/);
+  assert.match(worker, /SKIP_WAITING/);
+  assert.match(worker, /assets\/css\/usability-audit\.css/);
+  assert.match(worker, /assets\/js\/store\/app\.js/);
 });
 
 test("manifest starts in operator mode", async () => {
