@@ -33,6 +33,13 @@ export function summarizeDailyOperations({
   const dayTransactions = transactions.filter((item) => isOnBusinessDate(item.createdAt, dateKey));
   const dayLedgerEntries = ledgerEntries.filter((item) => isOnBusinessDate(item.occurredAt, dateKey));
   const dayWaste = waste.filter((item) => isOnBusinessDate(item.createdAt, dateKey));
+  const transactionReferences = new Set(
+    dayTransactions.flatMap((transaction) => [transaction.id, transaction.referenceId].filter(Boolean)),
+  );
+  const isLedgerEntryLinkedToTransaction = (entry) => (
+    entry.source === "daily-transaction"
+    || Boolean(entry.referenceId && transactionReferences.has(entry.referenceId))
+  );
 
   const sales = { cash: 0, transfer: 0, credit: 0, unknown: 0, total: 0, count: 0 };
   const purchases = { cash: 0, transfer: 0, credit: 0, unknown: 0, total: 0, count: 0 };
@@ -60,7 +67,7 @@ export function summarizeDailyOperations({
       payments.total += amount;
       payments.count += 1;
     }
-    if (entry.type === "charge" && entry.source !== "daily-transaction") {
+    if (entry.type === "charge" && !isLedgerEntryLinkedToTransaction(entry)) {
       manualCreditCharges += amount;
       manualCreditChargeCount += 1;
     }
@@ -77,10 +84,9 @@ export function summarizeDailyOperations({
     return summary;
   }, { quantity: 0, estimatedCost: 0, count: 0 });
 
+  const independentLedgerEntries = dayLedgerEntries.filter((entry) => !isLedgerEntryLinkedToTransaction(entry));
   const creditGenerated = sales.credit + manualCreditCharges;
-  const movementCount = dayTransactions.length
-    + dayLedgerEntries.filter((entry) => entry.source !== "daily-transaction").length
-    + dayWaste.length;
+  const movementCount = dayTransactions.length + independentLedgerEntries.length + dayWaste.length;
 
   return {
     dateKey,
@@ -97,7 +103,7 @@ export function summarizeDailyOperations({
       + dayLedgerEntries.filter((entry) => entry.type === "payment" && !["cash", "transfer"].includes(entry.settlement)).length,
     unclassifiedPayments: dayLedgerEntries.filter((entry) => entry.type === "payment" && !["cash", "transfer"].includes(entry.settlement)),
     transactionCount: dayTransactions.length,
-    ledgerMovementCount: dayLedgerEntries.filter((entry) => entry.source !== "daily-transaction").length,
+    ledgerMovementCount: independentLedgerEntries.length,
   };
 }
 
