@@ -11,6 +11,7 @@ La presentación comercial incluye fotografías de productos, cajas y operación
 ## Páginas
 
 - `/index.html`: tienda pública.
+- `/operar.html`: inicio guiado del negocio con tareas grandes y resumen operacional.
 - `/admin.html`: dashboard operacional y pesaje.
 - `/cuentas.html`: libro de fiados, abonos, registro rápido de operaciones y copiloto por voz.
 - `/configurador.html`: identidad del negocio y configuración demo.
@@ -18,10 +19,28 @@ La presentación comercial incluye fotografías de productos, cajas y operación
 
 Netlify también expone alias:
 
+- `/operar`
 - `/dashboard`
 - `/cuentas`
 - `/configurar`
 - `/scanner`
+
+## Operación guiada
+
+La capa guiada prioriza acciones cotidianas por sobre nombres técnicos de módulos:
+
+- Nueva venta.
+- Venta fiada.
+- Recibir un abono.
+- Anotar un fiado.
+- Preparar pedidos.
+- Cambiar precios.
+- Hablar con el copiloto.
+- Probar el lector.
+
+Incluye navegación inferior móvil, búsqueda de tareas, enlaces directos a formularios, instrucciones contextuales, recorrido de primera vez y un modo fácil persistente con controles mayores.
+
+La política de permisos permite cámara y micrófono únicamente desde el propio dominio. La geolocalización permanece deshabilitada.
 
 ## Ejecutar
 
@@ -52,6 +71,8 @@ Las pruebas cubren:
 - Extracción simple desde transcripciones de cuadernos.
 - Interpretación de instrucciones por voz.
 - Presencia de imágenes, textos alternativos y etiquetas comerciales en el catálogo demo.
+- Integridad de las tareas operacionales y sus destinos.
+- Montaje global de navegación guiada y permisos de voz.
 
 ## Presentación visual
 
