@@ -1,9 +1,13 @@
 export const BACKUP_FORMAT = "crohnoz-fresh-market-backup";
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
+export const LEGACY_BACKUP_VERSION = 1;
 export const MAX_BACKUP_BYTES = 2_000_000;
 
 const SAFE_KEY = /^[a-z0-9][a-z0-9_-]{0,119}$/i;
 const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+const FNV_OFFSET = 0xcbf29ce484222325n;
+const FNV_PRIME = 0x100000001b3n;
+const UINT64_MASK = 0xffffffffffffffffn;
 
 function byteLength(value) {
   const text = String(value ?? "");
@@ -17,6 +21,10 @@ function isPlainObject(value) {
   return prototype === Object.prototype || prototype === null;
 }
 
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function assertEntries(entries) {
   if (!isPlainObject(entries)) throw new Error("El respaldo no contiene una colección de datos válida.");
   const keys = Object.keys(entries);
@@ -28,6 +36,33 @@ function assertEntries(entries) {
   }
 }
 
+function canonicalValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (isPlainObject(value)) {
+    return Object.keys(value).sort().reduce((result, key) => {
+      result[key] = canonicalValue(value[key]);
+      return result;
+    }, {});
+  }
+  return value;
+}
+
+function utf8Bytes(text) {
+  if (typeof TextEncoder === "function") return new TextEncoder().encode(text);
+  return Uint8Array.from(unescape(encodeURIComponent(text)), (character) => character.charCodeAt(0));
+}
+
+export function computeBackupChecksum(entries) {
+  assertEntries(entries);
+  const canonical = JSON.stringify(canonicalValue(entries));
+  let hash = FNV_OFFSET;
+  for (const byte of utf8Bytes(canonical)) {
+    hash ^= BigInt(byte);
+    hash = (hash * FNV_PRIME) & UINT64_MASK;
+  }
+  return `fnv1a64:${hash.toString(16).padStart(16, "0")}`;
+}
+
 export function createBackupEnvelope(entries, {
   namespace,
   exportedAt = new Date().toISOString(),
@@ -35,13 +70,15 @@ export function createBackupEnvelope(entries, {
 } = {}) {
   assertEntries(entries);
   if (!namespace || typeof namespace !== "string") throw new Error("Falta el espacio de datos del respaldo.");
+  const clonedEntries = clone(entries);
   return {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     namespace,
     appVersion,
     exportedAt,
-    entries: JSON.parse(JSON.stringify(entries)),
+    checksum: computeBackupChecksum(clonedEntries),
+    entries: clonedEntries,
   };
 }
 
@@ -62,11 +99,39 @@ export function parseBackupText(text, { expectedNamespace } = {}) {
   }
   if (!isPlainObject(envelope)) throw new Error("La estructura del respaldo no es válida.");
   if (envelope.format !== BACKUP_FORMAT) throw new Error("El archivo no corresponde a Crohnoz Fresh Market.");
-  if (envelope.version !== BACKUP_VERSION) throw new Error(`La versión ${envelope.version ?? "desconocida"} del respaldo no es compatible.`);
+  if (![LEGACY_BACKUP_VERSION, BACKUP_VERSION].includes(envelope.version)) {
+    throw new Error(`La versión ${envelope.version ?? "desconocida"} del respaldo no es compatible.`);
+  }
   if (expectedNamespace && envelope.namespace !== expectedNamespace) throw new Error("El respaldo pertenece a otro espacio de datos.");
   if (!Number.isFinite(Date.parse(envelope.exportedAt))) throw new Error("El respaldo no contiene una fecha de exportación válida.");
   assertEntries(envelope.entries);
-  return envelope;
+
+  if (envelope.version === LEGACY_BACKUP_VERSION) {
+    return {
+      ...envelope,
+      integrity: {
+        verified: false,
+        legacy: true,
+        message: "Respaldo antiguo compatible, sin checksum de integridad.",
+      },
+    };
+  }
+
+  if (typeof envelope.checksum !== "string" || !envelope.checksum) {
+    throw new Error("El respaldo no contiene checksum de integridad.");
+  }
+  const expectedChecksum = computeBackupChecksum(envelope.entries);
+  if (envelope.checksum !== expectedChecksum) {
+    throw new Error("El respaldo fue modificado o está dañado: el checksum no coincide.");
+  }
+  return {
+    ...envelope,
+    integrity: {
+      verified: true,
+      legacy: false,
+      message: "Checksum de integridad verificado.",
+    },
+  };
 }
 
 export function summarizeBackupEntries(entries) {
