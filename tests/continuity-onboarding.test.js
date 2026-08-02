@@ -76,20 +76,24 @@ test("backup filenames are stable and backup reminders require activity", () => 
 });
 
 test("operator guidance recommends continuity without overriding urgent work", () => {
+  const daytime = new Date(2026, 7, 2, 15, 0, 0);
   assert.equal(chooseOperatorRecommendation({
     activityCount: 7,
     lastBackupAt: null,
     outstanding: 15000,
+    now: daytime,
   }).taskId, "backup");
   assert.equal(chooseOperatorRecommendation({
     orders: [{ status: "pending_weighing" }],
     activityCount: 7,
     lastBackupAt: null,
+    now: daytime,
   }).taskId, "prepare");
   assert.equal(chooseOperatorRecommendation({
     inventorySummary: { criticalLots: 1 },
     activityCount: 7,
     lastBackupAt: null,
+    now: daytime,
   }).taskId, "inventory");
 });
 
