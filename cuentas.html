@@ -18,6 +18,13 @@
   <main class="accounts-main"><div class="shell">
     <div class="section-title"><div><p class="eyebrow">Libro digital asistido</p><h1>Fiados y cuentas del día</h1><p>Registra ventas, abonos y deudas sin perder la cuenta. Todo lo de esta versión queda únicamente en este navegador.</p></div><span class="status warning">Piloto local · sin cobranza automática</span></div>
 
+    <section class="accounts-showcase" aria-label="Asistencia operacional">
+      <img src="https://images.unsplash.com/photo-1757627550652-30788bfce978?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=72&w=1800" alt="Verduras frescas exhibidas en cajas de un mercado" loading="eager">
+      <div class="accounts-showcase-shade" aria-hidden="true"></div>
+      <div class="accounts-showcase-copy"><p class="eyebrow">Copiloto operacional</p><h2>Habla, revisa y confirma.</h2><p>La asistencia convierte una frase cotidiana en una propuesta clara de fiado, abono, venta o consulta. Ningún movimiento se guarda sin confirmación.</p></div>
+      <div class="accounts-showcase-example"><span>Ejemplo</span><strong>“Rosa abonó cinco lucas”</strong><small>→ Abono propuesto: $5.000</small></div>
+    </section>
+
     <section class="accounts-metrics" aria-label="Resumen de fiados">
       <article class="card metric"><span>Total por cobrar</span><strong id="metric-outstanding">$0</strong></article>
       <article class="card metric"><span>Personas con deuda</span><strong id="metric-debtors">0</strong></article>
@@ -51,8 +58,8 @@
           <div class="daily-log" id="daily-log"></div>
         </section>
 
-        <section class="card accounts-panel">
-          <header><h2>Importar el cuaderno</h2><p>Toma una foto y revisa el texto antes de agregar cualquier deuda.</p></header>
+        <section class="card accounts-panel import-panel">
+          <div class="import-panel-heading"><div><h2>Importar el cuaderno</h2><p>Toma una foto y revisa el texto antes de agregar cualquier deuda.</p></div><img src="https://images.pexels.com/photos/4451871/pexels-photo-4451871.jpeg?auto=compress&cs=tinysrgb&w=700" alt="Caja con productos frescos preparada para una venta" loading="lazy" decoding="async"></div>
           <div class="notice-box"><strong>Extracción IA pendiente:</strong> el piloto guarda y previsualiza la foto, pero todavía no envía imágenes a ningún servicio. Pega o corrige la transcripción para probar el análisis.</div>
           <form class="import-form" id="import-form">
             <label>Foto del cuaderno<input id="notebook-photo" type="file" accept="image/*" capture="environment"></label>
