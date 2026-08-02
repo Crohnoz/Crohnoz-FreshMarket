@@ -1,6 +1,7 @@
 import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { formatCLP, formatQuantity } from "../core/format.js";
 import { readStorage, writeStorage } from "../core/storage.js";
+import { confirmAction, setStatus, showToast } from "../core/ui-feedback.js";
 import { initialOrders } from "../data/demo-data.js";
 import { initialCustomers, initialDailyTransactions, initialLedgerEntries } from "../data/receivables-demo.js";
 import { initialOrderPayments } from "../data/operations-demo.js";
@@ -14,15 +15,19 @@ let customers = readStorage("credit-customers", initialCustomers);
 let ledger = readStorage("credit-ledger", initialLedgerEntries);
 let selectedOrderId = orders[0]?.id ?? null;
 const statusRegion = document.querySelector("#sales-status");
+let mutationVersion = 0;
 
 function localDateKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+function cloneValue(value) {
+  return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+}
+
 function announce(message, state = "success") {
-  statusRegion.textContent = message;
-  statusRegion.dataset.state = state;
+  setStatus(statusRegion, message, state);
 }
 
 function applyTheme() {
@@ -58,6 +63,23 @@ function persist() {
   writeStorage("daily-transactions", transactions);
   writeStorage("credit-customers", customers);
   writeStorage("credit-ledger", ledger);
+}
+
+function offerUndo(message, restore) {
+  const version = ++mutationVersion;
+  showToast({
+    message,
+    state: "success",
+    actionLabel: "Deshacer",
+    onAction: () => {
+      if (version !== mutationVersion) throw new Error("Solo puede deshacerse la operación más reciente.");
+      restore();
+      mutationVersion += 1;
+      persist();
+      renderAll();
+      announce("La última operación fue deshecha.", "success");
+    },
+  });
 }
 
 function renderOrderList() {
@@ -204,21 +226,35 @@ document.querySelector("#sales-status-filter").addEventListener("change", () => 
   renderAll();
 });
 
-document.querySelector("#sales-state-action").addEventListener("click", (event) => {
+document.querySelector("#sales-state-action").addEventListener("click", async (event) => {
   const order = selectedOrder();
-  if (!order || !event.currentTarget.dataset.action) return;
+  const actionId = event.currentTarget.dataset.action;
+  if (!order || !actionId) return;
+  const action = availableAction(order);
+  const finalAction = ["complete_pickup", "deliver"].includes(actionId);
+  const accepted = await confirmAction({
+    title: action?.label ?? "Actualizar pedido",
+    message: finalAction
+      ? `El pedido ${order.id} quedará finalizado para ${order.customer}.`
+      : `Se actualizará el estado del pedido ${order.id}.`,
+    detail: `${order.fulfillment} · ${formatCLP(orderTotal(order))}`,
+    confirmLabel: action?.label ?? "Actualizar",
+  });
+  if (!accepted) return;
+  const previousOrders = cloneValue(orders);
   try {
-    const updated = nextOrderState(order, event.currentTarget.dataset.action);
+    const updated = nextOrderState(order, actionId);
     orders = orders.map((item) => item.id === updated.id ? updated : item);
     persist();
     announce(`Pedido ${updated.id}: ${statusLabel(updated.status)}.`, "success");
     renderAll();
+    offerUndo(`Pedido ${updated.id} actualizado.`, () => { orders = previousOrders; });
   } catch (error) {
     announce(error.message, "error");
   }
 });
 
-document.querySelector("#order-payment-form").addEventListener("submit", (event) => {
+document.querySelector("#order-payment-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const order = selectedOrder();
   if (!order) {
@@ -234,6 +270,20 @@ document.querySelector("#order-payment-form").addEventListener("submit", (event)
     return;
   }
   const settlement = event.currentTarget.settlement.value;
+  const accepted = await confirmAction({
+    title: `Registrar ${settlementLabel(settlement).toLocaleLowerCase("es")}`,
+    message: `${order.customer} · pedido ${order.id}`,
+    detail: `${formatCLP(amount)} de ${formatCLP(before.due)} pendientes`,
+    confirmLabel: settlement === "credit" ? "Registrar venta fiada" : "Registrar pago",
+  });
+  if (!accepted) return;
+
+  const snapshot = {
+    payments: cloneValue(payments),
+    transactions: cloneValue(transactions),
+    customers: cloneValue(customers),
+    ledger: cloneValue(ledger),
+  };
   const createdAt = new Date().toISOString();
   const payment = {
     id: crypto.randomUUID(),
@@ -278,12 +328,19 @@ document.querySelector("#order-payment-form").addEventListener("submit", (event)
     ? "Venta fiada registrada y vinculada a la cuenta del cliente."
     : "Pago registrado y comprobante actualizado.", "success");
   renderAll();
+  offerUndo(`${settlementLabel(settlement)} de ${formatCLP(amount)} registrado.`, () => {
+    payments = snapshot.payments;
+    transactions = snapshot.transactions;
+    customers = snapshot.customers;
+    ledger = snapshot.ledger;
+  });
 });
 
 document.querySelector("#copy-receipt").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(document.querySelector("#receipt-preview").value);
     announce("Comprobante copiado.", "success");
+    showToast({ message: "Comprobante copiado al portapapeles.", state: "success", duration: 3500 });
   } catch {
     announce("El navegador no permitió copiar automáticamente. Puedes seleccionar el texto manualmente.", "warning");
   }
