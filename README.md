@@ -10,12 +10,14 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 
 - `/index.html`: tienda pública.
 - `/admin.html`: dashboard operacional y pesaje.
+- `/cuentas.html`: libro de fiados, abonos y registro rápido de operaciones.
 - `/configurador.html`: identidad del negocio y configuración demo.
 - `/scanner-lab.html`: laboratorio de lector USB tipo teclado HID.
 
 Netlify también expone alias:
 
 - `/dashboard`
+- `/cuentas`
 - `/configurar`
 - `/scanner`
 
@@ -42,6 +44,24 @@ Las pruebas cubren:
 - Tolerancias de pesaje.
 - Checksum EAN-13, EAN-8 y UPC-A.
 - Clasificación básica de secuencias rápidas del escáner.
+- Cálculo de ventas por líneas.
+- Saldos de fiado y abonos.
+- Resumen de deuda bruta.
+- Extracción simple desde transcripciones de cuadernos.
+
+## Fiados y registro diario
+
+El módulo demostrativo permite:
+
+- Crear cuentas de clientes.
+- Registrar nuevos fiados y abonos.
+- Visualizar el total bruto por cobrar.
+- Ordenar clientes por saldo.
+- Registrar ventas o compras con múltiples productos, cantidades y precios.
+- Convertir una venta marcada como fiada en un cargo de la cuenta seleccionada.
+- Previsualizar una foto del cuaderno y analizar una transcripción revisable.
+
+La extracción visual real mediante OCR/IA todavía no está conectada. La foto permanece local en el navegador y ninguna línea se importa sin confirmación humana.
 
 ## Despliegue Netlify
 
@@ -52,10 +72,12 @@ Las pruebas cubren:
 
 ## Advertencias del piloto
 
-- No ingresar datos sensibles.
+- No ingresar datos sensibles ni información real de clientes.
 - Los enlaces y modos visuales no equivalen a autenticación.
+- `localStorage` no es una base de datos productiva ni sincroniza dispositivos.
 - El soporte físico del lector debe validarse con el dispositivo real.
 - Los cálculos del piloto son demostrativos; el backend productivo usará `Decimal`, transacciones, auditoría e idempotencia.
+- El módulo de fiados no ejecuta cobranza automática, no calcula intereses y no sustituye contabilidad formal.
 
 ## Referencia de reutilización
 
