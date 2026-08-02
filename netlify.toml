@@ -8,8 +8,13 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
     Content-Security-Policy = "default-src 'self'; img-src 'self' data: blob: https://images.pexels.com https://images.unsplash.com; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+
+[[redirects]]
+  from = "/operar"
+  to = "/operar.html"
+  status = 200
 
 [[redirects]]
   from = "/dashboard"
