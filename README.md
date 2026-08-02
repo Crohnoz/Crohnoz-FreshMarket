@@ -6,7 +6,7 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 
 **Piloto comercial funcionalmente completo, pendiente de validación física.** La interfaz usa datos ficticios y `localStorage`. No existe autenticación, persistencia central, aislamiento multiempresa ni garantía transaccional.
 
-Versión actual: **0.3.0-pilot**.
+Versión actual: **0.4.0-pilot**.
 
 ## Páginas
 
@@ -19,23 +19,39 @@ Versión actual: **0.3.0-pilot**.
 - `/compras.html`: proveedores, costos, recepción y precio sugerido.
 - `/ventas.html`: confirmación, cobro, entrega y comprobante interno.
 - `/asistente.html`: contexto operacional y propuestas revisables.
+- `/integridad.html`: diagnóstico de IDs, referencias, montos, saldos y fechas.
 - `/validacion.html`: diagnóstico técnico y pruebas de usuario.
 - `/configurador.html`: identidad, respaldo, restauración y restablecimiento demo.
 - `/scanner-lab.html`: laboratorio HID para lector de códigos.
 
-Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
+Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/integridad`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
 
 ## Capacidades principales
 
 ### Inicio operacional guiado
 
-- recomendación contextual según pedidos, pesaje, entrega, inventario y cierre;
+- recomendación contextual según pedidos, pesaje, integridad, entrega, inventario y cierre;
+- bloqueo prioritario ante errores críticos de coherencia;
 - recomendación de respaldo después de actividad local relevante;
 - tareas frecuentes separadas de herramientas secundarias;
 - filtros por área;
-- checklist de puesta en marcha;
+- checklist de cinco pasos: identidad, inventario, operación, integridad y respaldo;
 - regreso seguro a la última pantalla operacional visitada;
 - navegación móvil con contexto activo para vender, pedidos, fiados y voz.
+
+### Integridad de datos
+
+- diagnóstico local y de solo lectura;
+- estado efectivo materializado antes de auditar o respaldar;
+- IDs ausentes o duplicados;
+- referencias rotas entre pedidos, pagos, clientes, compras, proveedores, lotes y transacciones;
+- cantidades, costos, precios, totales y saldos inválidos;
+- stock negativo;
+- fechas defectuosas o incoherentes;
+- conciliación matemática del cierre diario;
+- clasificación en saludable, revisión recomendada o bloqueo crítico;
+- filtros, búsqueda e informe descargable sin datos restaurables;
+- reglas preparadas para evolucionar a constraints PostgreSQL y validadores Django/DRF.
 
 ### Inventario perecible
 
@@ -75,15 +91,20 @@ Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/
 
 ### Continuidad local
 
-- formato JSON versionado y limitado a 2 MB;
+- instantánea efectiva autosuficiente, aunque algunas colecciones no se hayan persistido todavía;
+- formato JSON versión 2, limitado a 2 MB;
+- checksum determinista para detectar alteraciones accidentales;
+- compatibilidad de lectura con respaldos versión 1 sin checksum;
 - validación de producto, versión, namespace, fecha y nombres de colecciones;
 - bloqueo de claves inseguras;
+- análisis semántico antes de restaurar;
+- restauración bloqueada ante errores críticos;
 - resumen previo de colecciones y registros estimados;
 - confirmación explícita antes de reemplazar datos;
 - descarga con nombre estable por negocio y fecha;
-- indicador de almacenamiento local, memoria temporal y último respaldo;
+- indicador de almacenamiento local, memoria temporal e integridad;
 - restablecimiento completo de datos demo con confirmación destructiva;
-- caché offline de Configuración y de los módulos de continuidad.
+- caché offline de Configuración, Integridad y módulos de continuidad.
 
 ### Hardening del piloto
 
@@ -110,14 +131,16 @@ Abrir `http://localhost:8000/operar.html`.
 npm test
 ```
 
-La suite cubre mediciones, pesaje, códigos de barra, fiados, voz, imágenes, cierre diario, inventario, compras, márgenes, flujo de pedidos, propuestas asistidas, rutas, UX reversible, respaldo, restauración, onboarding y validación del piloto.
+La suite cubre mediciones, pesaje, códigos de barra, fiados, voz, imágenes, cierre diario, inventario, compras, márgenes, flujo de pedidos, propuestas asistidas, rutas, UX reversible, respaldo, checksum, compatibilidad anterior, corrupción semántica, restauración, onboarding y validación del piloto.
 
 ## Seguridad y límites
 
 - No ingresar datos reales, personales, clínicos, financieros o sensibles.
 - `localStorage` no sincroniza dispositivos y puede perderse.
 - El respaldo JSON es manual, no cifrado y debe mantenerse en un lugar controlado.
+- El checksum detecta alteraciones accidentales; no es firma digital ni mecanismo de autenticación.
 - La restauración reemplaza todas las colecciones del namespace del piloto.
+- El auditor comprueba coherencia interna, no la veracidad comercial de la información.
 - El service worker mejora continuidad local, pero no constituye respaldo.
 - La voz y cámara dependen del navegador y permisos del usuario.
 - El soporte del escáner debe probarse físicamente.
@@ -127,11 +150,15 @@ La suite cubre mediciones, pesaje, códigos de barra, fiados, voz, imágenes, ci
 - El cierre no reemplaza contabilidad formal ni conciliación bancaria.
 - La IA actual es determinista y no llama a un modelo externo.
 
-La separación entre piloto y producción está documentada en `docs/PILOT_COMPLETION.md`.
+Documentación relevante:
+
+- `docs/PILOT_COMPLETION.md`: separación entre piloto y producción.
+- `docs/LOCAL_CONTINUITY.md`: respaldo, checksum, restauración y recuperación.
+- `docs/DATA_INTEGRITY.md`: reglas, estados, prioridades y mapeo a producción.
 
 ## Producción futura
 
-Django, DRF, PostgreSQL, autenticación, organizaciones, RBAC, auditoría, transacciones, idempotencia, almacenamiento privado, respaldos automáticos cifrados, restauraciones probadas, OCR/IA backend, observabilidad, privacidad, pagos e integración tributaria.
+Django, DRF, PostgreSQL, autenticación, organizaciones, RBAC, auditoría, transacciones, idempotencia, constraints de integridad, almacenamiento privado, respaldos automáticos cifrados, restauraciones probadas, OCR/IA backend, observabilidad, privacidad, pagos e integración tributaria.
 
 ## Referencia de reutilización
 

@@ -18,6 +18,7 @@ function normalizedPage() {
     ventas: "ventas.html",
     asistente: "asistente.html",
     validacion: "validacion.html",
+    integridad: "integridad.html",
     configurar: "configurador.html",
     scanner: "scanner-lab.html",
   })[segment] ?? segment;
@@ -77,7 +78,7 @@ function removeDuplicateMobileCart() {
 }
 
 function openFirstRunGuideFromAlias() {
-  if (currentSegment() !== "operar" || readBoolean("guided-onboarding-v1")) return;
+  if (currentSegment() !== "operar" || readBoolean("guided-onboarding-v2")) return;
   window.setTimeout(() => document.querySelector("[data-guide-open]")?.click(), 550);
 }
 

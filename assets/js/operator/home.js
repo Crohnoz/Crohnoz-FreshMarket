@@ -1,9 +1,11 @@
 import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
 import { formatCLP } from "../core/format.js";
-import { readStorage } from "../core/storage.js";
-import { initialOrders } from "../data/demo-data.js";
+import { readStorage, snapshotStorage } from "../core/storage.js";
+import { initialOrders, products } from "../data/demo-data.js";
 import { initialInventoryLots, initialPurchases } from "../data/operations-demo.js";
+import { materializePilotEntries } from "../data/pilot-state.js";
 import { initialCustomers, initialDailyTransactions, initialLedgerEntries } from "../data/receivables-demo.js";
+import { auditDataIntegrity } from "../domain/data-integrity.js";
 import { inventorySummary } from "../domain/inventory.js";
 import { chooseOperatorRecommendation, operatorTaskGroups } from "../domain/operator-guidance.js";
 import { buildOperatorReadiness, normalizeResumeTarget } from "../domain/operator-readiness.js";
@@ -20,9 +22,23 @@ const customers = readStorage("credit-customers", initialCustomers);
 const entries = readStorage("credit-ledger", initialLedgerEntries);
 const transactions = readStorage("daily-transactions", initialDailyTransactions);
 const continuityMeta = readStorage("continuity-meta", {});
+const integrityMeta = readStorage("integrity-meta", {});
 const visitedPages = readStorage("visited-operator-pages-v1", []);
 const lastRoute = readStorage("last-operator-route", null);
 const receivables = buildReceivablesSummary(customers, entries);
+const localSnapshot = snapshotStorage();
+const effectiveEntries = materializePilotEntries(localSnapshot.entries);
+const baseIntegrityReport = auditDataIntegrity(effectiveEntries, { products });
+const integrityReport = localSnapshot.invalidKeys.length
+  ? {
+    ...baseIntegrityReport,
+    status: "blocked",
+    counts: {
+      ...baseIntegrityReport.counts,
+      critical: baseIntegrityReport.counts.critical + localSnapshot.invalidKeys.length,
+    },
+  }
+  : baseIntegrityReport;
 let activeGroup = "all";
 
 function todayISO() {
@@ -104,6 +120,7 @@ function renderRecommendation() {
   const recommendation = chooseOperatorRecommendation({
     orders,
     inventorySummary: inventorySummary(lots),
+    integritySummary: integrityReport,
     closes,
     outstanding: receivables.totalOutstanding,
     activityCount: userActivityCount(),
@@ -176,6 +193,7 @@ function renderReadiness() {
     defaultBusiness: DEFAULT_BUSINESS,
     visitedPages,
     continuityMeta,
+    integrityMeta,
   });
   document.querySelector("#readiness-count").textContent = `${readiness.completed}/${readiness.total}`;
   const progress = document.querySelector("#readiness-progress");

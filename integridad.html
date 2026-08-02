@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Diagnóstico local de coherencia y referencias de Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <title>Crohnoz Fresh Market · Integridad de datos</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/data-integrity.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong data-business-name></strong><small>Integridad de datos</small></span></a>
+      <nav class="nav"><a href="operar.html">Inicio</a><a href="inventario.html">Inventario</a><a href="ventas.html">Ventas</a><a href="cierre.html">Cerrar día</a><a aria-current="page" href="integridad.html">Integridad</a><a href="configurador.html">Configurar</a></nav>
+    </div>
+  </header>
+
+  <main class="integrity-main" id="main-content">
+    <div class="shell">
+      <section class="integrity-hero">
+        <div>
+          <p class="eyebrow">Control operacional</p>
+          <h1>Comprueba que los datos tengan sentido</h1>
+          <p>El análisis es local y de solo lectura. Busca referencias rotas, identificadores duplicados, saldos negativos, montos inconsistentes y fechas defectuosas antes de respaldar o migrar.</p>
+        </div>
+        <div class="integrity-hero-actions">
+          <button class="button primary" id="run-integrity" type="button">↻ Analizar nuevamente</button>
+          <button class="button secondary" id="download-integrity" type="button">⬇ Descargar informe</button>
+          <a class="button secondary" href="configurador.html#continuidad">💾 Ir a respaldos</a>
+        </div>
+      </section>
+
+      <section class="integrity-status card" id="integrity-status-card" data-state="checking" aria-labelledby="integrity-status-title">
+        <div class="integrity-status-icon" id="integrity-status-icon" aria-hidden="true">…</div>
+        <div class="integrity-status-copy">
+          <p class="eyebrow">Resultado actual</p>
+          <h2 id="integrity-status-title">Analizando datos locales</h2>
+          <p id="integrity-status-description">Se están revisando las colecciones de este navegador.</p>
+          <small id="integrity-scanned-at"></small>
+        </div>
+        <div class="integrity-score" aria-label="Resumen de hallazgos">
+          <strong id="integrity-score">—</strong>
+          <span>estado</span>
+        </div>
+      </section>
+
+      <section class="integrity-metrics" aria-label="Métricas de integridad">
+        <article class="card"><span>Colecciones revisadas</span><strong id="integrity-collections">0</strong></article>
+        <article class="card"><span>Registros revisados</span><strong id="integrity-records">0</strong></article>
+        <article class="card metric-critical"><span>Errores críticos</span><strong id="integrity-critical">0</strong></article>
+        <article class="card metric-warning"><span>Advertencias</span><strong id="integrity-warning">0</strong></article>
+      </section>
+
+      <section class="integrity-workspace">
+        <div class="integrity-issues-panel">
+          <div class="integrity-toolbar">
+            <div>
+              <p class="eyebrow">Hallazgos</p>
+              <h2>Elementos que requieren atención</h2>
+              <p id="integrity-result-count">Preparando resultados…</p>
+            </div>
+            <label class="integrity-search"><span class="sr-only">Buscar hallazgo</span><input id="integrity-search" type="search" placeholder="Buscar colección, código o registro…" autocomplete="off"></label>
+          </div>
+          <div class="integrity-filters" id="integrity-filters" aria-label="Filtrar hallazgos">
+            <button type="button" data-severity="all" aria-pressed="true">Todos</button>
+            <button type="button" data-severity="critical" aria-pressed="false">Críticos</button>
+            <button type="button" data-severity="warning" aria-pressed="false">Advertencias</button>
+          </div>
+          <div class="integrity-issues" id="integrity-issues"></div>
+          <div class="empty-state" id="integrity-empty" hidden>No hay hallazgos para este filtro.</div>
+        </div>
+
+        <aside class="integrity-side">
+          <section class="card integrity-side-card">
+            <p class="eyebrow">Qué revisa</p>
+            <h2>Controles cruzados</h2>
+            <ul>
+              <li>IDs únicos y registros identificables.</li>
+              <li>Pedidos, pagos y clientes relacionados.</li>
+              <li>Compras, proveedores y lotes existentes.</li>
+              <li>Cantidades, costos, totales y saldos válidos.</li>
+              <li>Fechas de operación, vencimiento y cierre.</li>
+              <li>Conciliación matemática del cierre diario.</li>
+            </ul>
+          </section>
+          <section class="card integrity-side-card integrity-limit-card">
+            <p class="eyebrow">Límite del piloto</p>
+            <h2>No modifica automáticamente</h2>
+            <p>El diagnóstico evita “arreglar” datos sin contexto humano. Un hallazgo debe revisarse en su módulo de origen o recuperarse desde un respaldo confiable.</p>
+          </section>
+          <section class="card integrity-side-card">
+            <p class="eyebrow">Preparación futura</p>
+            <h2>Listo para migración</h2>
+            <p>Estas reglas sirven como base para validadores de API, constraints PostgreSQL, migraciones y tareas de auditoría en Crohnoz Kernel.</p>
+          </section>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>Diagnóstico local de solo lectura</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <div class="pilot-status integrity-live-status" id="integrity-live-status" role="status" aria-live="polite"></div>
+  <script type="module" src="assets/js/integrity/app.js"></script>
+  <script type="module" src="assets/js/core/guided-shell.js"></script>
+</body>
+</html>

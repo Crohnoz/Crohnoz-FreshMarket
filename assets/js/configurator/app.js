@@ -3,8 +3,10 @@ import { readStorage, replaceStorageSnapshot, resetDemoStorage, snapshotStorage,
 import { confirmAction, setButtonPending, setStatus, showToast } from "../core/ui-feedback.js";
 import { products, initialOrders } from "../data/demo-data.js";
 import { initialInventoryLots, initialOrderPayments, initialPurchases, initialSuppliers } from "../data/operations-demo.js";
+import { materializePilotEntries } from "../data/pilot-state.js";
 import { initialCustomers, initialDailyTransactions, initialLedgerEntries } from "../data/receivables-demo.js";
 import { buildBackupFilename, createBackupEnvelope, formatBackupSize, parseBackupText, serializeBackup, summarizeBackupEntries } from "../domain/backup.js";
+import { auditDataIntegrity, integrityStatusLabel } from "../domain/data-integrity.js";
 
 const form = document.querySelector("#business-form");
 const preview = document.querySelector("#business-preview");
@@ -85,7 +87,9 @@ function renderPreview() {
 
 function renderContinuity() {
   const snapshot = snapshotStorage();
-  const summary = summarizeBackupEntries(snapshot.entries);
+  const effectiveEntries = materializePilotEntries(snapshot.entries);
+  const summary = summarizeBackupEntries(effectiveEntries);
+  const integrity = auditDataIntegrity(effectiveEntries, { products });
   const meta = continuityMeta();
   document.querySelector("#continuity-collections").textContent = summary.collections;
   document.querySelector("#continuity-records").textContent = summary.estimatedRecords;
@@ -95,14 +99,22 @@ function renderContinuity() {
   const badge = document.querySelector("#continuity-health-badge");
   const health = document.querySelector("#continuity-health");
   if (snapshot.invalidKeys.length) {
-    badge.textContent = "Requiere revisión";
+    badge.textContent = "Datos ilegibles";
     badge.className = "status danger";
     health.dataset.state = "error";
-    health.textContent = `Hay ${snapshot.invalidKeys.length} colección(es) locales dañadas. No exportes hasta restablecer o revisar el piloto.`;
+    health.textContent = `Hay ${snapshot.invalidKeys.length} colección(es) locales con JSON dañado. La exportación está bloqueada para no generar una copia incompleta.`;
     exportButton.disabled = true;
     return;
   }
+
   exportButton.disabled = false;
+  if (integrity.status === "blocked") {
+    badge.textContent = "Datos incoherentes";
+    badge.className = "status danger";
+    health.dataset.state = "error";
+    health.textContent = `El almacenamiento se puede leer, pero existen ${integrity.counts.critical} error(es) crítico(s). Descarga una copia de resguardo y revisa Integridad antes de seguir operando.`;
+    return;
+  }
   if (snapshot.backend !== "localStorage") {
     badge.textContent = "Persistencia limitada";
     badge.className = "status warning";
@@ -110,12 +122,20 @@ function renderContinuity() {
     health.textContent = "El navegador está usando memoria temporal total o parcialmente. Descarga un respaldo antes de cerrar esta pestaña.";
     return;
   }
-  badge.textContent = "Datos legibles";
+  if (integrity.status === "review") {
+    badge.textContent = "Revisión recomendada";
+    badge.className = "status warning";
+    health.dataset.state = "warning";
+    health.textContent = `Los datos son legibles y no tienen errores críticos, pero existen ${integrity.counts.warning} advertencia(s) de coherencia.`;
+    return;
+  }
+
+  badge.textContent = "Datos coherentes";
   badge.className = "status success";
   health.dataset.state = "success";
   health.textContent = meta.lastBackupAt
-    ? `El almacenamiento local se puede leer. Última copia descargada: ${formatDateTime(meta.lastBackupAt)}.`
-    : "El almacenamiento local se puede leer, pero todavía no existe una copia descargada.";
+    ? `El almacenamiento local se puede leer y el diagnóstico no detectó incoherencias. Última copia: ${formatDateTime(meta.lastBackupAt)}.`
+    : "El almacenamiento local se puede leer y el diagnóstico no detectó incoherencias, pero todavía no existe una copia descargada.";
 }
 
 function save(event) {
@@ -148,17 +168,23 @@ async function exportBackup() {
     const exportedAt = new Date();
     const filename = buildBackupFilename(business.name, exportedAt);
     const snapshot = snapshotStorage();
-    if (snapshot.invalidKeys.length) throw new Error("Existen colecciones dañadas y el respaldo fue bloqueado.");
-    const envelope = createBackupEnvelope(snapshot.entries, {
+    if (snapshot.invalidKeys.length) throw new Error("Existen colecciones ilegibles y el respaldo fue bloqueado.");
+    const effectiveEntries = materializePilotEntries(snapshot.entries);
+    const envelope = createBackupEnvelope(effectiveEntries, {
       namespace: APP_CONFIG.storageNamespace,
       appVersion: APP_CONFIG.version,
       exportedAt: exportedAt.toISOString(),
     });
     const serialized = serializeBackup(envelope);
     downloadTextFile(serialized, filename);
-    updateContinuityMeta({ lastBackupAt: exportedAt.toISOString(), lastBackupFilename: filename });
-    setStatus("#continuity-status", `Respaldo descargado: ${filename}.`, "success");
-    showToast({ message: "Respaldo local descargado.", state: "success" });
+    updateContinuityMeta({
+      lastBackupAt: exportedAt.toISOString(),
+      lastBackupFilename: filename,
+      lastBackupChecksum: envelope.checksum,
+      lastBackupVersion: envelope.version,
+    });
+    setStatus("#continuity-status", `Respaldo completo descargado y checksum generado: ${filename}.`, "success");
+    showToast({ message: "Respaldo completo con checksum descargado.", state: "success" });
     renderContinuity();
   } catch (error) {
     setStatus("#continuity-status", error.message, "error");
@@ -171,9 +197,22 @@ async function exportBackup() {
 function clearBackupPreview() {
   pendingBackup = null;
   importButton.disabled = true;
-  document.querySelector("#backup-preview").hidden = true;
+  const backupPreview = document.querySelector("#backup-preview");
+  backupPreview.hidden = true;
+  delete backupPreview.dataset.state;
   document.querySelector("#backup-preview-title").textContent = "";
   document.querySelector("#backup-preview-detail").textContent = "";
+  document.querySelector("#backup-preview-integrity").textContent = "";
+}
+
+function backupInspectionText(envelope, integrity) {
+  const checksumState = envelope.integrity.verified
+    ? "Checksum verificado"
+    : "Respaldo antiguo sin checksum";
+  const dataState = integrity.status === "healthy"
+    ? "datos coherentes"
+    : `${integrityStatusLabel(integrity.status).toLocaleLowerCase("es")} (${integrity.counts.critical} crítico(s), ${integrity.counts.warning} advertencia(s))`;
+  return `${checksumState} · ${dataState}.`;
 }
 
 async function inspectSelectedBackup() {
@@ -183,24 +222,47 @@ async function inspectSelectedBackup() {
   if (!file) return;
   try {
     const envelope = parseBackupText(await file.text(), { expectedNamespace: APP_CONFIG.storageNamespace });
-    const summary = summarizeBackupEntries(envelope.entries);
-    pendingBackup = { envelope, fileName: file.name, summary };
+    const effectiveEntries = materializePilotEntries(envelope.entries);
+    const summary = summarizeBackupEntries(effectiveEntries);
+    const integrity = auditDataIntegrity(effectiveEntries, { products });
+    pendingBackup = { envelope, entries: effectiveEntries, fileName: file.name, summary, integrity };
+
+    const backupPreview = document.querySelector("#backup-preview");
+    backupPreview.dataset.state = integrity.status === "blocked"
+      ? "error"
+      : envelope.integrity.legacy || integrity.status === "review"
+        ? "warning"
+        : "success";
     document.querySelector("#backup-preview-title").textContent = file.name;
-    document.querySelector("#backup-preview-detail").textContent = `${summary.collections} colecciones · ${summary.estimatedRecords} registros estimados · exportado ${formatDateTime(envelope.exportedAt)}.`;
-    document.querySelector("#backup-preview").hidden = false;
+    document.querySelector("#backup-preview-detail").textContent = `${summary.collections} colecciones efectivas · ${summary.estimatedRecords} registros estimados · exportado ${formatDateTime(envelope.exportedAt)}.`;
+    document.querySelector("#backup-preview-integrity").textContent = backupInspectionText(envelope, integrity);
+    backupPreview.hidden = false;
+
+    if (integrity.status === "blocked") {
+      importButton.disabled = true;
+      setStatus("#continuity-status", `Restauración bloqueada: el archivo contiene ${integrity.counts.critical} error(es) crítico(s) de coherencia.`, "error");
+      return;
+    }
+
     importButton.disabled = false;
-    setStatus("#continuity-status", "Archivo compatible. Revisa el resumen antes de restaurar.", "success");
+    if (envelope.integrity.legacy) {
+      setStatus("#continuity-status", "Archivo antiguo compatible. No posee checksum; restaura solo si reconoces su origen.", "warning");
+    } else if (integrity.status === "review") {
+      setStatus("#continuity-status", `Checksum correcto. El archivo contiene ${integrity.counts.warning} advertencia(s) no bloqueantes.`, "warning");
+    } else {
+      setStatus("#continuity-status", "Checksum correcto y datos coherentes. Revisa el resumen antes de restaurar.", "success");
+    }
   } catch (error) {
     setStatus("#continuity-status", error.message, "error");
   }
 }
 
 async function importBackup() {
-  if (!pendingBackup) return;
+  if (!pendingBackup || pendingBackup.integrity.status === "blocked") return;
   const accepted = await confirmAction({
     title: "¿Restaurar este respaldo?",
-    message: "Los datos actuales de este navegador serán reemplazados por el contenido del archivo.",
-    detail: `${pendingBackup.fileName} · ${pendingBackup.summary.collections} colecciones · ${pendingBackup.summary.estimatedRecords} registros estimados.`,
+    message: "Los datos actuales de este navegador serán reemplazados por el contenido materializado del archivo.",
+    detail: `${pendingBackup.fileName} · ${pendingBackup.summary.collections} colecciones · ${pendingBackup.summary.estimatedRecords} registros · ${backupInspectionText(pendingBackup.envelope, pendingBackup.integrity)}`,
     confirmLabel: "Sí, restaurar",
     cancelLabel: "Conservar datos actuales",
     tone: "danger",
@@ -209,13 +271,23 @@ async function importBackup() {
 
   setButtonPending(importButton, true, "Restaurando…");
   try {
-    replaceStorageSnapshot(pendingBackup.envelope.entries);
+    replaceStorageSnapshot(pendingBackup.entries);
+    const restoredAt = new Date().toISOString();
     const importedMeta = continuityMeta();
     updateContinuityMeta({
       ...importedMeta,
-      lastRestoreAt: new Date().toISOString(),
+      lastRestoreAt: restoredAt,
       restoredFrom: pendingBackup.fileName,
       restoredExportedAt: pendingBackup.envelope.exportedAt,
+      restoredBackupVersion: pendingBackup.envelope.version,
+      restoredChecksumVerified: pendingBackup.envelope.integrity.verified,
+    });
+    writeStorage("integrity-meta", {
+      lastScanAt: restoredAt,
+      status: pendingBackup.integrity.status,
+      counts: pendingBackup.integrity.counts,
+      rulesetVersion: pendingBackup.integrity.rulesetVersion,
+      source: "restore-validation",
     });
     business = readStorage("business", DEFAULT_BUSINESS);
     fillForm();
@@ -223,13 +295,13 @@ async function importBackup() {
     clearBackupPreview();
     fileInput.value = "";
     renderContinuity();
-    setStatus("#continuity-status", "Respaldo restaurado. Revisa la configuración antes de continuar.", "success");
-    showToast({ message: "Datos restaurados desde el respaldo.", state: "success", duration: 8000 });
+    setStatus("#continuity-status", "Respaldo restaurado. Revisa la configuración y el último cierre antes de continuar.", "success");
+    showToast({ message: "Datos restaurados desde el respaldo validado.", state: "success", duration: 8000 });
   } catch (error) {
     setStatus("#continuity-status", error.message, "error");
     showToast({ message: error.message, state: "error" });
   } finally {
-    const canRestore = Boolean(pendingBackup);
+    const canRestore = Boolean(pendingBackup && pendingBackup.integrity.status !== "blocked");
     setButtonPending(importButton, false);
     importButton.disabled = !canRestore;
   }
@@ -250,6 +322,7 @@ function seedDemoData() {
   writeStorage("waste", []);
   writeStorage("daily-closes", []);
   writeStorage("continuity-meta", { lastResetAt: new Date().toISOString(), lastBackupAt: null, lastRestoreAt: null, businessConfiguredAt: null });
+  writeStorage("integrity-meta", { lastScanAt: null, status: null, counts: { critical: 0, warning: 0, info: 0 }, rulesetVersion: 1, source: "demo-reset" });
 }
 
 async function reset() {

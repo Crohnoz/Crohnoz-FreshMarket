@@ -1,0 +1,75 @@
+.integrity-main { padding: 34px 0 76px; }
+.integrity-hero { display: flex; align-items: end; justify-content: space-between; gap: 28px; padding: 30px; border: 1px solid var(--line); border-radius: 28px; background: radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 24%, transparent), transparent 34%), linear-gradient(145deg, color-mix(in srgb, var(--primary) 9%, var(--surface)), var(--surface)); box-shadow: var(--shadow); }
+.integrity-hero > div:first-child { max-width: 760px; }
+.integrity-hero h1 { margin: 4px 0 12px; font-size: clamp(34px, 5vw, 56px); line-height: 1; letter-spacing: -.055em; }
+.integrity-hero p:last-child { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
+.integrity-hero-actions { display: grid; gap: 10px; min-width: 240px; }
+.integrity-status { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; margin: 18px 0 14px; padding: 22px; border-width: 1px; }
+.integrity-status[data-state="healthy"] { border-color: color-mix(in srgb, var(--success) 46%, var(--line)); background: color-mix(in srgb, var(--success) 8%, var(--surface)); }
+.integrity-status[data-state="review"] { border-color: color-mix(in srgb, var(--warning) 48%, var(--line)); background: color-mix(in srgb, var(--warning) 9%, var(--surface)); }
+.integrity-status[data-state="blocked"] { border-color: color-mix(in srgb, var(--danger) 52%, var(--line)); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.integrity-status-icon { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 20px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 30px; }
+.integrity-status-copy h2 { margin: 0; font-size: 27px; letter-spacing: -.035em; }
+.integrity-status-copy p:not(.eyebrow) { margin: 7px 0 4px; color: var(--muted); line-height: 1.5; }
+.integrity-status-copy small { color: var(--muted); font-weight: 700; }
+.integrity-score { display: grid; min-width: 92px; justify-items: center; padding: 13px; border-radius: 18px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.integrity-score strong { font-size: 25px; letter-spacing: -.04em; }
+.integrity-score span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.integrity-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+.integrity-metrics article { padding: 17px; }
+.integrity-metrics span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
+.integrity-metrics strong { display: block; margin-top: 8px; font-size: 28px; letter-spacing: -.04em; }
+.metric-critical strong { color: var(--danger); }
+.metric-warning strong { color: color-mix(in srgb, var(--warning) 78%, var(--text)); }
+.integrity-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+.integrity-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 13px; }
+.integrity-toolbar h2 { margin: 0; font-size: 30px; letter-spacing: -.04em; }
+.integrity-toolbar p:last-child { margin: 7px 0 0; color: var(--muted); }
+.integrity-search { width: min(330px, 100%); }
+.integrity-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.integrity-filters button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.integrity-filters button[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, var(--surface)); color: var(--primary); }
+.integrity-issues { display: grid; gap: 10px; }
+.integrity-issue { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 17px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 8px 24px rgba(11, 39, 18, .05); }
+.integrity-issue[data-severity="critical"] { border-left: 5px solid var(--danger); }
+.integrity-issue[data-severity="warning"] { border-left: 5px solid var(--warning); }
+.integrity-issue-badge { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: var(--surface-2); font-size: 20px; }
+.integrity-issue-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.integrity-issue h3 { margin: 0; font-size: 17px; }
+.integrity-issue-code { padding: 4px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.integrity-issue p { margin: 7px 0 0; color: var(--muted); line-height: 1.5; }
+.integrity-issue small { display: block; margin-top: 8px; color: var(--text); font-weight: 750; line-height: 1.45; }
+.integrity-issue-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.integrity-issue-meta span { padding: 4px 8px; border-radius: 8px; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 800; }
+.integrity-side { display: grid; gap: 14px; }
+.integrity-side-card { padding: 20px; }
+.integrity-side-card h2 { margin: 0; font-size: 21px; }
+.integrity-side-card p, .integrity-side-card li { color: var(--muted); line-height: 1.55; }
+.integrity-side-card ul { display: grid; gap: 7px; margin: 13px 0 0; padding-left: 19px; }
+.integrity-limit-card { border-color: color-mix(in srgb, var(--warning) 42%, var(--line)); background: color-mix(in srgb, var(--warning) 8%, var(--surface)); }
+.integrity-live-status { position: fixed; right: 18px; bottom: 92px; z-index: 20; max-width: min(420px, calc(100vw - 36px)); padding: 11px 14px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+.integrity-live-status:empty { display: none; }
+@media (max-width: 980px) {
+  .integrity-hero { align-items: stretch; flex-direction: column; }
+  .integrity-hero-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 0; }
+  .integrity-workspace { grid-template-columns: 1fr; }
+  .integrity-side { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .integrity-main { padding-top: 18px; }
+  .integrity-hero { padding: 22px 18px; }
+  .integrity-hero-actions { grid-template-columns: 1fr; }
+  .integrity-status { grid-template-columns: auto minmax(0, 1fr); }
+  .integrity-score { grid-column: 1 / -1; grid-template-columns: auto auto; justify-content: center; gap: 8px; width: 100%; }
+  .integrity-metrics { grid-template-columns: 1fr 1fr; }
+  .integrity-toolbar { align-items: stretch; flex-direction: column; }
+  .integrity-search { width: 100%; }
+  .integrity-side { grid-template-columns: 1fr; }
+}
+@media (max-width: 440px) {
+  .integrity-metrics { grid-template-columns: 1fr; }
+  .integrity-metrics article { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .integrity-metrics strong { margin: 0; }
+  .integrity-issue { grid-template-columns: 1fr; }
+  .integrity-issue-heading { flex-direction: column; }
+}

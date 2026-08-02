@@ -5,6 +5,7 @@ const KNOWN_OPERATOR_PAGES = new Set([
   "compras.html",
   "configurador.html",
   "cuentas.html",
+  "integridad.html",
   "inventario.html",
   "operar.html",
   "scanner-lab.html",
@@ -22,8 +23,10 @@ export function buildOperatorReadiness({
   defaultBusiness = {},
   visitedPages = [],
   continuityMeta = {},
+  integrityMeta = {},
 } = {}) {
   const visited = new Set(Array.isArray(visitedPages) ? visitedPages : []);
+  const integrityScanned = Number.isFinite(Date.parse(integrityMeta.lastScanAt));
   const items = [
     {
       id: "identity",
@@ -45,6 +48,15 @@ export function buildOperatorReadiness({
       description: "Simula una venta, un abono o la preparación de un pedido.",
       href: "ventas.html",
       complete: ["ventas.html", "cuentas.html", "admin.html"].some((page) => visited.has(page)),
+    },
+    {
+      id: "integrity",
+      label: "Comprobar integridad",
+      description: integrityMeta.status === "blocked"
+        ? "El último análisis detectó errores críticos pendientes."
+        : "Revisa referencias, saldos, montos y fechas antes del respaldo.",
+      href: "integridad.html",
+      complete: integrityScanned && integrityMeta.status !== "blocked",
     },
     {
       id: "backup",
