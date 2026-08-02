@@ -102,9 +102,9 @@ export function operatorTasksByGroup(group) {
 export function operatorTaskSearch(query) {
   const normalized = String(query ?? "").trim().toLocaleLowerCase("es");
   if (!normalized) return [...OPERATOR_TASKS];
-  return OPERATOR_TASKS.filter((task) => (
-    `${task.title} ${task.shortTitle} ${task.description}`
-      .toLocaleLowerCase("es")
-      .includes(normalized)
-  ));
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  return OPERATOR_TASKS.filter((task) => {
+    const haystack = `${task.title} ${task.shortTitle} ${task.description}`.toLocaleLowerCase("es");
+    return tokens.every((token) => haystack.includes(token));
+  });
 }
