@@ -14,12 +14,14 @@ La presentación comercial incluye fotografías de productos, cajas y operación
 - `/operar.html`: inicio guiado del negocio con tareas grandes y resumen operacional.
 - `/admin.html`: dashboard operacional y pesaje.
 - `/cuentas.html`: libro de fiados, abonos, registro rápido de operaciones y copiloto por voz.
+- `/cierre.html`: cierre diario asistido y conciliación de efectivo.
 - `/configurador.html`: identidad del negocio y configuración demo.
 - `/scanner-lab.html`: laboratorio de lector USB tipo teclado HID.
 
 Netlify también expone alias:
 
 - `/operar`
+- `/cierre`
 - `/dashboard`
 - `/cuentas`
 - `/configurar`
@@ -35,12 +37,29 @@ La capa guiada prioriza acciones cotidianas por sobre nombres técnicos de módu
 - Anotar un fiado.
 - Preparar pedidos.
 - Cambiar precios.
+- Cerrar el día.
 - Hablar con el copiloto.
 - Probar el lector.
 
 Incluye navegación inferior móvil, búsqueda de tareas, enlaces directos a formularios, instrucciones contextuales, recorrido de primera vez y un modo fácil persistente con controles mayores.
 
 La política de permisos permite cámara y micrófono únicamente desde el propio dominio. La geolocalización permanece deshabilitada.
+
+## Cierre diario asistido
+
+El cierre reúne las operaciones de una fecha y separa:
+
+- ventas en efectivo;
+- ventas por transferencia;
+- ventas fiadas;
+- compras por medio de pago;
+- abonos en efectivo o transferencia;
+- fiados manuales;
+- merma registrada.
+
+La caja esperada se calcula desde la caja inicial, entradas y salidas de efectivo. Luego se compara con el efectivo contado. Los abonos sin medio de pago deben clasificarse antes de guardar y las ventas fiadas vinculadas al libro de cuentas no se duplican.
+
+El resumen puede leerse mediante síntesis de voz. Los cierres se guardan como snapshots locales demostrativos y no sustituyen contabilidad formal.
 
 ## Ejecutar
 
@@ -73,6 +92,10 @@ Las pruebas cubren:
 - Presencia de imágenes, textos alternativos y etiquetas comerciales en el catálogo demo.
 - Integridad de las tareas operacionales y sus destinos.
 - Montaje global de navegación guiada y permisos de voz.
+- Separación de efectivo, transferencia y fiado en el cierre.
+- Conciliación de caja esperada contra efectivo contado.
+- Bloqueo de cierres con abonos sin clasificar.
+- Ruta y regiones obligatorias de la pantalla de cierre.
 
 ## Presentación visual
 
@@ -116,6 +139,7 @@ La extracción visual real mediante OCR/IA todavía no está conectada. La foto 
 - El soporte físico del lector debe validarse con el dispositivo real.
 - Los cálculos del piloto son demostrativos; el backend productivo usará `Decimal`, transacciones, auditoría e idempotencia.
 - El módulo de fiados no ejecuta cobranza automática, no calcula intereses y no sustituye contabilidad formal.
+- El cierre diario no genera libros contables ni conciliación bancaria certificada.
 - Las fotografías remotas son activos del piloto y deben migrarse a infraestructura controlada antes de producción.
 
 ## Referencia de reutilización
