@@ -54,6 +54,21 @@ class InventoryLotSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El producto no pertenece a la organización activa.")
         return product
 
+    def validate(self, attrs):
+        received = attrs.get("quantity_received", getattr(self.instance, "quantity_received", None))
+        available = attrs.get("quantity_available", getattr(self.instance, "quantity_available", None))
+        received_at = attrs.get("received_at", getattr(self.instance, "received_at", None))
+        best_before = attrs.get("best_before", getattr(self.instance, "best_before", None))
+        if received is not None and received < 0:
+            raise serializers.ValidationError({"quantity_received": "La cantidad recibida no puede ser negativa."})
+        if available is not None and available < 0:
+            raise serializers.ValidationError({"quantity_available": "La cantidad disponible no puede ser negativa."})
+        if received is not None and available is not None and available > received:
+            raise serializers.ValidationError({"quantity_available": "No puede superar la cantidad recibida."})
+        if received_at and best_before and best_before < received_at:
+            raise serializers.ValidationError({"best_before": "La fecha preferente no puede ser anterior a la recepción."})
+        return attrs
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
@@ -70,6 +85,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
         if product.organization_id != organization.id:
             raise serializers.ValidationError("El producto no pertenece a la organización activa.")
         return product
+
+    def validate(self, attrs):
+        requested = attrs.get("requested_quantity")
+        actual = attrs.get("actual_quantity")
+        unit_price = attrs.get("unit_price")
+        if requested is not None and requested <= 0:
+            raise serializers.ValidationError({"requested_quantity": "La cantidad debe ser mayor que cero."})
+        if actual is not None and actual <= 0:
+            raise serializers.ValidationError({"actual_quantity": "La cantidad real debe ser mayor que cero."})
+        if unit_price is not None and unit_price < 0:
+            raise serializers.ValidationError({"unit_price": "El precio no puede ser negativo."})
+        return attrs
 
 
 class OrderSerializer(serializers.ModelSerializer):

@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -93,3 +94,47 @@ class MarketApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 0)
+
+    def test_audit_chain_links_events_and_is_immutable(self):
+        headers = {"HTTP_X_ORGANIZATION_ID": str(self.organization.id)}
+        for sku, name in [("TOM-002", "Tomate pera"), ("TOM-003", "Tomate cherry")]:
+            response = self.client.post(
+                "/api/v1/products/",
+                {"sku": sku, "name": name, "sale_unit": "kg", "price": "2100.00"},
+                format="json",
+                **headers,
+            )
+            self.assertEqual(response.status_code, 201, response.data)
+        first, second = AuditEvent.objects.order_by("sequence")
+        self.assertEqual(first.sequence, 1)
+        self.assertEqual(second.sequence, 2)
+        self.assertEqual(second.previous_hash, first.event_hash)
+        second.action = "tampered"
+        with self.assertRaises(ValidationError):
+            second.save()
+
+    def test_inventory_validation_returns_operator_friendly_error(self):
+        product = Product.objects.create(
+            organization=self.organization,
+            sku="LEC-001",
+            name="Lechuga",
+            sale_unit=Product.SaleUnit.UNIT,
+            price=Decimal("1200.00"),
+        )
+        response = self.client.post(
+            "/api/v1/inventory-lots/",
+            {
+                "product": str(product.id),
+                "received_at": "2026-08-02",
+                "best_before": "2026-08-01",
+                "quantity_received": "10.000",
+                "quantity_available": "12.000",
+                "unit_cost": "500.00",
+                "quality": "good",
+                "status": "active",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.organization.id),
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("cantidad disponible", str(response.data).lower())

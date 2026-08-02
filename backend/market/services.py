@@ -9,7 +9,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 
-from .models import AuditEvent, Order
+from .models import AuditEvent, Order, Organization
 
 
 def _canonical_payload(value: dict) -> bytes:
@@ -18,6 +18,7 @@ def _canonical_payload(value: dict) -> bytes:
 
 def record_audit_event(*, organization, actor, action: str, entity_type: str, entity_id: str, payload: dict) -> AuditEvent:
     with transaction.atomic():
+        Organization.objects.select_for_update().get(pk=organization.pk)
         previous = (
             AuditEvent.objects.select_for_update()
             .filter(organization=organization)
