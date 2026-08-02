@@ -1,0 +1,54 @@
+.audit-main { padding: 42px 0 78px; }
+.audit-hero { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; padding: 28px; border: 1px solid var(--line); border-radius: 24px; background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, var(--surface)), var(--surface)); }
+.audit-hero h1 { max-width: 760px; margin: 6px 0 12px; font-size: clamp(38px, 6vw, 64px); line-height: .98; letter-spacing: -.055em; }
+.audit-hero p { max-width: 760px; margin: 0; color: var(--muted); line-height: 1.6; }
+.audit-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; flex: 0 0 auto; }
+.audit-status { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; padding: 22px; border-left: 5px solid var(--muted); }
+.audit-status[data-state="healthy"] { border-left-color: var(--success); }
+.audit-status[data-state="blocked"] { border-left-color: var(--danger); }
+.audit-status[data-state="empty"] { border-left-color: var(--warning); }
+.audit-status-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 18px; background: var(--surface-2); font-size: 28px; font-weight: 900; }
+.audit-status h2 { margin: 2px 0 7px; }
+.audit-status p { margin: 0; color: var(--muted); line-height: 1.5; }
+.audit-status small { display: block; margin-top: 8px; color: var(--muted); }
+.audit-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+.audit-metrics article { padding: 18px; }
+.audit-metrics span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
+.audit-metrics strong { display: block; margin-top: 8px; font-size: clamp(25px, 4vw, 36px); letter-spacing: -.04em; }
+.audit-controls { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; margin-bottom: 30px; padding: 18px; }
+.audit-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 340px); gap: 24px; align-items: start; }
+.audit-list { display: grid; gap: 12px; }
+.audit-event { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.audit-event-sequence { display: grid; place-items: center; align-self: start; min-width: 54px; min-height: 54px; padding: 8px; border-radius: 16px; background: var(--surface-2); font-weight: 900; }
+.audit-event-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.audit-event h3 { margin: 0; font-size: 18px; }
+.audit-event time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.audit-event-meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
+.audit-event-meta span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 11px; font-weight: 800; }
+.audit-event-digests { display: grid; gap: 4px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; overflow-wrap: anywhere; }
+.audit-boundary { position: sticky; top: 96px; padding: 22px; }
+.audit-boundary h2 { margin-top: 4px; }
+.audit-boundary p, .audit-boundary li { color: var(--muted); line-height: 1.55; }
+.audit-boundary ul { padding-left: 20px; }
+.audit-live-status { min-height: 24px; margin-top: 16px; font-weight: 800; }
+.audit-live-status[data-state="error"] { color: var(--danger); }
+.audit-live-status[data-state="success"] { color: var(--success); }
+.audit-live-status[data-state="warning"] { color: var(--warning); }
+
+@media (max-width: 900px) {
+  .audit-hero { align-items: start; flex-direction: column; }
+  .audit-metrics { grid-template-columns: 1fr 1fr; }
+  .audit-content { grid-template-columns: 1fr; }
+  .audit-boundary { position: static; }
+}
+@media (max-width: 650px) {
+  .audit-main { padding-top: 26px; }
+  .audit-hero { padding: 20px; }
+  .audit-hero-actions { width: 100%; }
+  .audit-hero-actions .button { flex: 1 1 100%; }
+  .audit-status { grid-template-columns: 1fr; }
+  .audit-controls { grid-template-columns: 1fr; }
+  .audit-event { grid-template-columns: 1fr; }
+  .audit-event-sequence { justify-self: start; }
+  .audit-event-heading { flex-direction: column; }
+}
