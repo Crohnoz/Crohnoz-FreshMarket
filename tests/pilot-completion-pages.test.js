@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 async function text(path) { return readFile(new URL(`../${path}`, import.meta.url), "utf8"); }
 
 test("five completion blocks expose their main regions", async () => {
@@ -14,6 +16,20 @@ test("five completion blocks expose their main regions", async () => {
   for (const [path, ids] of Object.entries(pages)) {
     const html = await text(path);
     for (const id of ids) assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+});
+
+test("new application scripts pass syntax validation", () => {
+  for (const path of [
+    "assets/js/inventory/app.js",
+    "assets/js/purchasing/app.js",
+    "assets/js/sales/app.js",
+    "assets/js/assistant/app.js",
+    "assets/js/validation/app.js",
+    "assets/js/core/hardening.js",
+    "sw.js",
+  ]) {
+    execFileSync(process.execPath, ["--check", fileURLToPath(new URL(`../${path}`, import.meta.url))]);
   }
 });
 
