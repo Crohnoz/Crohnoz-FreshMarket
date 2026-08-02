@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Laboratorio de pruebas para lector USB de códigos de barra.">
+  <title>Crohnoz Fresh Market · Scanner Lab</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/scanner.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar"><div class="shell topbar-inner"><a class="brand" href="index.html"><span class="brand-mark">SL</span><span class="brand-copy"><strong>Scanner Lab</strong><small>Crohnoz Fresh Market</small></span></a><nav class="nav"><a href="index.html">Tienda</a><a href="admin.html">Operación</a><a href="configurador.html">Configurar</a><a aria-current="page" href="scanner-lab.html">Scanner Lab</a></nav></div></header>
+
+  <main class="scanner-main">
+    <div class="shell">
+      <div class="section-title"><div><p class="eyebrow">Laboratorio independiente</p><h1>Diagnóstico del lector USB</h1><p>La detección asume inicialmente un teclado HID. El soporte físico solo se confirma después de probar el dispositivo.</p></div><button class="button primary" id="toggle-capture" type="button">Pausar captura</button></div>
+
+      <div class="scanner-grid">
+        <div class="scanner-column">
+          <section class="card scanner-card"><div class="scanner-statuses"><span class="status success" id="capture-state">Captura activa</span><span class="status warning">Foco: <b id="focus-state"></b></span><span class="status success">Lecturas: <b id="scan-count">0</b></span></div><div class="scan-code" id="current-code">—</div><p class="scan-meta" id="current-meta">Esperando una lectura</p><div class="scanner-actions"><button class="button secondary" id="clear-current" type="button">Limpiar lectura</button><button class="button secondary" id="clear-history" type="button">Limpiar historial</button><button class="button secondary" id="export-history" type="button">Exportar JSON</button></div></section>
+
+          <section class="card scanner-card"><h2>Lectura manual</h2><form class="manual-form" id="manual-form"><input id="manual-code" autocomplete="off" placeholder="Escribe o pega un código"><button class="button primary" type="submit">Procesar</button></form></section>
+
+          <section class="card scanner-card"><h2>Último evento</h2><pre class="diagnostic" id="event-log">Sin eventos.</pre></section>
+        </div>
+
+        <div class="scanner-column">
+          <section class="card scanner-card"><h2>Configuración de captura</h2><form class="settings-grid" id="scanner-settings"><label>Umbral entre caracteres (ms)<input id="threshold" type="number" min="10" max="200" value="60"></label><label>Timeout sin terminador (ms)<input id="idle-timeout" type="number" min="40" max="1000" value="120"></label><label>Longitud mínima<input id="min-length" type="number" min="1" max="50" value="4"></label><label>Ventana anti-duplicado (ms)<input id="duplicate-window" type="number" min="0" max="10000" value="900"></label><label>Terminador<select id="terminator"><option value="Enter">Enter</option><option value="Tab">Tab</option><option value="none">Ninguno</option></select></label><label class="toggle-setting"><input id="sound-enabled" type="checkbox"> Confirmación sonora</label><label class="toggle-setting"><input id="capture-inputs" type="checkbox"> Capturar dentro de campos</label></form></section>
+          <section class="card scanner-card"><h2>Errores</h2><ul class="error-list" id="error-list"></ul></section>
+          <section class="card scanner-card"><h2>Formatos lógicos</h2><p>Se valida checksum para EAN-13, EAN-8 y UPC-A. Los códigos alfanuméricos se aceptan como estructura compatible probable con Code 128, sin garantizar que el lector físico lo soporte.</p></section>
+        </div>
+      </div>
+
+      <section class="card history-card"><div class="panel-header"><div><h2>Historial de lecturas</h2><p>Máximo de cien registros en memoria durante esta sesión.</p></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>Código</th><th>Formato</th><th>Duración</th><th>Intervalo</th><th>Terminador</th><th>Duplicado</th><th>Resultado</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>Laboratorio, no integración productiva</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/scanner/scanner-lab.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "crohnoz-fresh-market",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Piloto comercial de Crohnoz Fresh Market",
+  "scripts": {
+    "test": "node --test",
+    "check": "npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,23 @@
+.config-main { padding: 46px 0; }
+.config-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 28px; align-items: start; }
+.config-form { display: grid; gap: 15px; padding: 22px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.check-row { display: flex; align-items: center; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.check-row input { width: auto; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.save-status { min-height: 20px; color: var(--success); font-size: 13px; }
+.preview-shell { position: sticky; top: 102px; padding: 24px; }
+.business-preview { --preview-primary: #2f7d4a; --preview-accent: #f2b544; min-height: 510px; overflow: hidden; border-radius: 25px; background: #f6f7f2; color: #17201a; }
+.business-preview[data-theme="dark"] { background: #101511; color: #f4f7f2; }
+.preview-top { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid rgba(90,100,92,.2); }
+.preview-logo { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--preview-primary); color: white; font-weight: 900; }
+.preview-hero { padding: 45px 28px; background: radial-gradient(circle at top right, color-mix(in srgb, var(--preview-accent) 35%, transparent), transparent 35%); }
+.preview-hero h2 { max-width: 470px; margin: 18px 0 10px; font-size: 46px; line-height: 1; letter-spacing: -.05em; }
+.preview-hero p { max-width: 480px; color: color-mix(in srgb, currentColor 65%, transparent); line-height: 1.6; }
+.preview-products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 28px 28px; }
+.preview-product { display: grid; place-items: center; height: 120px; border: 1px solid rgba(90,100,92,.2); border-radius: 18px; background: color-mix(in srgb, currentColor 5%, transparent); font-size: 48px; }
+@media (max-width: 900px) {
+  .config-grid { grid-template-columns: 1fr; }
+  .preview-shell { position: static; }
+}
+@media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
