@@ -64,6 +64,10 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 function htmlFallbackFor(url) {
   if (url.pathname === "/" || url.pathname === "") return "/operar.html";
   const segment = url.pathname.split("/").filter(Boolean).at(-1);
