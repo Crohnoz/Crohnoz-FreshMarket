@@ -1,0 +1,593 @@
+openapi: 3.1.0
+info:
+  title: Crohnoz Fresh Market API
+  version: 0.1.0
+  description: |
+    Contrato de migración hacia Crohnoz Kernel. No representa un backend desplegado.
+    Toda operación de negocio exige organización, identidad autenticada, autorización RBAC
+    y una clave de idempotencia cuando modifica estado.
+  x-crohnoz-status: contract-only
+servers:
+  - url: https://api.example.invalid
+    description: Placeholder; no desplegado
+security:
+  - bearerAuth: []
+tags:
+  - name: System
+  - name: Organizations
+  - name: Memberships
+  - name: Orders
+  - name: Inventory
+  - name: Receivables
+  - name: Closing
+  - name: Audit
+  - name: Imports
+paths:
+  /health:
+    get:
+      tags: [System]
+      security: []
+      operationId: getHealth
+      responses:
+        '200':
+          description: Servicio disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /v1/organizations:
+    get:
+      tags: [Organizations]
+      operationId: listOrganizations
+      responses:
+        '200':
+          description: Organizaciones accesibles por la identidad autenticada
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+    post:
+      tags: [Organizations]
+      operationId: createOrganization
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationCreate'
+      responses:
+        '201':
+          description: Organización creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/organizations/{organizationId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Organizations]
+      operationId: getOrganization
+      responses:
+        '200':
+          description: Organización
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/organizations/{organizationId}/memberships:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Memberships]
+      operationId: listMemberships
+      responses:
+        '200':
+          description: Membresías visibles para roles autorizados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Membership'
+    post:
+      tags: [Memberships]
+      operationId: createMembership
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MembershipCreate'
+      responses:
+        '201':
+          description: Membresía creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /v1/organizations/{organizationId}/orders:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Orders]
+      operationId: listOrders
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Pedidos paginados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPage'
+    post:
+      tags: [Orders]
+      operationId: createOrder
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/organizations/{organizationId}/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Orders]
+      operationId: getOrder
+      responses:
+        '200':
+          description: Pedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Orders]
+      operationId: updateOrder
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/OrderUpdate'
+      responses:
+        '200':
+          description: Pedido actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          description: La versión del recurso cambió
+  /v1/organizations/{organizationId}/inventory-lots:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Inventory]
+      operationId: listInventoryLots
+      responses:
+        '200':
+          description: Lotes de inventario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryLot'
+    post:
+      tags: [Inventory]
+      operationId: receiveInventoryLot
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryLotCreate'
+      responses:
+        '201':
+          description: Lote recibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryLot'
+  /v1/organizations/{organizationId}/ledger-entries:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Receivables]
+      operationId: listLedgerEntries
+      responses:
+        '200':
+          description: Movimientos de cuentas por cobrar
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LedgerEntry'
+    post:
+      tags: [Receivables]
+      operationId: createLedgerEntry
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerEntryCreate'
+      responses:
+        '201':
+          description: Movimiento registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerEntry'
+  /v1/organizations/{organizationId}/daily-closes:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Closing]
+      operationId: listDailyCloses
+      responses:
+        '200':
+          description: Cierres diarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailyClose'
+    post:
+      tags: [Closing]
+      operationId: createDailyClose
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyCloseCreate'
+      responses:
+        '201':
+          description: Cierre creado como snapshot inmutable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyClose'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/organizations/{organizationId}/audit-events:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Audit]
+      operationId: listAuditEvents
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Eventos de auditoría inmutables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditEvent'
+  /v1/import-jobs:
+    post:
+      tags: [Imports]
+      operationId: createImportJob
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KernelImportPackage'
+      responses:
+        '202':
+          description: Importación aceptada para validación asíncrona
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportJob'
+        '422':
+          description: Paquete íntegro pero semánticamente inválido
+  /v1/import-jobs/{jobId}:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Imports]
+      operationId: getImportJob
+      responses:
+        '200':
+          description: Estado de importación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportJob'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrganizationId:
+      name: organizationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Versión optimista o ETag del recurso
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    NotFound:
+      description: Recurso inexistente o no visible en la organización
+    Forbidden:
+      description: La membresía no posee el permiso requerido
+    Conflict:
+      description: Conflicto de idempotencia, versión o restricción única
+  schemas:
+    Health:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          const: ok
+        version:
+          type: string
+    OrganizationCreate:
+      type: object
+      additionalProperties: false
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        slug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+    Organization:
+      allOf:
+        - $ref: '#/components/schemas/OrganizationCreate'
+        - type: object
+          required: [id, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+    MembershipCreate:
+      type: object
+      additionalProperties: false
+      required: [userId, role]
+      properties:
+        userId: { type: string, format: uuid }
+        role:
+          enum: [owner, manager, operator, viewer]
+    Membership:
+      allOf:
+        - $ref: '#/components/schemas/MembershipCreate'
+        - type: object
+          required: [id, organizationId, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            organizationId: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+    OrderLineInput:
+      type: object
+      additionalProperties: false
+      required: [productId, requestedQuantity, unitPrice]
+      properties:
+        productId: { type: string, format: uuid }
+        requestedQuantity: { type: number, exclusiveMinimum: 0 }
+        actualQuantity: { type: [number, 'null'], minimum: 0 }
+        unitPrice: { type: integer, minimum: 0 }
+        preference: { type: [string, 'null'], maxLength: 240 }
+    OrderCreate:
+      type: object
+      additionalProperties: false
+      required: [customerLabel, fulfillment, lines]
+      properties:
+        externalId: { type: [string, 'null'], maxLength: 120 }
+        customerLabel: { type: string, minLength: 1, maxLength: 160 }
+        fulfillment: { enum: [pickup, delivery] }
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderLineInput'
+    OrderUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          enum: [new, preparing, pending_weighing, pending_customer_confirmation, confirmed, ready, delivering, delivered, cancelled]
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderLineInput'
+    Order:
+      allOf:
+        - $ref: '#/components/schemas/OrderCreate'
+        - type: object
+          required: [id, organizationId, status, version, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            organizationId: { type: string, format: uuid }
+            status: { type: string }
+            version: { type: integer, minimum: 1 }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    OrderPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        nextCursor: { type: [string, 'null'] }
+    InventoryLotCreate:
+      type: object
+      additionalProperties: false
+      required: [productId, receivedQuantity, unitCost, receivedAt]
+      properties:
+        productId: { type: string, format: uuid }
+        supplierId: { type: [string, 'null'], format: uuid }
+        receivedQuantity: { type: number, exclusiveMinimum: 0 }
+        unitCost: { type: integer, minimum: 0 }
+        receivedAt: { type: string, format: date }
+        bestBeforeDate: { type: [string, 'null'], format: date }
+    InventoryLot:
+      allOf:
+        - $ref: '#/components/schemas/InventoryLotCreate'
+        - type: object
+          required: [id, organizationId, availableQuantity]
+          properties:
+            id: { type: string, format: uuid }
+            organizationId: { type: string, format: uuid }
+            availableQuantity: { type: number, minimum: 0 }
+    LedgerEntryCreate:
+      type: object
+      additionalProperties: false
+      required: [customerId, type, amount, occurredAt]
+      properties:
+        customerId: { type: string, format: uuid }
+        type: { enum: [charge, payment] }
+        amount: { type: integer, exclusiveMinimum: 0 }
+        settlement: { enum: [cash, transfer, credit] }
+        occurredAt: { type: string, format: date-time }
+        referenceId: { type: [string, 'null'], maxLength: 120 }
+    LedgerEntry:
+      allOf:
+        - $ref: '#/components/schemas/LedgerEntryCreate'
+        - type: object
+          required: [id, organizationId, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            organizationId: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+    DailyCloseCreate:
+      type: object
+      additionalProperties: false
+      required: [businessDate, expectedCash, countedCash, difference]
+      properties:
+        businessDate: { type: string, format: date }
+        expectedCash: { type: integer, minimum: 0 }
+        countedCash: { type: integer, minimum: 0 }
+        difference: { type: integer }
+        notes: { type: [string, 'null'], maxLength: 2000 }
+    DailyClose:
+      allOf:
+        - $ref: '#/components/schemas/DailyCloseCreate'
+        - type: object
+          required: [id, organizationId, revision, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            organizationId: { type: string, format: uuid }
+            revision: { type: integer, minimum: 1 }
+            createdAt: { type: string, format: date-time }
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      required: [id, organizationId, sequence, occurredAt, actorId, action, resourceType, eventHash]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        sequence: { type: integer, minimum: 1 }
+        occurredAt: { type: string, format: date-time }
+        actorId: { type: string, format: uuid }
+        action: { type: string, minLength: 1, maxLength: 120 }
+        resourceType: { type: string, minLength: 1, maxLength: 120 }
+        resourceId: { type: [string, 'null'], maxLength: 160 }
+        previousEventHash: { type: [string, 'null'] }
+        eventHash: { type: string }
+        metadata: { type: object }
+    KernelImportPackage:
+      type: object
+      description: Debe validar también contra kernel-import-package.schema.json
+      required: [format, version, exportedAt, source, organization, data, auditVerification, checksum]
+      properties:
+        format: { const: crohnoz-kernel-import-package }
+        version: { const: 1 }
+        exportedAt: { type: string, format: date-time }
+        source: { type: object }
+        organization: { type: object }
+        data: { type: object }
+        auditVerification: { type: object }
+        checksum: { type: string, pattern: '^fnv1a64:[a-f0-9]{16}$' }
+    ImportJob:
+      type: object
+      required: [id, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { enum: [pending, validating, ready, importing, completed, failed, cancelled] }
+        errorCount: { type: integer, minimum: 0 }
+        warningCount: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
