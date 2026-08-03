@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import dj_database_url
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -14,6 +16,12 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def append_unique(values: list[str], value: str) -> list[str]:
+    if value and value not in values:
+        values.append(value)
+    return values
+
+
 DEBUG = env_bool("DJANGO_DEBUG", False)
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
@@ -22,9 +30,11 @@ if not SECRET_KEY:
     else:
         raise RuntimeError("DJANGO_SECRET_KEY es obligatorio cuando DJANGO_DEBUG=false")
 
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1" if DEBUG else "")
+append_unique(ALLOWED_HOSTS, RENDER_EXTERNAL_HOSTNAME)
 if not DEBUG and not ALLOWED_HOSTS:
-    raise RuntimeError("DJANGO_ALLOWED_HOSTS es obligatorio en producción")
+    raise RuntimeError("DJANGO_ALLOWED_HOSTS o RENDER_EXTERNAL_HOSTNAME es obligatorio en producción")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -41,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -68,8 +79,18 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 DATABASE_ENGINE = os.getenv("DATABASE_ENGINE", "sqlite").strip().lower()
-if DATABASE_ENGINE == "postgresql":
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=60,
+            conn_health_checks=True,
+        )
+    }
+    DATABASES["default"]["ATOMIC_REQUESTS"] = True
+elif DATABASE_ENGINE == "postgresql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -79,6 +100,7 @@ if DATABASE_ENGINE == "postgresql":
             "HOST": os.getenv("DATABASE_HOST", "localhost"),
             "PORT": os.getenv("DATABASE_PORT", "5432"),
             "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
             "ATOMIC_REQUESTS": True,
         }
     }
@@ -103,12 +125,18 @@ LANGUAGE_CODE = "es-cl"
 TIME_ZONE = "America/Santiago"
 USE_I18N = True
 USE_TZ = True
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = env_list("DJANGO_CORS_ALLOWED_ORIGINS")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+if RENDER_EXTERNAL_HOSTNAME:
+    append_unique(CSRF_TRUSTED_ORIGINS, f"https://{RENDER_EXTERNAL_HOSTNAME}")
 CORS_ALLOW_CREDENTIALS = False
 
 PILOT_TOKEN_MAX_HOURS = max(1, min(24, int(os.getenv("PILOT_TOKEN_MAX_HOURS", "12"))))
@@ -132,6 +160,7 @@ AUDIT_HMAC_KEY = os.getenv("AUDIT_HMAC_KEY", SECRET_KEY)
 API_VERSION = "v1"
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 X_FRAME_OPTIONS = "DENY"
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
