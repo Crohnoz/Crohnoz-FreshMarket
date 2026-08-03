@@ -50,6 +50,7 @@ export function normalizeRemoteOrder(raw) {
       id: cleanText(item.id, 80),
       productId: cleanText(item.product, 80),
       productName: cleanText(item.product_name, 160),
+      productSaleUnit: cleanText(item.product_sale_unit, 20) || "unit",
       requestedQuantity: decimalNumber(item.requested_quantity, "La cantidad solicitada"),
       actualQuantity: item.actual_quantity === null || item.actual_quantity === ""
         ? null
@@ -84,6 +85,9 @@ export function createRemoteOrderPayload({
 
   if (!items.length) throw new Error("Agrega al menos un producto con cantidad mayor que cero.");
   if (items.some((line) => line.unit_price < 0)) throw new Error("Los precios no pueden ser negativos.");
+  if (new Set(items.map((line) => line.product)).size !== items.length) {
+    throw new Error("Cada producto debe aparecer una sola vez en el pedido.");
+  }
 
   return {
     public_id: normalizedPublicId,
@@ -95,6 +99,29 @@ export function createRemoteOrderPayload({
     idempotency_key: normalizedKey,
     items,
   };
+}
+
+export function createRemoteWeighingPayload(order, values) {
+  if (!order?.id || order.status !== "preparing") throw new Error("Solo un pedido en preparación puede registrar peso real.");
+  const submitted = new Map((Array.isArray(values) ? values : []).map((value) => [cleanText(value.id, 80), value]));
+  if (submitted.size !== order.items.length || order.items.some((item) => !submitted.has(item.id))) {
+    throw new Error("Debes registrar exactamente todas las líneas actuales del pedido.");
+  }
+  return order.items.map((item) => {
+    const actualQuantity = decimalNumber(submitted.get(item.id).actualQuantity, `La cantidad real de ${item.productName}`);
+    if (actualQuantity <= 0) throw new Error(`La cantidad real de ${item.productName} debe ser mayor que cero.`);
+    if (item.productSaleUnit !== "kg" && !Number.isInteger(actualQuantity)) {
+      throw new Error(`La cantidad real de ${item.productName} debe ser un número entero.`);
+    }
+    return { id: item.id, actual_quantity: actualQuantity };
+  });
+}
+
+export function remoteOrderCanBeReady(order) {
+  return order?.status === "preparing"
+    && Array.isArray(order.items)
+    && order.items.length > 0
+    && order.items.every((item) => Number.isFinite(item.actualQuantity) && item.actualQuantity > 0);
 }
 
 export function remoteOrderStatusLabel(status) {
@@ -109,7 +136,7 @@ export function remoteOrderStatusLabel(status) {
 }
 
 export function saleUnitLabel(unit) {
-  return ({ kg: "kg", unit: "unidad", pack: "paquete", box: "caja" })[unit] ?? unit;
+  return ({ kg: "kg", unit: "unidad", bundle: "paquete", pack: "paquete", box: "caja" })[unit] ?? unit;
 }
 
 export function generateRemotePublicId(date = new Date(), suffix = "0000") {
