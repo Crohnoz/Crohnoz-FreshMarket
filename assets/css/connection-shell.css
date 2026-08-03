@@ -1,0 +1,15 @@
+.connection-strip { border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 94%, var(--bg)); }
+.connection-strip-inner { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 42px; }
+.connection-strip-icon { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 900; }
+.connection-strip div strong, .connection-strip div span { display: inline; font-size: 12px; }
+.connection-strip div span { margin-left: 6px; color: var(--muted); }
+.connection-strip a { padding: 6px 9px; border-radius: 9px; color: var(--primary); text-decoration: none; font-size: 11px; font-weight: 850; }
+.connection-strip a:hover { background: color-mix(in srgb, var(--primary) 9%, var(--surface)); }
+.connection-strip[data-state="connected"] .connection-strip-icon { background: color-mix(in srgb, var(--success) 16%, var(--surface)); color: var(--success); }
+.connection-strip[data-state="configured"] .connection-strip-icon, .connection-strip[data-state="organization-required"] .connection-strip-icon { background: color-mix(in srgb, var(--warning) 18%, var(--surface)); color: var(--warning); }
+@media (max-width: 680px) {
+  .connection-strip-inner { grid-template-columns: auto minmax(0, 1fr) auto; min-height: 48px; }
+  .connection-strip div strong, .connection-strip div span { display: block; }
+  .connection-strip div span { overflow: hidden; margin: 2px 0 0; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  .connection-strip a { max-width: 92px; text-align: center; }
+}

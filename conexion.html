@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Conexión segura entre la interfaz y el backend Django de Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <title>Crohnoz Fresh Market · Conectar backend</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/connection.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong>Crohnoz Fresh Market</strong><small>Conexión del negocio</small></span></a>
+      <nav class="nav"><a href="operar.html">Inicio</a><a href="ventas.html">Pedidos</a><a href="inventario.html">Inventario</a><a href="integridad.html">Integridad</a><a aria-current="page" href="conexion.html">Conexión</a></nav>
+    </div>
+  </header>
+
+  <main class="connection-main" id="main-content">
+    <div class="shell">
+      <section class="connection-hero">
+        <div><p class="eyebrow">Puente hacia Django</p><h1>Conecta sin cambiar la forma de trabajar</h1><p>Primero comprobamos la API, después ingresas con una cuenta individual y finalmente verificamos el negocio. La operación cotidiana seguirá usando las mismas pantallas simples.</p></div>
+        <div class="connection-hero-badge"><strong id="connection-hero-state">Modo local</strong><span id="connection-hero-detail">Sin una sesión de backend</span></div>
+      </section>
+
+      <div class="connection-layout">
+        <div class="connection-column">
+          <section class="card connection-card">
+            <div class="connection-card-heading"><div class="connection-step"><span class="connection-step-number">1</span><div><p class="eyebrow">Dirección del servicio</p><h2>Comprobar la API</h2></div></div><span class="status" id="api-health-badge">Sin comprobar</span></div>
+            <form class="connection-form" id="connection-config-form">
+              <label>Dirección API
+                <input id="api-base-url" name="apiBaseUrl" type="url" inputmode="url" autocomplete="url" placeholder="https://api.ejemplo.cl/api/v1" required>
+                <small>Debe terminar en <code>/api/v1</code>. Se permite HTTP solo en localhost durante desarrollo.</small>
+              </label>
+              <div class="connection-actions">
+                <button class="button primary" id="test-api" type="submit">Probar conexión</button>
+                <button class="button secondary" id="use-local-mode" type="button">Seguir en modo local</button>
+              </div>
+            </form>
+            <div class="pilot-status connection-status" id="api-health-status" role="status" aria-live="polite"></div>
+          </section>
+
+          <section class="card connection-card" id="login-card">
+            <div class="connection-card-heading"><div class="connection-step"><span class="connection-step-number">2</span><div><p class="eyebrow">Cuenta individual</p><h2>Ingresar al piloto</h2></div></div></div>
+            <p>Camila y Carmelo deben usar cuentas distintas. La contraseña nunca se guarda en el navegador.</p>
+            <form class="connection-form" id="login-form">
+              <label>Usuario<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+              <label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
+              <button class="button primary" type="submit">Ingresar de forma segura</button>
+            </form>
+            <div class="pilot-status connection-status" id="login-status" role="status" aria-live="polite"></div>
+          </section>
+
+          <section class="card connection-card" id="organization-card" hidden>
+            <div class="connection-card-heading"><div class="connection-step"><span class="connection-step-number">3</span><div><p class="eyebrow">Negocio activo</p><h2>Elegir organización</h2></div></div></div>
+            <form class="connection-form" id="organization-form">
+              <label>Negocio<select id="organization-select" name="organization" required></select></label>
+              <button class="button primary" type="submit">Usar este negocio</button>
+            </form>
+          </section>
+        </div>
+
+        <aside class="connection-column">
+          <section class="card connection-card" id="session-card">
+            <div class="connection-card-heading"><div><p class="eyebrow">Estado actual</p><h2>Sesión del operador</h2></div><span class="status" id="session-badge">Local</span></div>
+            <div id="session-empty" class="connection-empty">Todavía no existe una sesión de backend. El piloto continúa funcionando con datos locales.</div>
+            <div class="connection-session" id="session-content" hidden>
+              <div class="connection-identity"><span class="connection-avatar" id="session-avatar">?</span><div><strong id="session-name"></strong><span id="session-role"></span></div></div>
+              <div class="connection-metrics" aria-label="Resumen del backend">
+                <article><span>Productos</span><strong id="summary-products">—</strong></article>
+                <article><span>Lotes</span><strong id="summary-lots">—</strong></article>
+                <article><span>Pedidos</span><strong id="summary-orders">—</strong></article>
+                <article><span>Eventos</span><strong id="summary-events">—</strong></article>
+              </div>
+              <div><p class="eyebrow">Catálogo del servidor</p><div class="connection-products" id="summary-product-preview"></div></div>
+              <div class="connection-actions"><button class="button secondary" id="refresh-summary" type="button">Actualizar resumen</button><button class="button danger" id="logout-api" type="button">Cerrar sesión</button></div>
+              <div class="pilot-status connection-status" id="summary-status" role="status" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section class="card connection-card">
+            <p class="eyebrow">Prácticas seguras</p><h3>Qué protege este puente</h3>
+            <ul class="connection-safety">
+              <li><b>✓</b><span>El token vive en <code>sessionStorage</code> y desaparece al cerrar la sesión del navegador.</span></li>
+              <li><b>✓</b><span>La contraseña se envía una vez por HTTPS y el formulario se limpia inmediatamente.</span></li>
+              <li><b>✓</b><span>Cada petición incluye la organización elegida y el backend vuelve a comprobar el rol.</span></li>
+              <li><b>✓</b><span>El modo local permanece disponible mientras conectamos cada flujo operacional.</span></li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>Conexión API del piloto</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/connection/app.js"></script>
+  <script type="module" src="assets/js/core/guided-shell.js"></script>
+</body>
+</html>

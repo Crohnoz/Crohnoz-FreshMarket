@@ -8,9 +8,9 @@ El producto tiene tres porcentajes distintos y no deben confundirse:
 
 | Alcance | Avance estimado | Interpretación |
 |---|---:|---|
-| Piloto navegable y demostrable | 90% | La experiencia visual y los flujos principales existen y se pueden recorrer con datos ficticios. |
-| MVP real para Camila y Carmelo | 66% | La fundación Django está implementada y probada; falta conectar la interfaz, desplegar la API, crear cuentas y completar la validación presencial. |
-| Producto comercial endurecido | 38% | Ya existe una base multiempresa y auditable, pero faltan operación multiusuario madura, backups automáticos, observabilidad, privacidad, soporte y preparación tributaria. |
+| Piloto navegable y demostrable | 92% | La experiencia visual, flujos principales y pantalla de conexión existen y pueden recorrerse con datos ficticios. |
+| MVP real para Camila y Carmelo | 70% | Django y el puente de sesión están implementados; faltan despliegue API/PostgreSQL, migración de operaciones y validación presencial. |
+| Producto comercial endurecido | 40% | Existe base multiempresa, RBAC, auditoría y sesión finita, pero faltan backups automáticos, observabilidad, privacidad, soporte y preparación tributaria. |
 
 Los porcentajes son una estimación de gestión basada en entregables verificables, no una medición automática de líneas de código.
 
@@ -19,12 +19,12 @@ Los porcentajes son una estimación de gestión basada en entregables verificabl
 | Bloque | Peso | Estado | Aporte actual |
 |---|---:|---:|---:|
 | Descubrimiento, alcance y UX/UI | 20% | 95% | 19% |
-| Flujos operacionales del frontend | 25% | 88% | 22% |
+| Flujos operacionales del frontend | 25% | 90% | 22,5% |
 | Reglas de negocio, integridad y continuidad | 15% | 87% | 13% |
-| Backend, API y persistencia | 20% | 50% | 10% |
-| Seguridad mínima y despliegue | 10% | 20% | 2% |
+| Backend, API y persistencia | 20% | 60% | 12% |
+| Seguridad mínima y despliegue | 10% | 35% | 3,5% |
 | Validación real con usuarios | 10% | 0% | 0% |
-| **Total** | **100%** |  | **66%** |
+| **Total redondeado** | **100%** |  | **70%** |
 
 ## Lo que ya está listo
 
@@ -38,28 +38,54 @@ Los porcentajes son una estimación de gestión basada en entregables verificabl
 - Cierre diario y conciliación de caja.
 - Integridad local, respaldo, restauración y auditoría encadenada.
 - Navegación móvil, modo fácil, confirmaciones y acciones reversibles.
-- 110 pruebas del piloto aprobadas.
-- Fundación Django con 7 pruebas API aprobadas.
-- `manage.py check` sin observaciones y migraciones sincronizadas.
+- Fundación Django con organizaciones, roles, catálogo, lotes, pedidos y auditoría servidor.
+- Pantalla de conexión con prueba de salud, login, logout, selección de organización y resumen del servidor.
+- Sesiones almacenadas solo durante la pestaña y tokens con vencimiento máximo de 12 horas por defecto.
+- Comando seguro para preparar cuentas separadas de Camila y Carmelo sin contraseñas predeterminadas.
+- CI dual para frontend y backend.
 
-## Fundación backend completada
+## Puente backend completado en esta fase
 
-La primera fundación Django incorpora:
+La versión `0.6.0-pilot` incorpora:
 
-- Django 5.2 LTS y Django REST Framework.
-- PostgreSQL para despliegue; SQLite únicamente para desarrollo y CI.
-- Organizaciones y membresías.
-- Roles owner, manager, operator y viewer.
-- Catálogo, lotes, pedidos e ítems.
-- API versionada `/api/v1/`.
-- Autenticación por token para el piloto cerrado.
-- Scope obligatorio por organización.
-- Control optimista por versión.
-- Auditoría servidor append-only con HMAC-SHA256.
-- Admin Django para preparar el piloto.
-- Docker Compose y CI dual para frontend/backend.
+- URL API configurable;
+- validación HTTPS, salvo localhost;
+- estado visible local/configurado/conectado;
+- login individual con mensajes en español;
+- límite de intentos de login;
+- token temporal y cierre de sesión servidor;
+- elección explícita de organización;
+- resumen de productos, lotes, pedidos y auditoría;
+- vista previa del catálogo remoto;
+- modo local como rollback explícito;
+- caché offline de la pantalla, sin fingir que la API funciona offline.
 
-El siguiente incremento debe venir de conectar la UI al backend, no de agregar más pantallas.
+## Lo que todavía sigue local
+
+Aunque exista una sesión conectada, estas operaciones todavía usan `localStorage`:
+
+- venta rápida;
+- preparación y pesaje;
+- cambios de precio;
+- recepción y ajustes de inventario;
+- pagos y fiados;
+- cierre diario;
+- respaldos operacionales.
+
+La franja superior muestra el estado de conexión para evitar que el operador interprete erróneamente que todo ya está sincronizado.
+
+## Próximo incremento crítico
+
+1. desplegar Django bajo HTTPS;
+2. desplegar PostgreSQL administrado;
+3. configurar secretos, CORS y CSP exactos;
+4. ejecutar migraciones y `seed_pilot`;
+5. conectar lectura de catálogo;
+6. conectar creación y consulta de pedidos;
+7. probar dos sesiones simultáneas;
+8. agregar health monitoring y backup inicial.
+
+Al completar despliegue y catálogo/pedidos remotos, el MVP debería alcanzar aproximadamente **80%**.
 
 ## Criterio de MVP para Camila y Carmelo
 
@@ -78,7 +104,7 @@ El MVP se considera listo para la primera prueba real cuando:
 
 Camila y Carmelo deben intentar, sin entrenamiento técnico prolongado:
 
-1. ingresar y reconocer el inicio;
+1. ingresar y reconocer su nombre, rol y negocio;
 2. registrar o consultar un producto;
 3. registrar una recepción de inventario;
 4. crear y preparar un pedido;

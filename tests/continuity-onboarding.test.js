@@ -25,7 +25,7 @@ test("checksummed backups round-trip and reject invalid input", () => {
   const entries = { business: { name: "Mercado" }, orders: [{ id: "FM-1" }, { id: "FM-2" }] };
   const envelope = createBackupEnvelope(entries, {
     namespace: "crohnoz-fresh-market",
-    appVersion: "0.5.0-pilot",
+    appVersion: "0.6.0-pilot",
     exportedAt: "2026-08-02T19:00:00.000Z",
   });
   const restored = parseBackupText(serializeBackup(envelope), { expectedNamespace: "crohnoz-fresh-market" });
@@ -56,16 +56,18 @@ test("urgent work still outranks continuity", () => {
 
 test("readiness and resume targets preserve operator safety", () => {
   const defaults = { name: "Mercado", tagline: "Fresco", whatsapp: "", primaryColor: "#000", accentColor: "#fff", deliveryFee: 0, tolerancePercent: 5, maxExtraAmount: 1000 };
-  assert.equal(buildOperatorReadiness({ business: defaults, defaultBusiness: defaults }).total, 5);
+  assert.equal(buildOperatorReadiness({ business: defaults, defaultBusiness: defaults }).total, 6);
   const ready = buildOperatorReadiness({
     business: { ...defaults, name: "Mi negocio" },
     defaultBusiness: defaults,
     visitedPages: ["inventario.html", "ventas.html"],
     continuityMeta: { lastBackupAt: "2026-08-02T19:00:00.000Z" },
     integrityMeta: { lastScanAt: "2026-08-02T18:55:00.000Z", status: "healthy" },
+    connection: { state: "connected" },
   });
   assert.equal(ready.percent, 100);
   assert.equal(normalizeResumeTarget({ href: "integridad.html", label: "Integridad" })?.href, "integridad.html");
+  assert.equal(normalizeResumeTarget({ href: "conexion.html", label: "Conexión" })?.href, "conexion.html");
   assert.equal(normalizeResumeTarget({ href: "https://example.com", label: "Fuera" }), null);
 });
 
@@ -78,25 +80,31 @@ test("configuration, onboarding and operator home expose continuity controls", a
     assert.match(configurator, new RegExp(`id=["']${id}["']`));
   }
   assert.match(configurator, /checksum/);
-  assert.match(shell, /guided-onboarding-v2/);
+  assert.match(shell, /guided-onboarding-v3/);
+  assert.match(shell, /Cuenta individual/);
   assert.match(shell, /Comprueba y respalda/);
-  assert.match(state, /guided-onboarding-v2/);
+  assert.match(state, /guided-onboarding-v3/);
   assert.doesNotMatch(state, /guided-onboarding-v1/);
-  assert.match(home, /id="readiness-count">0\/5/);
+  assert.match(home, /id="readiness-count">0\/6/);
+  assert.match(home, /href="conexion\.html">Conexión/);
 });
 
-test("continuity and audit scripts pass syntax checks and cache v7", async () => {
+test("continuity, audit and connection scripts pass syntax checks and cache v8", async () => {
   for (const path of [
     "assets/js/core/config.js",
     "assets/js/core/storage.js",
     "assets/js/core/storage-audit.js",
+    "assets/js/core/connection.js",
+    "assets/js/core/connection-shell.js",
     "assets/js/configurator/app.js",
+    "assets/js/connection/app.js",
     "assets/js/integrity/app.js",
     "assets/js/audit/app.js",
     "assets/js/data/pilot-state.js",
     "assets/js/domain/backup.js",
     "assets/js/domain/audit-trail.js",
     "assets/js/domain/data-integrity.js",
+    "assets/js/domain/operator-readiness.js",
     "assets/js/operator/home.js",
     "sw.js",
   ]) execFileSync(process.execPath, ["--check", fileURLToPath(new URL(`../${path}`, import.meta.url))]);
@@ -106,9 +114,10 @@ test("continuity and audit scripts pass syntax checks and cache v7", async () =>
   const config = await text("assets/js/core/config.js");
   assert.match(storage, /recordStorageMutation/);
   assert.match(storage, /recordSnapshotRestore/);
-  assert.match(worker, /crohnoz-fresh-market-v7/);
+  assert.match(worker, /crohnoz-fresh-market-v8/);
   assert.match(worker, /auditoria\.html/);
+  assert.match(worker, /conexion\.html/);
   assert.match(worker, /assets\/js\/domain\/audit-trail\.js/);
-  assert.match(worker, /assets\/js\/core\/storage-audit\.js/);
-  assert.match(config, /0\.5\.0-pilot/);
+  assert.match(worker, /assets\/js\/core\/connection\.js/);
+  assert.match(config, /0\.6\.0-pilot/);
 });
