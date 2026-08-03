@@ -130,7 +130,7 @@ class InventoryMovement(UUIDTimestampedModel):
 
     organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="inventory_movements")
     lot = models.ForeignKey(InventoryLot, on_delete=models.PROTECT, related_name="movements")
-    lot_version = models.PositiveIntegerField()
+    lot_version = models.PositiveIntegerField(default=1)
     movement_type = models.CharField(max_length=24, choices=MovementType.choices)
     quantity_delta = models.DecimalField(max_digits=12, decimal_places=3)
     quantity_before = models.DecimalField(max_digits=12, decimal_places=3)
