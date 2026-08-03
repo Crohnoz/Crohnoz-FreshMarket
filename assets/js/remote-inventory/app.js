@@ -124,6 +124,32 @@ function saleUnitForLot(lot) {
   return lot?.productSaleUnit || productById(lot?.productId)?.saleUnit || "unit";
 }
 
+function compareFefoLots(left, right) {
+  if (left.bestBefore && right.bestBefore && left.bestBefore !== right.bestBefore) {
+    return left.bestBefore.localeCompare(right.bestBefore);
+  }
+  if (left.bestBefore && !right.bestBefore) return -1;
+  if (!left.bestBefore && right.bestBefore) return 1;
+  if (left.receivedAt !== right.receivedAt) return left.receivedAt.localeCompare(right.receivedAt);
+  if (left.createdAt !== right.createdAt) return left.createdAt.localeCompare(right.createdAt);
+  return left.id.localeCompare(right.id);
+}
+
+function fefoLotForProduct(productId) {
+  return lots
+    .filter((lot) => (
+      lot.productId === productId
+      && lot.status === "active"
+      && lot.quantityAvailable > 0
+      && lot.quality !== "damaged"
+    ))
+    .sort(compareFefoLots)[0] ?? null;
+}
+
+function isFefoLot(lot) {
+  return Boolean(lot && fefoLotForProduct(lot.productId)?.id === lot.id);
+}
+
 function renderProductOptions() {
   const selected = productSelect.value;
   productSelect.replaceChildren(new Option("Selecciona un producto", ""));
@@ -145,12 +171,19 @@ function synchronizeSelectedProduct() {
   receptionQuantity.min = product?.saleUnit === "kg" ? "0.001" : "1";
 }
 
+function formatQuantity(value, productOrUnit) {
+  const saleUnit = typeof productOrUnit === "string" ? productOrUnit : productOrUnit?.saleUnit ?? "unit";
+  const maximumFractionDigits = saleUnit === "kg" ? 3 : 0;
+  return `${new Intl.NumberFormat("es-CL", { maximumFractionDigits }).format(value)} ${saleUnitLabel(saleUnit)}`;
+}
+
 function renderMovementLotOptions() {
   const selected = movementLotSelect.value;
   movementLotSelect.replaceChildren(new Option("Selecciona un lote", ""));
   for (const lot of lots) {
     const unit = saleUnitLabel(saleUnitForLot(lot));
-    const label = `${lot.productName} · ${formatQuantity(lot.quantityAvailable, saleUnitForLot(lot))} · ${lot.status === "depleted" ? "agotado" : unit}`;
+    const fefo = isFefoLot(lot) ? " · FEFO primero" : "";
+    const label = `${lot.productName} · ${formatQuantity(lot.quantityAvailable, saleUnitForLot(lot))} · ${lot.status === "depleted" ? "agotado" : unit}${fefo}`;
     movementLotSelect.append(new Option(label, lot.id));
   }
   if (lots.some((lot) => lot.id === selected)) movementLotSelect.value = selected;
@@ -160,23 +193,43 @@ function renderMovementLotOptions() {
 
 function synchronizeMovementForm() {
   if (!movementLotSelect || !movementTypeSelect) return;
+  const state = connectionState();
   const lot = lotById(movementLotSelect.value);
-  const adjustment = movementTypeSelect.value === "adjustment";
+  const movementType = movementTypeSelect.value;
+  const adjustment = movementType === "adjustment";
+  const consumption = movementType === "consumption";
   const unit = saleUnitLabel(saleUnitForLot(lot));
+  const fefo = lot ? fefoLotForProduct(lot.productId) : null;
+  const laterThanFefo = consumption && fefo && fefo.id !== lot?.id;
+  const damagedConsumption = consumption && lot?.quality === "damaged";
+  const emptyNonAdjustment = Boolean(lot && lot.quantityAvailable <= 0 && !adjustment);
+  const unauthorizedAdjustment = adjustment && !canAdjustInventory(state);
+
   movementQuantityLabel.textContent = adjustment ? "Nuevo saldo disponible" : "Cantidad a descontar";
   movementQuantity.step = saleUnitForLot(lot) === "kg" ? "0.001" : "1";
   movementQuantity.min = adjustment ? "0" : (saleUnitForLot(lot) === "kg" ? "0.001" : "1");
   movementQuantity.max = lot ? String(adjustment ? lot.quantityReceived : lot.quantityAvailable) : "";
-  movementUnitHelp.textContent = lot
-    ? `${lot.productName}: ${formatQuantity(lot.quantityAvailable, saleUnitForLot(lot))} disponibles de ${formatQuantity(lot.quantityReceived, saleUnitForLot(lot))}. Ingresa ${unit}.`
-    : "Selecciona un lote para revisar saldo y unidad.";
-  movementButton.disabled = loading || !lot;
-}
 
-function formatQuantity(value, productOrUnit) {
-  const saleUnit = typeof productOrUnit === "string" ? productOrUnit : productOrUnit?.saleUnit ?? "unit";
-  const maximumFractionDigits = saleUnit === "kg" ? 3 : 0;
-  return `${new Intl.NumberFormat("es-CL", { maximumFractionDigits }).format(value)} ${saleUnitLabel(saleUnit)}`;
+  if (!lot) {
+    movementUnitHelp.textContent = "Selecciona un lote para revisar saldo y unidad.";
+  } else if (laterThanFefo) {
+    movementUnitHelp.textContent = `Para consumo usa primero el lote FEFO de ${fefo.productName}, con prioridad ${fefo.bestBefore || fefo.receivedAt}.`;
+  } else if (damagedConsumption) {
+    movementUnitHelp.textContent = "Este lote está dañado: registra merma o devolución, no consumo.";
+  } else if (emptyNonAdjustment) {
+    movementUnitHelp.textContent = "Este lote está agotado. Solo un administrador puede corregirlo mediante ajuste de conteo.";
+  } else {
+    movementUnitHelp.textContent = `${lot.productName}: ${formatQuantity(lot.quantityAvailable, saleUnitForLot(lot))} disponibles de ${formatQuantity(lot.quantityReceived, saleUnitForLot(lot))}. Ingresa ${unit}.`;
+  }
+
+  movementButton.disabled = Boolean(
+    loading
+    || !lot
+    || laterThanFefo
+    || damagedConsumption
+    || emptyNonAdjustment
+    || unauthorizedAdjustment
+  );
 }
 
 function readableDate(value) {
@@ -218,7 +271,8 @@ function renderLots() {
     const strong = document.createElement("strong");
     strong.textContent = lot.productName;
     const quality = document.createElement("small");
-    quality.textContent = `${remoteQualityLabel(lot.quality)} · versión ${lot.version}`;
+    const fefoLabel = isFefoLot(lot) ? " · FEFO primero" : "";
+    quality.textContent = `${remoteQualityLabel(lot.quality)} · versión ${lot.version}${fefoLabel}`;
     productWrap.append(strong, quality);
     if (lot.notes) {
       const note = document.createElement("small");
@@ -293,18 +347,19 @@ function renderMovements() {
 function setLoading(value) {
   loading = value;
   receptionButton.disabled = value || products.length === 0;
-  movementButton.disabled = value || !lotById(movementLotSelect.value);
   refreshButton.disabled = value;
   productSelect.disabled = value || products.length === 0;
   movementLotSelect.disabled = value || lots.length === 0;
   receptionButton.textContent = value ? "Guardando en servidor…" : "Registrar recepción remota";
   movementButton.textContent = value ? "Guardando en servidor…" : "Registrar movimiento remoto";
+  synchronizeMovementForm();
 }
 
-async function loadRemoteData({ quiet = false } = {}) {
+async function loadRemoteData({ quiet = false, force = false } = {}) {
   const state = currentConnectedState();
-  if (state.state !== "connected" || loading) return;
-  setLoading(true);
+  if (state.state !== "connected" || (loading && !force)) return;
+  const inheritedLoading = loading;
+  if (!inheritedLoading) setLoading(true);
   if (!quiet) announce("Consultando catálogo, lotes y movimientos del servidor…", "loading");
   try {
     [products, lots, movements] = await Promise.all([
@@ -316,12 +371,14 @@ async function loadRemoteData({ quiet = false } = {}) {
     renderMovementLotOptions();
     renderLots();
     renderMovements();
-    announce(`Servidor actualizado: ${products.length} productos, ${lots.length} lotes y ${movements.length} movimientos.`, "success");
+    if (!quiet) {
+      announce(`Servidor actualizado: ${products.length} productos, ${lots.length} lotes y ${movements.length} movimientos.`, "success");
+    }
   } catch (error) {
     announce(error instanceof ApiError ? error.message : "No fue posible actualizar el inventario remoto.", "error");
     currentConnectedState();
   } finally {
-    setLoading(false);
+    if (!inheritedLoading) setLoading(false);
   }
 }
 
@@ -380,7 +437,7 @@ receptionForm.addEventListener("submit", async (event) => {
     activeReceptionKey = newRequestKey("inventory-reception");
     receptionForm.reset();
     receivedAt.value = todayISO();
-    await loadRemoteData({ quiet: true });
+    await loadRemoteData({ quiet: true, force: true });
     announce(`Recepción de ${lot.productName} confirmada por Django.`, "success");
   } catch (error) {
     const message = error instanceof ApiError ? error.message : "No fue posible registrar la recepción remota.";
@@ -425,7 +482,7 @@ movementForm.addEventListener("submit", async (event) => {
     const selectedLot = lot.id;
     movementForm.reset();
     movementLotSelect.value = selectedLot;
-    await loadRemoteData({ quiet: true });
+    await loadRemoteData({ quiet: true, force: true });
     announce(`${remoteMovementLabel(result.movement.movementType)} de ${result.movement.productName} confirmado por Django.`, "success");
   } catch (error) {
     const message = error instanceof ApiError ? error.message : "No fue posible registrar el movimiento remoto.";
