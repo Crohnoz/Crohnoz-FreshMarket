@@ -167,6 +167,116 @@
   font-weight: 800;
 }
 
+.remote-order-lines {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 12rem;
+}
+
+.remote-order-lines small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.remote-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  min-width: 9rem;
+}
+
+.remote-order-actions .button {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  white-space: nowrap;
+}
+
+.remote-workflow-dialog {
+  width: min(42rem, calc(100% - 1.5rem));
+  max-height: calc(100vh - 2rem);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
+}
+
+.remote-workflow-dialog::backdrop {
+  background: rgb(10 20 13 / 62%);
+  backdrop-filter: blur(2px);
+}
+
+.remote-workflow-card {
+  display: grid;
+  gap: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg, 0 20px 60px rgb(0 0 0 / 22%));
+}
+
+.remote-workflow-card > header,
+.remote-workflow-card > footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.remote-workflow-card > footer {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.remote-workflow-card h2 {
+  margin: 0.2rem 0 0.35rem;
+}
+
+.remote-dialog-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.5rem;
+}
+
+.remote-weighing-lines {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.remote-weighing-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.45fr);
+  gap: 0.85rem;
+  align-items: end;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted, color-mix(in srgb, var(--surface) 92%, var(--primary)));
+}
+
+.remote-weighing-line label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 800;
+}
+
+.remote-weighing-line input {
+  width: 100%;
+}
+
+.remote-weighing-line small {
+  color: var(--muted);
+}
+
 @media (max-width: 880px) {
   .remote-grid {
     grid-template-columns: 1fr;
@@ -198,5 +308,18 @@
   .remote-table th,
   .remote-table td {
     padding: 0.6rem;
+  }
+
+  .remote-weighing-line {
+    grid-template-columns: 1fr;
+  }
+
+  .remote-workflow-card > footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .remote-workflow-card > footer .button {
+    width: 100%;
   }
 }
