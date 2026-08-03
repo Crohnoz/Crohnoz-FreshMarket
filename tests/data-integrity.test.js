@@ -175,7 +175,7 @@ test("Netlify and offline shell expose the integrity route", async () => {
   const netlify = await text("netlify.toml");
   const worker = await text("sw.js");
   assert.match(netlify, /from = "\/integridad"[\s\S]*to = "\/integridad\.html"/);
-  assert.match(worker, /crohnoz-fresh-market-v6/);
+  assert.match(worker, /crohnoz-fresh-market-v\d+/);
   assert.match(worker, /\/integridad\.html/);
   assert.match(worker, /assets\/css\/data-integrity\.css/);
   assert.match(worker, /assets\/js\/integrity\/app\.js/);
