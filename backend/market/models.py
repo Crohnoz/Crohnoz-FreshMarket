@@ -130,6 +130,7 @@ class InventoryMovement(UUIDTimestampedModel):
 
     organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="inventory_movements")
     lot = models.ForeignKey(InventoryLot, on_delete=models.PROTECT, related_name="movements")
+    lot_version = models.PositiveIntegerField()
     movement_type = models.CharField(max_length=24, choices=MovementType.choices)
     quantity_delta = models.DecimalField(max_digits=12, decimal_places=3)
     quantity_before = models.DecimalField(max_digits=12, decimal_places=3)
@@ -159,6 +160,8 @@ class InventoryMovement(UUIDTimestampedModel):
     def save(self, *args, **kwargs) -> None:
         if self.pk and InventoryMovement.objects.filter(pk=self.pk).exists():
             raise ValidationError("Los movimientos de inventario son inmutables.")
+        if self._state.adding and self.lot_id:
+            self.lot_version = self.lot.version
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
