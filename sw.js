@@ -1,5 +1,5 @@
-const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v10";
-const CACHE_NAME = "crohnoz-fresh-market-v11";
+const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v11";
+const CACHE_NAME = "crohnoz-fresh-market-v12";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -18,6 +18,7 @@ const CORE_ASSETS = [
   "/cierre.html",
   "/cuentas.html",
   "/admin.html",
+  "/dueno.html",
   "/configurador.html",
   "/scanner-lab.html",
   "/assets/css/tokens.css",
@@ -37,6 +38,10 @@ const CORE_ASSETS = [
   "/assets/css/audit.css",
   "/assets/css/daily-close.css",
   "/assets/css/store.css",
+  "/assets/css/store-mobile.css",
+  "/assets/css/owner.css",
+  "/assets/css/voice-copilot.css",
+  "/assets/css/voice-copilot-v2.css",
   "/assets/js/core/config.js",
   "/assets/js/core/storage.js",
   "/assets/js/core/storage-audit.js",
@@ -48,11 +53,14 @@ const CORE_ASSETS = [
   "/assets/js/core/guided-shell-state.js",
   "/assets/js/core/hardening.js",
   "/assets/js/data/demo-data.js",
+  "/assets/js/data/expanded-catalog.js",
   "/assets/js/data/receivables-demo.js",
   "/assets/js/data/operations-demo.js",
   "/assets/js/data/pilot-state.js",
+  "/assets/js/store/entry.js",
   "/assets/js/store/app.js",
   "/assets/js/operator/home.js",
+  "/assets/js/owner/app.js",
   "/assets/js/configurator/app.js",
   "/assets/js/connection/app.js",
   "/assets/js/remote-orders/app.js",
@@ -67,6 +75,9 @@ const CORE_ASSETS = [
   "/assets/js/sales/app.js",
   "/assets/js/assistant/app.js",
   "/assets/js/assistant/speech.js",
+  "/assets/js/assistant/voice-intents.js",
+  "/assets/js/accounts/voice-copilot.js",
+  "/assets/js/accounts/voice-entry.js",
   "/assets/js/validation/app.js",
   "/assets/js/close/app.js",
   "/assets/js/domain/backup.js",
@@ -75,6 +86,7 @@ const CORE_ASSETS = [
   "/assets/js/domain/pricing.js",
   "/assets/js/domain/substitutions.js",
   "/assets/js/domain/catalog-experience.js",
+  "/assets/js/domain/access-levels.js",
   "/assets/js/domain/inventory.js",
   "/assets/js/domain/purchasing.js",
   "/assets/js/domain/sales-flow.js",
