@@ -249,6 +249,13 @@ def confirm_order_weighing(*, order: Order, actor, validated_data: dict, request
             raise ValidationError({"items": "Debes registrar exactamente todas las líneas actuales del pedido."})
 
         for item_id, item in current_items.items():
+            actual_quantity = submitted_items[item_id]["actual_quantity"]
+            if item.product.sale_unit != Product.SaleUnit.KILOGRAM and actual_quantity != actual_quantity.to_integral_value():
+                raise ValidationError({
+                    "items": f"La cantidad real de {item.product.name} debe ser un número entero.",
+                })
+
+        for item_id, item in current_items.items():
             item.actual_quantity = submitted_items[item_id]["actual_quantity"]
             item.full_clean()
             item.save(update_fields=["actual_quantity", "line_total", "updated_at"])
