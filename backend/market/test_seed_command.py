@@ -16,6 +16,17 @@ class SeedPilotCommandTests(TestCase):
                 call_command("seed_pilot")
         self.assertFalse(User.objects.exists())
 
+    def test_seed_rejects_passwords_shorter_than_minimum(self):
+        with patch.dict(
+            "os.environ",
+            {"CAMILA_PILOT_PASSWORD": "corta-123", "CARMELO_PILOT_PASSWORD": "breve-456"},
+            clear=False,
+        ):
+            with self.assertRaisesRegex(CommandError, "al menos 12 caracteres"):
+                call_command("seed_pilot")
+        self.assertFalse(User.objects.exists())
+        self.assertFalse(Organization.objects.exists())
+
     def test_seed_creates_separate_accounts_without_printing_passwords(self):
         camila_password = "camila-pilot-only-2026"
         carmelo_password = "carmelo-pilot-only-2026"
