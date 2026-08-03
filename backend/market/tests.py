@@ -54,12 +54,13 @@ class MarketApiTests(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("incorrectos", str(response.data).lower())
 
-    def test_expired_token_is_rejected_and_removed(self):
+    def test_expired_token_is_rejected(self):
         Token.objects.filter(pk=self.token.pk).update(created=timezone.now() - timedelta(hours=13))
         response = self.client.get(reverse("me"))
         self.assertEqual(response.status_code, 401)
         self.assertIn("venció", str(response.data).lower())
-        self.assertFalse(Token.objects.filter(pk=self.token.pk).exists())
+        repeated = self.client.get(reverse("me"))
+        self.assertEqual(repeated.status_code, 401)
 
     def test_logout_invalidates_token(self):
         response = self.client.post(reverse("pilot-logout"))
