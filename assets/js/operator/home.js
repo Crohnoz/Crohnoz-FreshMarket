@@ -1,4 +1,5 @@
 import { APP_CONFIG, DEFAULT_BUSINESS } from "../core/config.js";
+import { connectionState } from "../core/connection.js";
 import { formatCLP } from "../core/format.js";
 import { readStorage, snapshotStorage } from "../core/storage.js";
 import { initialOrders, products } from "../data/demo-data.js";
@@ -194,13 +195,14 @@ function renderReadiness() {
     visitedPages,
     continuityMeta,
     integrityMeta,
+    connection: connectionState(),
   });
   document.querySelector("#readiness-count").textContent = `${readiness.completed}/${readiness.total}`;
   const progress = document.querySelector("#readiness-progress");
   progress.style.width = `${readiness.percent}%`;
   progress.parentElement.setAttribute("aria-valuenow", String(readiness.percent));
   document.querySelector("#readiness-summary").textContent = readiness.ready
-    ? "La puesta en marcha local está completa. El siguiente paso es validar el piloto en el dispositivo real."
+    ? "La puesta en marcha está completa. El siguiente paso es validar el piloto en el dispositivo real."
     : `Completa ${readiness.total - readiness.completed} paso(s) para dejar preparado este navegador.`;
 
   const list = document.querySelector("#readiness-list");
@@ -228,6 +230,7 @@ function bindControls() {
       renderTasks();
     });
   });
+  window.addEventListener("crohnoz:connection-changed", renderReadiness);
 }
 
 applyBusiness();
