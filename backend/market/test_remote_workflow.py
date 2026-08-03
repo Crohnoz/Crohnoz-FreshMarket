@@ -31,23 +31,29 @@ class RemoteWorkflowTests(APITestCase):
     def organization_header(self):
         return {"HTTP_X_ORGANIZATION_ID": str(self.organization.id)}
 
+    def order_payload(self, *, public_id="FM-WORKFLOW-001", actual_quantity=None):
+        item = {
+            "product": str(self.product.id),
+            "requested_quantity": "1.250",
+            "unit_price": "4500.00",
+        }
+        if actual_quantity is not None:
+            item["actual_quantity"] = actual_quantity
+        return {
+            "public_id": public_id,
+            "customer_name": "Cliente piloto",
+            "status": "delivered",
+            "payment_method": "cash",
+            "source": "import",
+            "notes": "Retiro",
+            "idempotency_key": f"create-{public_id}",
+            "items": [item],
+        }
+
     def create_order(self, *, public_id="FM-WORKFLOW-001"):
         response = self.client.post(
             "/api/v1/orders/",
-            {
-                "public_id": public_id,
-                "customer_name": "Cliente piloto",
-                "status": "delivered",
-                "payment_method": "cash",
-                "source": "import",
-                "notes": "Retiro",
-                "idempotency_key": f"create-{public_id}",
-                "items": [{
-                    "product": str(self.product.id),
-                    "requested_quantity": "1.250",
-                    "unit_price": "4500.00",
-                }],
-            },
+            self.order_payload(public_id=public_id),
             format="json",
             **self.organization_header,
         )
@@ -131,10 +137,31 @@ class RemoteWorkflowTests(APITestCase):
         self.assertEqual(response.status_code, 400, response.data)
         self.assertIn("negocio activo", str(response.data).lower())
 
+    def test_order_creation_rejects_prefilled_actual_quantity(self):
+        response = self.client.post(
+            "/api/v1/orders/",
+            self.order_payload(public_id="FM-WORKFLOW-PREFILLED", actual_quantity="1.300"),
+            format="json",
+            **self.organization_header,
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn("durante la preparación", str(response.data).lower())
+        self.assertEqual(Order.objects.count(), 0)
+
     def test_order_uses_explicit_versioned_transitions_and_idempotent_retries(self):
         created = self.create_order()
         order_id = created.data["id"]
         item_id = created.data["items"][0]["id"]
+
+        missing_version = self.client.post(
+            f"/api/v1/orders/{order_id}/start-preparing/",
+            {},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="start-missing-version",
+            **self.organization_header,
+        )
+        self.assertEqual(missing_version.status_code, 400, missing_version.data)
+        self.assertIn("falta la versión", str(missing_version.data).lower())
 
         started = self.client.post(
             f"/api/v1/orders/{order_id}/start-preparing/",
@@ -215,6 +242,32 @@ class RemoteWorkflowTests(APITestCase):
             **self.organization_header,
         )
         self.assertEqual(patch.status_code, 405, patch.data)
+
+    def test_workflow_idempotency_key_cannot_cross_orders(self):
+        first = self.create_order(public_id="FM-WORKFLOW-A")
+        second = self.create_order(public_id="FM-WORKFLOW-B")
+        shared_key = "shared-workflow-key"
+        started = self.client.post(
+            f"/api/v1/orders/{first.data['id']}/start-preparing/",
+            {},
+            format="json",
+            HTTP_IF_MATCH="1",
+            HTTP_IDEMPOTENCY_KEY=shared_key,
+            **self.organization_header,
+        )
+        self.assertEqual(started.status_code, 200, started.data)
+        conflict = self.client.post(
+            f"/api/v1/orders/{second.data['id']}/start-preparing/",
+            {},
+            format="json",
+            HTTP_IF_MATCH="1",
+            HTTP_IDEMPOTENCY_KEY=shared_key,
+            **self.organization_header,
+        )
+        self.assertEqual(conflict.status_code, 409, conflict.data)
+        self.assertIn("otro registro", str(conflict.data).lower())
+        second_order = Order.objects.get(pk=second.data["id"])
+        self.assertEqual(second_order.status, Order.Status.CONFIRMED)
 
     def test_order_cannot_be_ready_before_every_line_is_weighed(self):
         created = self.create_order(public_id="FM-WORKFLOW-002")
