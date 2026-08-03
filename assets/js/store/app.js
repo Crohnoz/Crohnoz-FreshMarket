@@ -69,6 +69,14 @@ function initialsFor(value) {
     .join("");
 }
 
+function normalizeSearchText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .trim();
+}
+
 function attachImageFallback(image, fallback, label) {
   image.addEventListener("error", () => {
     image.hidden = true;
@@ -93,7 +101,7 @@ function clearCatalogFilters() {
 function renderProducts() {
   const filtered = filterCatalogProducts(products, {
     category: activeCategory,
-    query: searchInput.value,
+    query: normalizeSearchText(searchInput.value),
   });
   const page = paginateCatalog(filtered, visibleLimit);
   productGrid.replaceChildren();
@@ -121,7 +129,7 @@ function renderProducts() {
         <p class="product-description"></p>
         <p class="product-defaults"></p>
         <details class="product-customization">
-          <summary>Personalizar producto</summary>
+          <summary aria-label="Cambiar presentación y preferencias">Personalizar producto</summary>
           <div class="product-controls">
             <label>Presentación<select data-role="option"></select></label>
             <label>Preferencia<select data-role="preference"></select></label>
