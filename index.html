@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/store.css">
+  <link rel="stylesheet" href="assets/css/store-mobile.css">
 </head>
 <body>
   <div class="demo-banner" id="demo-notice"></div>
@@ -22,8 +23,8 @@
       <nav class="nav" aria-label="Navegación principal">
         <a href="#catalogo">Productos</a>
         <a href="operar.html">Área del negocio</a>
+        <a href="dueno.html">Panel dueño</a>
         <a href="cuentas.html">Fiados</a>
-        <a href="configurador.html">Configurar</a>
         <a href="scanner-lab.html">Scanner Lab</a>
         <button class="button secondary cart-button" id="open-cart" type="button" aria-controls="cart-drawer" aria-expanded="false">Pedido <span class="cart-count" id="cart-count">0</span></button>
       </nav>
@@ -42,7 +43,8 @@
             <a class="button primary" href="#catalogo">Explorar catálogo</a>
             <a class="button secondary" href="operar.html">Explorar área del negocio</a>
           </div>
-          <div class="hero-notes"><span>✓ Más variedad de frutas y verduras</span><span>✓ Miel y mermeladas</span><span>✓ Ajuste por peso real</span></div>
+          <a class="store-view-switch" href="dueno.html">¿Eres dueño? Personaliza esta tienda y revisa tu equipo</a>
+          <div class="hero-notes"><span>✓ Más variedad de frutas y verduras</span><span>✓ Miel, huevos y productos de despensa</span><span>✓ Ajuste por peso real</span></div>
         </div>
         <div class="hero-visual">
           <img class="hero-image" src="https://images.unsplash.com/photo-1757627550652-30788bfce978?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=72&w=1800" alt="Puesto de mercado con tomates, berenjenas y verduras frescas" fetchpriority="high">
@@ -81,14 +83,14 @@
           </div>
           <aside class="catalog-region-note">
             <strong>Selección inicial del sur</strong>
-            <span>Frutas, verduras de temporada fría, miel y mermeladas artesanales.</span>
+            <span>Frutas, verduras, hierbas, huevos, miel, mermeladas y productos de despensa.</span>
           </aside>
         </div>
         <div class="catalog-tools">
           <div class="chips" id="category-list" aria-label="Categorías del catálogo"></div>
           <label class="search">
             <span>Buscar productos</span>
-            <input id="product-search" type="search" placeholder="Ej.: manzana, miel, papas…" autocomplete="off">
+            <input id="product-search" type="search" placeholder="Ej.: manzana, cilantro, huevos…" autocomplete="off">
           </label>
         </div>
         <div class="catalog-summary">
@@ -130,6 +132,6 @@
   </dialog>
 
   <footer class="page-footer"><div class="shell"><span>© 2026 <span data-business-name></span></span><span>Impulsado por Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
-  <script type="module" src="assets/js/store/app.js"></script>
+  <script type="module" src="assets/js/store/entry.js"></script>
 </body>
 </html>
