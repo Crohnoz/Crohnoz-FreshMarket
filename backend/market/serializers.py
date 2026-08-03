@@ -76,7 +76,6 @@ class InventoryMovementSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="lot.product.name", read_only=True)
     product_sale_unit = serializers.CharField(source="lot.product.sale_unit", read_only=True)
     created_by = UserSummarySerializer(read_only=True)
-    lot_version = serializers.IntegerField(source="lot.version", read_only=True)
 
     class Meta:
         model = InventoryMovement
