@@ -8,7 +8,6 @@ services:
     buildCommand: bash build.sh
     startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
     healthCheckPath: /api/v1/health/
-    preDeployCommand: python manage.py migrate
     initialDeployHook: python manage.py seed_pilot
     envVars:
       - key: DATABASE_URL
