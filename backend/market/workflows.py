@@ -45,8 +45,11 @@ def require_if_match(request, current_version: int) -> None:
 
 
 def _find_idempotent_event(*, organization, action: str, key: str) -> AuditEvent | None:
-    events = AuditEvent.objects.filter(organization=organization, action=action).order_by("-sequence")[:1000]
-    return next((event for event in events if event.payload.get("idempotency_key") == key), None)
+    events = AuditEvent.objects.filter(organization=organization, action=action).order_by("-sequence")
+    for event in events.iterator(chunk_size=200):
+        if event.payload.get("idempotency_key") == key:
+            return event
+    return None
 
 
 def _replay_or_conflict(*, organization, action: str, key: str, signature: str, entity_id=None):
@@ -173,6 +176,7 @@ def transition_order(*, order: Order, actor, target_status: str, action: str, re
     idempotency_key = require_idempotency_key(request)
     signature = canonical_signature({"order_id": str(order.pk), "payload": payload or {}})
     with transaction.atomic():
+        Organization.objects.select_for_update().get(pk=order.organization_id)
         locked = Order.objects.select_for_update().prefetch_related("items__product").get(pk=order.pk)
         replay = _replay_or_conflict(
             organization=locked.organization,
@@ -223,6 +227,7 @@ def confirm_order_weighing(*, order: Order, actor, validated_data: dict, request
     idempotency_key = require_idempotency_key(request)
     signature = weighing_signature(order, validated_data)
     with transaction.atomic():
+        Organization.objects.select_for_update().get(pk=order.organization_id)
         locked = Order.objects.select_for_update().prefetch_related("items__product").get(pk=order.pk)
         replay = _replay_or_conflict(
             organization=locked.organization,
