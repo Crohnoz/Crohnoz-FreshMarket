@@ -50,7 +50,7 @@ Se guardan temporalmente:
 - hora de creación;
 - vencimiento informado por el servidor.
 
-La sesión no se exporta en respaldos, no se comparte entre pestañas nuevas y se elimina al cerrar sesión o detectar vencimiento.
+La sesión no se exporta en respaldos, no se comparte entre pestañas nuevas y se elimina del navegador al cerrar sesión, cerrar la pestaña o detectar su vencimiento.
 
 La contraseña no se persiste en ningún storage.
 
@@ -58,7 +58,9 @@ La contraseña no se persiste en ningún storage.
 
 - autenticación DRF Token temporal;
 - vencimiento configurable entre 1 y 24 horas, por defecto 12;
-- eliminación de tokens vencidos;
+- rechazo permanente de tokens vencidos;
+- rotación del token anterior en cada login válido;
+- eliminación explícita al cerrar sesión;
 - 8 intentos de login por minuto por origen;
 - membresía activa obligatoria;
 - organización activa obligatoria;
@@ -68,6 +70,8 @@ La contraseña no se persiste en ningún storage.
 - CORS por allowlist;
 - HTTPS obligatorio fuera de desarrollo local.
 
+Un token vencido puede permanecer físicamente en la tabla hasta el siguiente login de esa cuenta, pero la autenticación lo rechaza en todas las peticiones. El login siguiente elimina el token anterior y crea uno nuevo.
+
 ## Flujo de conexión
 
 1. El operador abre `/conexion`.
@@ -75,7 +79,7 @@ La contraseña no se persiste en ningún storage.
 3. El navegador consulta `GET /health/` sin credenciales.
 4. Si la API está disponible, se habilita el ingreso.
 5. El operador envía usuario y contraseña a `POST /auth/login/`.
-6. El servidor devuelve token de vida finita, usuario y membresías.
+6. El servidor rota cualquier token anterior y devuelve uno de vida finita, usuario y membresías.
 7. Con una membresía se selecciona automáticamente la organización.
 8. Con varias membresías se exige elección explícita.
 9. El frontend consulta `GET /connection-summary/` con token y organización.
@@ -169,7 +173,7 @@ Una pantalla no debe mezclar escrituras locales y remotas dentro de la misma ope
 
 ## CSP temporal
 
-Mientras la URL final no exista, Netlify permite `connect-src https:` y HTTP únicamente para localhost. Esta regla facilita staging, pero es más amplia de lo deseable.
+Mientras la URL final no exista, Netlify permite `connect-src https:` y HTTP únicamente en `localhost:8001` o `127.0.0.1:8001`. Esta regla facilita staging, pero es más amplia de lo deseable para destinos HTTPS.
 
 Al definir el host, debe reemplazarse por una allowlist explícita, por ejemplo:
 
