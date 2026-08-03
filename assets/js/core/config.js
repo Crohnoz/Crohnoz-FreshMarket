@@ -1,7 +1,7 @@
 export const APP_CONFIG = Object.freeze({
   appName: "Crohnoz Fresh Market",
   storageNamespace: "crohnoz-fresh-market",
-  version: "0.8.0-pilot",
+  version: "0.9.0-pilot",
   demoNotice: "Piloto comercial · verifica si estás en modo local o conectado",
 });
 
