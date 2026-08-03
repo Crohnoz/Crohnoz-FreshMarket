@@ -1,6 +1,6 @@
 import { readStorage, writeStorage } from "./storage.js";
 
-const ONBOARDING_KEY = "guided-onboarding-v2";
+const ONBOARDING_KEY = "guided-onboarding-v3";
 const EASY_MODE_KEY = "easy-mode";
 const VISITED_PAGES_KEY = "visited-operator-pages-v1";
 const LAST_ROUTE_KEY = "last-operator-route";
@@ -14,6 +14,8 @@ const PAGE_ALIASES = Object.freeze({
   asistente: "asistente.html",
   validacion: "validacion.html",
   integridad: "integridad.html",
+  auditoria: "auditoria.html",
+  conexion: "conexion.html",
   cierre: "cierre.html",
   dashboard: "admin.html",
   cuentas: "cuentas.html",
@@ -24,8 +26,10 @@ const PAGE_ALIASES = Object.freeze({
 const OPERATOR_PAGE_META = Object.freeze({
   "admin.html": { label: "Preparación y pesaje" },
   "asistente.html": { label: "Centro asistido" },
+  "auditoria.html": { label: "Auditoría y trazabilidad" },
   "cierre.html": { label: "Cierre del día" },
   "compras.html": { label: "Compras y proveedores" },
+  "conexion.html": { label: "Conexión con el backend" },
   "configurador.html": { label: "Configuración y respaldo" },
   "cuentas.html": { label: "Ventas y fiados" },
   "integridad.html": { label: "Integridad de datos" },
@@ -48,6 +52,12 @@ const onboardingSteps = [
     eyebrow: "Prioridades",
     title: "Sigue el siguiente paso recomendado",
     text: "El inicio revisa pedidos, pesaje, inventario, integridad y cierre para mostrar primero la tarea que necesita atención.",
+  },
+  {
+    icon: "👤",
+    eyebrow: "Cuenta individual",
+    title: "Comprueba cómo estás trabajando",
+    text: "La franja superior indica si estás en modo local o conectado. Camila y Carmelo deben ingresar con cuentas separadas.",
   },
   {
     icon: "🎙️",
