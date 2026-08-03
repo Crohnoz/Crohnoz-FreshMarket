@@ -80,22 +80,19 @@ class LoginView(APIView):
         if user is None or not user.is_active:
             raise ValidationError({"credentials": "Usuario o contraseña incorrectos."}, code="invalid_credentials")
 
-        max_age = timedelta(hours=settings.PILOT_TOKEN_MAX_HOURS)
-        token = Token.objects.filter(user=user).first()
-        if token and token.created < timezone.now() - max_age:
-            token.delete()
-            token = None
-        if token is None:
-            token = Token.objects.create(user=user)
-
         memberships = list(
             Membership.objects.select_related("organization")
             .filter(user=user, is_active=True, organization__status=Organization.Status.ACTIVE)
             .order_by("organization__name")
         )
         if not memberships:
-            token.delete()
+            Token.objects.filter(user=user).delete()
             raise ValidationError({"membership": "La cuenta no tiene un negocio activo asignado."})
+
+        max_age = timedelta(hours=settings.PILOT_TOKEN_MAX_HOURS)
+        with transaction.atomic():
+            Token.objects.filter(user=user).delete()
+            token = Token.objects.create(user=user)
 
         default_organization = memberships[0].organization_id if len(memberships) == 1 else None
         return Response({
