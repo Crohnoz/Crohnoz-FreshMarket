@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
@@ -8,6 +11,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework.views import exception_handler as drf_exception_handler
 
@@ -23,6 +27,10 @@ from .serializers import (
     UserSummarySerializer,
 )
 from .services import record_audit_event
+
+
+class LoginRateThrottle(AnonRateThrottle):
+    rate = "8/min"
 
 
 class Conflict(APIException):
@@ -60,6 +68,7 @@ class HealthView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         username = str(request.data.get("username", "")).strip()
@@ -71,7 +80,14 @@ class LoginView(APIView):
         if user is None or not user.is_active:
             raise ValidationError({"credentials": "Usuario o contraseña incorrectos."}, code="invalid_credentials")
 
-        token, _ = Token.objects.get_or_create(user=user)
+        max_age = timedelta(hours=settings.PILOT_TOKEN_MAX_HOURS)
+        token = Token.objects.filter(user=user).first()
+        if token and token.created < timezone.now() - max_age:
+            token.delete()
+            token = None
+        if token is None:
+            token = Token.objects.create(user=user)
+
         memberships = list(
             Membership.objects.select_related("organization")
             .filter(user=user, is_active=True, organization__status=Organization.Status.ACTIVE)
@@ -87,7 +103,7 @@ class LoginView(APIView):
             "user": UserSummarySerializer(user).data,
             "memberships": MembershipSerializer(memberships, many=True).data,
             "default_organization": default_organization,
-            "expires_when": "browser_session_ends",
+            "expires_at": (token.created + max_age).isoformat(),
         })
 
 
