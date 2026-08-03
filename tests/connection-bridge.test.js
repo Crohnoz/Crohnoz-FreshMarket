@@ -11,7 +11,7 @@ async function text(path) {
 
 test("API base URL accepts HTTPS and local development only", () => {
   assert.equal(normalizeApiBaseUrl("https://api.example.cl/api/v1/"), "https://api.example.cl/api/v1");
-  assert.equal(normalizeApiBaseUrl("http://localhost:8000/api/v1"), "http://localhost:8000/api/v1");
+  assert.equal(normalizeApiBaseUrl("http://localhost:8001/api/v1"), "http://localhost:8001/api/v1");
   assert.throws(() => normalizeApiBaseUrl("http://api.example.cl/api/v1"), /HTTPS/);
   assert.throws(() => normalizeApiBaseUrl("https://user:pass@api.example.cl/api/v1"), /credenciales/);
   assert.throws(() => normalizeApiBaseUrl("not-a-url"), /dirección API válida/);
@@ -32,11 +32,13 @@ test("browser session uses sessionStorage and finite server expiry", async () =>
   const connection = await text("assets/js/core/connection.js");
   const authentication = await text("backend/market/authentication.py");
   const settings = await text("backend/config/settings.py");
+  const views = await text("backend/market/views.py");
   assert.match(connection, /sessionStorage\.setItem/);
   assert.match(connection, /expiresAt/);
   assert.doesNotMatch(connection, /localStorage\.setItem\([^\n]*token/i);
   assert.match(authentication, /token\.created/);
-  assert.match(authentication, /token\.delete/);
+  assert.match(authentication, /AuthenticationFailed/);
+  assert.match(views, /Token\.objects\.filter\(user=user\)\.delete/);
   assert.match(settings, /PILOT_TOKEN_MAX_HOURS/);
   assert.match(settings, /PilotTokenAuthentication/);
 });
@@ -89,4 +91,6 @@ test("connection assets pass syntax checks and are cached offline", async () => 
   assert.match(worker, /assets\/css\/connection-shell\.css/);
   assert.match(netlify, /from = "\/conexion"/);
   assert.match(netlify, /connect-src 'self' https:/);
+  assert.match(netlify, /http:\/\/localhost:8001/);
+  assert.doesNotMatch(netlify, /localhost:\*/);
 });
