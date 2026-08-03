@@ -9,7 +9,7 @@ test("operator tasks have unique safe identifiers and local destinations", () =>
     assert.match(task.id, /^[a-z0-9-]+$/);
     assert.ok(task.title.length >= 4);
     assert.ok(task.description.length >= 20);
-    assert.match(task.href, /^(admin|cuentas|scanner-lab|cierre|inventario|compras|ventas|pedidos-remotos|asistente|validacion|configurador|integridad|auditoria|conexion)\.html/);
+    assert.match(task.href, /^(admin|cuentas|scanner-lab|cierre|inventario|inventario-remoto|compras|ventas|pedidos-remotos|asistente|validacion|configurador|integridad|auditoria|conexion)\.html/);
     assert.ok(!task.href.includes("javascript:"));
   }
 });
@@ -22,6 +22,7 @@ test("tasks can be resolved by id and group", () => {
   assert.equal(operatorTaskById("audit")?.href, "auditoria.html");
   assert.equal(operatorTaskById("connect-backend")?.href, "conexion.html");
   assert.equal(operatorTaskById("remote-orders")?.href, "pedidos-remotos.html");
+  assert.equal(operatorTaskById("remote-inventory")?.href, "inventario-remoto.html");
   assert.equal(operatorTaskById("missing"), null);
   assert.ok(operatorTasksByGroup("credit").length >= 3);
 });
@@ -36,5 +37,6 @@ test("task search supports everyday Spanish words", () => {
   assert.equal(operatorTaskSearch("historial cambios")[0]?.id, "audit");
   assert.equal(operatorTaskSearch("login django")[0]?.id, "connect-backend");
   assert.equal(operatorTaskSearch("pedido remoto")[0]?.id, "remote-orders");
+  assert.equal(operatorTaskSearch("recepcion lote")[0]?.id, "remote-inventory");
   assert.ok(operatorTaskSearch("").length === OPERATOR_TASKS.length);
 });
