@@ -1,6 +1,17 @@
 from django.contrib import admin
 
-from .models import AuditEvent, InventoryLot, Membership, Order, OrderItem, Organization, Product
+from .models import AuditEvent, InventoryLot, InventoryMovement, Membership, Order, OrderItem, Organization, Product
+
+
+class ImmutableAdminMixin:
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Organization)
@@ -25,10 +36,22 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 @admin.register(InventoryLot)
-class InventoryLotAdmin(admin.ModelAdmin):
-    list_display = ("product", "organization", "received_at", "best_before", "quantity_available", "quality", "status")
+class InventoryLotAdmin(ImmutableAdminMixin, admin.ModelAdmin):
+    list_display = ("product", "organization", "received_at", "best_before", "quantity_available", "quality", "status", "version")
     list_filter = ("organization", "quality", "status")
-    autocomplete_fields = ("product", "organization")
+    search_fields = ("product__name", "product__sku", "notes")
+    readonly_fields = [field.name for field in InventoryLot._meta.fields]
+
+
+@admin.register(InventoryMovement)
+class InventoryMovementAdmin(ImmutableAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "organization", "lot", "movement_type", "quantity_delta", "quantity_before",
+        "quantity_after", "created_by", "created_at",
+    )
+    list_filter = ("organization", "movement_type", "created_at")
+    search_fields = ("lot__product__name", "reason", "reference", "idempotency_key", "created_by__username")
+    readonly_fields = [field.name for field in InventoryMovement._meta.fields]
 
 
 class OrderItemInline(admin.TabularInline):
@@ -47,17 +70,8 @@ class OrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(AuditEvent)
-class AuditEventAdmin(admin.ModelAdmin):
+class AuditEventAdmin(ImmutableAdminMixin, admin.ModelAdmin):
     list_display = ("organization", "sequence", "action", "entity_type", "entity_id", "actor", "created_at")
     list_filter = ("organization", "action", "entity_type")
     search_fields = ("entity_id", "event_hash", "actor__username")
     readonly_fields = [field.name for field in AuditEvent._meta.fields]
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
