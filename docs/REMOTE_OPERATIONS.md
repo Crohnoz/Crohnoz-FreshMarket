@@ -1,24 +1,25 @@
-# Operación remota · Catálogo y pedidos
+# Operaciones remotas · Inventario y pedidos
 
 Fecha de corte: 2 de agosto de 2026.  
-Versión: `0.7.0-pilot`.
+Versión: `0.8.0-pilot`.
 
 ## Propósito
 
-Validar el primer flujo comercial persistido en Django sin mezclar escrituras locales y remotas dentro de una misma pantalla.
+Persistir en Django las primeras operaciones cotidianas sin mezclar escrituras locales y remotas dentro de una misma pantalla.
 
-La superficie `/pedidos-remotos` permite:
+Las superficies conectadas son:
 
-- leer productos activos del negocio autenticado;
-- crear un pedido con uno o más productos;
-- listar pedidos del mismo negocio;
-- reintentar una creación sin duplicarla;
-- mostrar errores de red, sesión, permisos e integridad sin activar un fallback local.
+- `/inventario-remoto`: lectura de lotes y recepción de inventario;
+- `/pedidos-remotos`: catálogo, creación, preparación, cantidades reales y estado listo;
+- `/conexion`: sesión, organización activa y resumen del servidor.
+
+Ante un error de red ninguna de estas pantallas escribe silenciosamente en `localStorage`.
 
 ## Fuente de verdad
 
 | Superficie | Fuente de verdad |
 | --- | --- |
+| `/inventario-remoto` | Django/PostgreSQL |
 | `/pedidos-remotos` | Django/PostgreSQL |
 | `/conexion` | Django para sesión y resumen; navegador para URL/configuración |
 | `/ventas`, `/inventario`, `/compras`, `/cuentas`, `/cierre` | `localStorage` del navegador |
@@ -27,7 +28,7 @@ La aplicación no sincroniza automáticamente ambas fuentes.
 
 ## Contrato de sesión
 
-La operación remota exige:
+Toda operación remota exige:
 
 1. modo API activo;
 2. URL API válida;
@@ -37,7 +38,7 @@ La operación remota exige:
 
 Cada petición incluye `Authorization: Token …` y `X-Organization-ID`.
 
-## Contrato de catálogo
+## Catálogo remoto
 
 Solicitud:
 
@@ -53,7 +54,38 @@ El repositorio frontend:
 - rechaza productos sin ID, nombre o precio válido;
 - no escribe una copia local del catálogo remoto.
 
-## Contrato de creación de pedido
+## Recepción de inventario
+
+Solicitud:
+
+```text
+POST /api/v1/inventory-lots/receive/
+Idempotency-Key: <clave estable>
+```
+
+Campos:
+
+- producto activo del negocio autenticado;
+- fecha de recepción;
+- fecha preferente opcional;
+- cantidad recibida positiva;
+- costo unitario no negativo;
+- calidad `good`, `review` o `damaged`;
+- observaciones opcionales.
+
+El servidor:
+
+- fija `quantity_available = quantity_received`;
+- crea el lote en estado `active`;
+- valida producto y organización;
+- rechaza fecha preferente anterior a la recepción;
+- registra `inventorylot.received` en la auditoría;
+- devuelve el mismo lote ante un reintento idéntico;
+- responde `409` si la clave se reutiliza con datos distintos.
+
+Los endpoints genéricos `POST`, `PUT`, `PATCH` y `DELETE` de lotes no son una vía operacional. Un lote no se reemplaza ni se elimina: los ajustes futuros deberán implementarse como movimientos trazables.
+
+## Creación de pedido
 
 Solicitud:
 
@@ -65,12 +97,53 @@ Campos enviados:
 
 - `public_id` legible para el operador;
 - `customer_name`;
-- `status=confirmed`;
-- `payment_method=pending`;
-- `source=operator`;
 - `notes` con modalidad y observaciones;
 - `idempotency_key` generada por el navegador;
 - `items` con producto, cantidad solicitada y precio unitario.
+
+Aunque el cliente intente enviar otros valores, el servidor fija:
+
+- `status=confirmed`;
+- `payment_method=pending`;
+- `source=operator`;
+- `actual_quantity=null` hasta la preparación.
+
+Cada producto puede aparecer una sola vez.
+
+## Preparación y control optimista
+
+Los pedidos no aceptan `PUT`, `PATCH` ni `DELETE` genéricos. Usan transiciones explícitas:
+
+```text
+POST /api/v1/orders/{id}/start-preparing/
+POST /api/v1/orders/{id}/confirm-weighing/
+POST /api/v1/orders/{id}/mark-ready/
+```
+
+Cada transición exige:
+
+```text
+If-Match: <versión visible>
+Idempotency-Key: <clave estable>
+```
+
+Reglas:
+
+- `confirmed → preparing` mediante `start-preparing`;
+- cantidades reales solo en estado `preparing`;
+- el pesaje debe incluir exactamente todas las líneas actuales;
+- cantidades no pesables deben ser enteras;
+- el servidor recalcula totales con cantidades reales;
+- `preparing → ready` solo cuando todas las líneas tienen cantidad real;
+- cada mutación incrementa `version`;
+- una versión obsoleta responde `409` y exige actualizar;
+- una clave de transición nunca puede cruzarse entre pedidos.
+
+Eventos de auditoría:
+
+- `order.preparing_started`;
+- `order.weighing_confirmed`;
+- `order.marked_ready`.
 
 ## Idempotencia
 
@@ -78,37 +151,38 @@ La clave se genera antes del primer intento y se conserva mientras no exista una
 
 Resultados:
 
-- primer envío válido: `201 Created`;
-- mismo envío y misma clave: `200 OK`, mismo pedido y header `X-Idempotent-Replay: true`;
-- clave reutilizada con datos distintos: `409 Conflict`;
-- error de red: el navegador conserva la clave para el reintento;
-- éxito: el navegador rota la clave.
+- primera creación de recurso: `201 Created`;
+- primer cambio de estado: `200 OK`;
+- mismo envío y misma clave: `200 OK`, mismo recurso y `X-Idempotent-Replay: true`;
+- clave reutilizada con contenido distinto: `409 Conflict`;
+- clave de pedido usada en otro pedido: `409 Conflict`;
+- error de red: el navegador conserva la clave;
+- éxito: el navegador rota o elimina la clave.
 
-Esto protege ante doble clic, timeout o respuesta perdida. No reemplaza una cola offline.
+Esto protege ante doble clic, timeout y respuesta perdida. No reemplaza una cola offline.
 
-## Estados y permisos
+## Operaciones que siguen fuera del bloque remoto
 
-La primera versión remota crea pedidos en estado `confirmed`. No permite todavía:
+- descuento FEFO de inventario al preparar;
+- ajustes, mermas y devoluciones como movimientos;
+- cobro y conciliación de pagos;
+- fiados y abonos;
+- entrega final;
+- cancelación con motivo;
+- cierre diario;
+- sincronización offline.
 
-- registrar peso real;
-- cambiar estado;
-- cobrar;
-- cargar fiado;
-- descontar inventario;
-- cancelar o eliminar;
-- resolver conflictos offline.
-
-Estas acciones permanecen fuera de la pantalla para evitar una falsa integración parcial.
+Mantenerlas fuera evita aparentar una integración parcial que todavía no existe.
 
 ## Despliegue preparado
 
-El Blueprint `render.yaml` crea recursos exclusivos para Fresh Market:
+El Blueprint `render.yaml` declara recursos exclusivos para Fresh Market:
 
 - servicio web Python;
 - PostgreSQL;
-- acceso externo a la base bloqueado;
-- secrets independientes;
-- migraciones antes del despliegue;
+- acceso externo directo a la base bloqueado;
+- secretos independientes;
+- migraciones durante el build compatible con el plan declarado;
 - seed inicial de Camila y Carmelo;
 - health check de API.
 
@@ -120,14 +194,17 @@ El Blueprint no debe conectarse a bases de KatYta Studio, IncluMe, Administraci�
 2. Camila inicia sesión y obtiene rol `manager`.
 3. Carmelo inicia sesión y obtiene rol `operator`.
 4. Ambas cuentas ven solo la organización piloto.
-5. Catálogo remoto muestra cuatro productos ficticios.
-6. Carmelo crea un pedido.
-7. Camila lo visualiza en una segunda sesión.
-8. Repetir el POST con la misma clave no duplica el pedido.
-9. Reutilizar la clave con otro cliente devuelve conflicto.
-10. Auditoría contiene un único evento `order.created`.
-11. CORS rechaza un origen no autorizado.
-12. Cerrar sesión invalida el token.
+5. Carmelo registra una recepción remota.
+6. Repetir la recepción con la misma clave no crea otro lote.
+7. Camila crea un pedido remoto.
+8. Carmelo inicia la preparación desde otra sesión.
+9. Registra todas las cantidades reales.
+10. Camila actualiza y observa el nuevo total y versión.
+11. Carmelo marca el pedido listo.
+12. Un intento con versión antigua devuelve conflicto.
+13. Auditoría contiene un único evento por operación.
+14. CORS rechaza un origen no autorizado.
+15. Cerrar sesión invalida el token.
 
 ## Rollback
 
@@ -144,14 +221,6 @@ Backend:
 - detener escrituras o desactivar el servicio;
 - conservar logs y commit desplegado;
 - verificar backup antes de restaurar;
-- no importar automáticamente pedidos remotos a `localStorage`.
+- no importar automáticamente registros remotos a `localStorage`.
 
-## Criterio para el siguiente bloque
-
-Solo se conectarán pesaje y estados cuando:
-
-- el hosting esté verificado;
-- dos sesiones funcionen simultáneamente;
-- la idempotencia esté comprobada en red real;
-- exista rollback documentado;
-- Camila o Carmelo completen el flujo sin asistencia técnica.
+El rollback cambia la fuente de trabajo futura; no borra ni fusiona datos existentes.
