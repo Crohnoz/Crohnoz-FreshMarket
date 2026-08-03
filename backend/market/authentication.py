@@ -13,6 +13,5 @@ class PilotTokenAuthentication(TokenAuthentication):
         user, token = super().authenticate_credentials(key)
         max_age = timedelta(hours=settings.PILOT_TOKEN_MAX_HOURS)
         if token.created < timezone.now() - max_age:
-            token.delete()
             raise AuthenticationFailed("La sesión venció. Ingresa nuevamente.", code="token_expired")
         return user, token
