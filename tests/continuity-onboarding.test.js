@@ -56,16 +56,18 @@ test("urgent work still outranks continuity", () => {
 
 test("readiness and resume targets preserve operator safety", () => {
   const defaults = { name: "Mercado", tagline: "Fresco", whatsapp: "", primaryColor: "#000", accentColor: "#fff", deliveryFee: 0, tolerancePercent: 5, maxExtraAmount: 1000 };
-  assert.equal(buildOperatorReadiness({ business: defaults, defaultBusiness: defaults }).total, 5);
+  assert.equal(buildOperatorReadiness({ business: defaults, defaultBusiness: defaults }).total, 6);
   const ready = buildOperatorReadiness({
     business: { ...defaults, name: "Mi negocio" },
     defaultBusiness: defaults,
     visitedPages: ["inventario.html", "ventas.html"],
     continuityMeta: { lastBackupAt: "2026-08-02T19:00:00.000Z" },
     integrityMeta: { lastScanAt: "2026-08-02T18:55:00.000Z", status: "healthy" },
+    connection: { state: "connected" },
   });
   assert.equal(ready.percent, 100);
   assert.equal(normalizeResumeTarget({ href: "integridad.html", label: "Integridad" })?.href, "integridad.html");
+  assert.equal(normalizeResumeTarget({ href: "conexion.html", label: "Conexión" })?.href, "conexion.html");
   assert.equal(normalizeResumeTarget({ href: "https://example.com", label: "Fuera" }), null);
 });
 
@@ -83,7 +85,8 @@ test("configuration, onboarding and operator home expose continuity controls", a
   assert.match(shell, /Comprueba y respalda/);
   assert.match(state, /guided-onboarding-v3/);
   assert.doesNotMatch(state, /guided-onboarding-v1/);
-  assert.match(home, /id="readiness-count">0\/5/);
+  assert.match(home, /id="readiness-count">0\/6/);
+  assert.match(home, /href="conexion\.html">Conexión/);
 });
 
 test("continuity, audit and connection scripts pass syntax checks and cache v8", async () => {
@@ -101,6 +104,7 @@ test("continuity, audit and connection scripts pass syntax checks and cache v8",
     "assets/js/domain/backup.js",
     "assets/js/domain/audit-trail.js",
     "assets/js/domain/data-integrity.js",
+    "assets/js/domain/operator-readiness.js",
     "assets/js/operator/home.js",
     "sw.js",
   ]) execFileSync(process.execPath, ["--check", fileURLToPath(new URL(`../${path}`, import.meta.url))]);
