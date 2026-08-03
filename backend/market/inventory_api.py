@@ -1,19 +1,18 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .inventory_fefo import apply_fefo_guarded_inventory_movement
 from .models import InventoryLot, InventoryMovement, Membership
 from .permissions import require_role, resolve_organization_context
 from .serializers import InventoryLotSerializer, InventoryMovementSerializer
-from .workflows import (
-    InventoryAdjustmentSerializer,
-    InventoryQuantityMovementSerializer,
-    apply_inventory_movement,
-)
+from .workflows import InventoryAdjustmentSerializer, InventoryQuantityMovementSerializer
 
 
 class InventoryMovementViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -52,6 +51,10 @@ class InventoryMovementViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         lot_id = str(request.data.get("lot", "")).strip()
         if not lot_id:
             raise ValidationError({"lot": "Selecciona un lote del negocio activo."})
+        try:
+            UUID(lot_id)
+        except (TypeError, ValueError):
+            raise ValidationError({"lot": "El identificador del lote no es válido."})
         lot = get_object_or_404(
             InventoryLot.objects.select_related("product").filter(organization=self.organization_context.organization),
             pk=lot_id,
@@ -64,7 +67,7 @@ class InventoryMovementViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         )
         serializer = serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        locked_lot, movement, replay = apply_inventory_movement(
+        locked_lot, movement, replay = apply_fefo_guarded_inventory_movement(
             lot=lot,
             actor=request.user,
             movement_type=movement_type,
