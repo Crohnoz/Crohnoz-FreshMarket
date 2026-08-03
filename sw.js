@@ -1,5 +1,5 @@
-const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v6";
-const CACHE_NAME = "crohnoz-fresh-market-v7";
+const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v7";
+const CACHE_NAME = "crohnoz-fresh-market-v8";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -12,6 +12,7 @@ const CORE_ASSETS = [
   "/validacion.html",
   "/integridad.html",
   "/auditoria.html",
+  "/conexion.html",
   "/cierre.html",
   "/cuentas.html",
   "/admin.html",
@@ -20,6 +21,8 @@ const CORE_ASSETS = [
   "/assets/css/tokens.css",
   "/assets/css/base.css",
   "/assets/css/guided-shell.css",
+  "/assets/css/connection-shell.css",
+  "/assets/css/connection.css",
   "/assets/css/hardening.css",
   "/assets/css/usability-audit.css",
   "/assets/css/ux-polish.css",
@@ -33,6 +36,8 @@ const CORE_ASSETS = [
   "/assets/js/core/config.js",
   "/assets/js/core/storage.js",
   "/assets/js/core/storage-audit.js",
+  "/assets/js/core/connection.js",
+  "/assets/js/core/connection-shell.js",
   "/assets/js/core/format.js",
   "/assets/js/core/ui-feedback.js",
   "/assets/js/core/guided-shell.js",
@@ -45,6 +50,7 @@ const CORE_ASSETS = [
   "/assets/js/store/app.js",
   "/assets/js/operator/home.js",
   "/assets/js/configurator/app.js",
+  "/assets/js/connection/app.js",
   "/assets/js/integrity/app.js",
   "/assets/js/audit/navigation.js",
   "/assets/js/audit/app.js",
