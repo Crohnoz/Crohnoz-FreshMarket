@@ -95,14 +95,17 @@ test("Render blueprint isolates secrets, database and health checks", async () =
   const settings = await text("backend/config/settings.py");
   const requirements = await text("backend/requirements.txt");
   assert.match(blueprint, /name: crohnoz-fresh-market-api/);
+  assert.match(blueprint, /plan: free/);
   assert.match(blueprint, /rootDir: backend/);
   assert.match(blueprint, /healthCheckPath: \/api\/v1\/health\//);
   assert.match(blueprint, /fromDatabase:[\s\S]*crohnoz-fresh-market-db[\s\S]*connectionString/);
   assert.match(blueprint, /CAMILA_PILOT_PASSWORD[\s\S]*sync: false/);
   assert.match(blueprint, /CARMELO_PILOT_PASSWORD[\s\S]*sync: false/);
+  assert.doesNotMatch(blueprint, /preDeployCommand/);
   assert.doesNotMatch(blueprint, /camila-pilot-only|carmelo-pilot-only|safe-test-password/);
   assert.match(build, /collectstatic --no-input/);
   assert.match(build, /check --deploy/);
+  assert.match(build, /migrate --noinput/);
   assert.match(settings, /DATABASE_URL/);
   assert.match(settings, /WhiteNoiseMiddleware/);
   assert.match(requirements, /dj-database-url/);
