@@ -78,7 +78,7 @@ Pantalla frontend: `http://localhost:8000/conexion.html`
 6. Verificar rol, conteos y catálogo del servidor.
 7. Volver a las pantallas operacionales.
 
-El frontend guarda únicamente la URL y el modo local/API en `localStorage`. El token, la identidad y la organización activa viven en `sessionStorage`, no entran en respaldos y se eliminan al cerrar sesión o vencer la sesión.
+El frontend guarda únicamente la URL y el modo local/API en `localStorage`. El token, la identidad y la organización activa viven en `sessionStorage`, no entran en respaldos y desaparecen al cerrar sesión, cerrar la pestaña o detectar el vencimiento informado por el servidor.
 
 ## Endpoints del puente
 
@@ -96,7 +96,9 @@ El frontend guarda únicamente la URL y el modo local/API en `localStorage`. El 
 ## Seguridad del puente
 
 - Los intentos de login están limitados a 8 por minuto por origen.
-- Los tokens vencen en el servidor y se eliminan cuando se detecta el vencimiento.
+- Los tokens vencidos son rechazados en todas las peticiones.
+- Cada login rota el token anterior; logout lo elimina explícitamente.
+- Un token vencido que siga almacenado en la tabla no vuelve a ser válido y se reemplaza en el próximo login.
 - El frontend solo acepta HTTPS, salvo `localhost` y `127.0.0.1` para desarrollo.
 - La contraseña no se persiste y el formulario se limpia después de cada intento.
 - CORS debe usar una allowlist exacta del frontend desplegado.
