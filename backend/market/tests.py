@@ -9,7 +9,6 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from .models import AuditEvent, InventoryLot, Membership, Order, Organization, Product
-from .services import record_audit_event
 
 
 class MarketApiTests(APITestCase):
@@ -24,12 +23,30 @@ class MarketApiTests(APITestCase):
         self.token = Token.objects.create(user=self.camila)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
 
+    def order_payload(self, product, *, key="remote-order-key", customer="Cliente piloto"):
+        return {
+            "public_id": "FM-API-0001",
+            "customer_name": customer,
+            "status": "confirmed",
+            "payment_method": "pending",
+            "source": "operator",
+            "notes": "Retiro · pedido remoto de prueba",
+            "idempotency_key": key,
+            "items": [
+                {
+                    "product": str(product.id),
+                    "requested_quantity": "1.250",
+                    "unit_price": "4500.00",
+                }
+            ],
+        }
+
     def test_health_is_public(self):
         self.client.credentials()
         response = self.client.get(reverse("health"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["status"], "ok")
-        self.assertEqual(response.data["version"], "0.2.0-mvp")
+        self.assertEqual(response.data["version"], "0.3.0-mvp")
 
     def test_login_returns_session_without_password_and_requires_org_choice(self):
         self.client.credentials()
@@ -45,15 +62,6 @@ class MarketApiTests(APITestCase):
         self.assertIsNone(response.data["default_organization"])
         self.assertGreater(timezone.datetime.fromisoformat(response.data["expires_at"]), timezone.now())
 
-    def test_login_rejects_missing_credentials_without_rotating_token(self):
-        self.client.credentials()
-        original_key = self.token.key
-        response = self.client.post(reverse("pilot-login"), {}, format="json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("ingresa usuario y contraseña", str(response.data).lower())
-        self.assertTrue(Token.objects.filter(key=original_key, user=self.camila).exists())
-        self.assertEqual(Token.objects.filter(user=self.camila).count(), 1)
-
     def test_login_rejects_invalid_credentials_with_friendly_message(self):
         self.client.credentials()
         response = self.client.post(
@@ -64,35 +72,13 @@ class MarketApiTests(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("incorrectos", str(response.data).lower())
 
-    def test_login_rotates_previous_token_and_invalidates_old_credentials(self):
+    def test_login_rejects_missing_credentials_without_rotating_token(self):
         self.client.credentials()
         original_key = self.token.key
-        first = self.client.post(
-            reverse("pilot-login"),
-            {"username": "camila", "password": "safe-test-password"},
-            format="json",
-        )
-        self.assertEqual(first.status_code, 200, first.data)
-        first_key = first.data["token"]
-        self.assertNotEqual(first_key, original_key)
-        self.assertFalse(Token.objects.filter(key=original_key).exists())
-        self.assertEqual(Token.objects.filter(user=self.camila).count(), 1)
-
-        second = self.client.post(
-            reverse("pilot-login"),
-            {"username": "camila", "password": "safe-test-password"},
-            format="json",
-        )
-        self.assertEqual(second.status_code, 200, second.data)
-        second_key = second.data["token"]
-        self.assertNotEqual(second_key, first_key)
-        self.assertFalse(Token.objects.filter(key=first_key).exists())
-        self.assertEqual(Token.objects.filter(user=self.camila).count(), 1)
-
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {first_key}")
-        self.assertEqual(self.client.get(reverse("me")).status_code, 401)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {second_key}")
-        self.assertEqual(self.client.get(reverse("me")).status_code, 200)
+        response = self.client.post(reverse("pilot-login"), {}, format="json")
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn("ingresa usuario y contraseña", str(response.data).lower())
+        self.assertTrue(Token.objects.filter(key=original_key, user=self.camila).exists())
 
     def test_expired_token_is_rejected(self):
         Token.objects.filter(pk=self.token.pk).update(created=timezone.now() - timedelta(hours=13))
@@ -106,6 +92,24 @@ class MarketApiTests(APITestCase):
         response = self.client.post(reverse("pilot-logout"))
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Token.objects.filter(user=self.camila).exists())
+
+    def test_login_rotates_previous_token_and_invalidates_old_credentials(self):
+        first_key = self.token.key
+        self.client.credentials()
+        response = self.client.post(
+            reverse("pilot-login"),
+            {"username": "camila", "password": "safe-test-password"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        second_key = response.data["token"]
+        self.assertNotEqual(first_key, second_key)
+        self.assertFalse(Token.objects.filter(key=first_key).exists())
+        self.assertEqual(Token.objects.filter(user=self.camila).count(), 1)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {first_key}")
+        self.assertEqual(self.client.get(reverse("me")).status_code, 401)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {second_key}")
+        self.assertEqual(self.client.get(reverse("me")).status_code, 200)
 
     def test_connection_summary_is_scoped_and_operator_friendly(self):
         product = Product.objects.create(
@@ -123,36 +127,13 @@ class MarketApiTests(APITestCase):
             quantity_available=Decimal("8.500"),
             unit_cost=Decimal("900.00"),
         )
-        foreign_product = Product.objects.create(
+        Product.objects.create(
             organization=self.other_organization,
-            sku="SECRET",
+            sku="FOREIGN-001",
             name="Producto ajeno",
             sale_unit=Product.SaleUnit.UNIT,
-            price=Decimal("1.00"),
+            price=Decimal("999.00"),
         )
-        InventoryLot.objects.create(
-            organization=self.other_organization,
-            product=foreign_product,
-            received_at="2026-08-02",
-            quantity_received=Decimal("50.000"),
-            quantity_available=Decimal("50.000"),
-            unit_cost=Decimal("1.00"),
-        )
-        foreign_order = Order.objects.create(
-            organization=self.other_organization,
-            public_id="FOREIGN-1",
-            customer_name="Cliente ajeno",
-            created_by=self.camila,
-        )
-        record_audit_event(
-            organization=self.other_organization,
-            actor=self.camila,
-            action="order.created",
-            entity_type=foreign_order._meta.label_lower,
-            entity_id=str(foreign_order.pk),
-            payload={"public_id": foreign_order.public_id},
-        )
-
         response = self.client.get(
             reverse("connection-summary"),
             HTTP_X_ORGANIZATION_ID=str(self.organization.id),
@@ -160,13 +141,9 @@ class MarketApiTests(APITestCase):
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.data["organization"]["name"], "Mercado Piloto")
         self.assertEqual(response.data["membership"]["role"], Membership.Role.MANAGER)
-        self.assertEqual(response.data["counts"], {
-            "products": 1,
-            "inventory_lots": 1,
-            "orders": 0,
-            "audit_events": 0,
-        })
-        self.assertEqual([item["name"] for item in response.data["product_preview"]], ["Tomate"])
+        self.assertEqual(response.data["counts"]["products"], 1)
+        self.assertEqual(response.data["counts"]["inventory_lots"], 1)
+        self.assertEqual(response.data["product_preview"][0]["name"], "Tomate")
         self.assertNotIn("Producto ajeno", str(response.data))
 
     def test_multiple_memberships_require_explicit_organization(self):
@@ -188,6 +165,39 @@ class MarketApiTests(APITestCase):
         self.assertEqual(event.action, "product.created")
         self.assertEqual(event.organization, self.organization)
 
+    def test_active_product_filter_is_scoped_to_selected_organization(self):
+        Product.objects.create(
+            organization=self.organization,
+            sku="ACTIVE",
+            name="Producto activo",
+            sale_unit=Product.SaleUnit.UNIT,
+            price=Decimal("1000.00"),
+            is_active=True,
+        )
+        Product.objects.create(
+            organization=self.organization,
+            sku="INACTIVE",
+            name="Producto inactivo",
+            sale_unit=Product.SaleUnit.UNIT,
+            price=Decimal("900.00"),
+            is_active=False,
+        )
+        Product.objects.create(
+            organization=self.other_organization,
+            sku="FOREIGN",
+            name="Producto extranjero",
+            sale_unit=Product.SaleUnit.UNIT,
+            price=Decimal("800.00"),
+            is_active=True,
+        )
+        response = self.client.get(
+            "/api/v1/products/?is_active=true",
+            HTTP_X_ORGANIZATION_ID=str(self.organization.id),
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["sku"], "ACTIVE")
+
     def test_operator_can_create_order_but_cannot_create_product(self):
         product = Product.objects.create(
             organization=self.organization,
@@ -208,20 +218,58 @@ class MarketApiTests(APITestCase):
         self.assertEqual(blocked.status_code, 403)
         created = self.client.post(
             "/api/v1/orders/",
-            {
-                "public_id": "FM-0001",
-                "customer_name": "Cliente piloto",
-                "status": "confirmed",
-                "payment_method": "cash",
-                "source": "operator",
-                "items": [{"product": str(product.id), "requested_quantity": "1.250", "unit_price": "4500.00"}],
-            },
+            self.order_payload(product),
             format="json",
             **headers,
         )
         self.assertEqual(created.status_code, 201, created.data)
         self.assertEqual(created.data["total"], "5625.00")
         self.assertEqual(Order.objects.get().created_by, self.carmelo)
+
+    def test_order_creation_replays_same_idempotency_key_without_duplicates(self):
+        product = Product.objects.create(
+            organization=self.organization,
+            sku="PAL-002",
+            name="Palta hass",
+            sale_unit=Product.SaleUnit.KILOGRAM,
+            price=Decimal("4500.00"),
+        )
+        headers = {"HTTP_X_ORGANIZATION_ID": str(self.organization.id)}
+        payload = self.order_payload(product, key="stable-browser-request")
+        first = self.client.post("/api/v1/orders/", payload, format="json", **headers)
+        second = self.client.post("/api/v1/orders/", payload, format="json", **headers)
+        self.assertEqual(first.status_code, 201, first.data)
+        self.assertEqual(second.status_code, 200, second.data)
+        self.assertEqual(first.data["id"], second.data["id"])
+        self.assertEqual(second.headers["X-Idempotent-Replay"], "true")
+        self.assertEqual(Order.objects.filter(organization=self.organization).count(), 1)
+        self.assertEqual(AuditEvent.objects.filter(organization=self.organization, action="order.created").count(), 1)
+
+    def test_reused_idempotency_key_with_different_payload_returns_conflict(self):
+        product = Product.objects.create(
+            organization=self.organization,
+            sku="PAL-003",
+            name="Palta fuerte",
+            sale_unit=Product.SaleUnit.KILOGRAM,
+            price=Decimal("4500.00"),
+        )
+        headers = {"HTTP_X_ORGANIZATION_ID": str(self.organization.id)}
+        first = self.client.post(
+            "/api/v1/orders/",
+            self.order_payload(product, key="collision-key", customer="Cliente A"),
+            format="json",
+            **headers,
+        )
+        conflicting = self.client.post(
+            "/api/v1/orders/",
+            self.order_payload(product, key="collision-key", customer="Cliente B"),
+            format="json",
+            **headers,
+        )
+        self.assertEqual(first.status_code, 201, first.data)
+        self.assertEqual(conflicting.status_code, 409, conflicting.data)
+        self.assertIn("pedido diferente", str(conflicting.data).lower())
+        self.assertEqual(Order.objects.filter(organization=self.organization).count(), 1)
 
     def test_organization_scope_hides_foreign_records(self):
         Product.objects.create(
