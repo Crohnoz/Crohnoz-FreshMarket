@@ -25,7 +25,7 @@ test("checksummed backups round-trip and reject invalid input", () => {
   const entries = { business: { name: "Mercado" }, orders: [{ id: "FM-1" }, { id: "FM-2" }] };
   const envelope = createBackupEnvelope(entries, {
     namespace: "crohnoz-fresh-market",
-    appVersion: "0.5.0-pilot",
+    appVersion: "0.6.0-pilot",
     exportedAt: "2026-08-02T19:00:00.000Z",
   });
   const restored = parseBackupText(serializeBackup(envelope), { expectedNamespace: "crohnoz-fresh-market" });
@@ -78,19 +78,23 @@ test("configuration, onboarding and operator home expose continuity controls", a
     assert.match(configurator, new RegExp(`id=["']${id}["']`));
   }
   assert.match(configurator, /checksum/);
-  assert.match(shell, /guided-onboarding-v2/);
+  assert.match(shell, /guided-onboarding-v3/);
+  assert.match(shell, /Cuenta individual/);
   assert.match(shell, /Comprueba y respalda/);
-  assert.match(state, /guided-onboarding-v2/);
+  assert.match(state, /guided-onboarding-v3/);
   assert.doesNotMatch(state, /guided-onboarding-v1/);
   assert.match(home, /id="readiness-count">0\/5/);
 });
 
-test("continuity and audit scripts pass syntax checks and cache v7", async () => {
+test("continuity, audit and connection scripts pass syntax checks and cache v8", async () => {
   for (const path of [
     "assets/js/core/config.js",
     "assets/js/core/storage.js",
     "assets/js/core/storage-audit.js",
+    "assets/js/core/connection.js",
+    "assets/js/core/connection-shell.js",
     "assets/js/configurator/app.js",
+    "assets/js/connection/app.js",
     "assets/js/integrity/app.js",
     "assets/js/audit/app.js",
     "assets/js/data/pilot-state.js",
@@ -106,9 +110,10 @@ test("continuity and audit scripts pass syntax checks and cache v7", async () =>
   const config = await text("assets/js/core/config.js");
   assert.match(storage, /recordStorageMutation/);
   assert.match(storage, /recordSnapshotRestore/);
-  assert.match(worker, /crohnoz-fresh-market-v7/);
+  assert.match(worker, /crohnoz-fresh-market-v8/);
   assert.match(worker, /auditoria\.html/);
+  assert.match(worker, /conexion\.html/);
   assert.match(worker, /assets\/js\/domain\/audit-trail\.js/);
-  assert.match(worker, /assets\/js\/core\/storage-audit\.js/);
-  assert.match(config, /0\.5\.0-pilot/);
+  assert.match(worker, /assets\/js\/core\/connection\.js/);
+  assert.match(config, /0\.6\.0-pilot/);
 });
