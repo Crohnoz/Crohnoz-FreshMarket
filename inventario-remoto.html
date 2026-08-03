@@ -32,9 +32,9 @@
   <main id="main-content" class="remote-main">
     <section class="shell remote-hero">
       <div>
-        <p class="eyebrow">Bloque conectado 0.9</p>
-        <h1>Recepciones y movimientos trazables</h1>
-        <p>Cada entrada o salida queda registrada en Django. Los saldos no se editan ni se eliminan directamente.</p>
+        <p class="eyebrow">Bloque conectado 0.9 · UX guiada</p>
+        <h1>Inventario remoto, paso a paso</h1>
+        <p>Elige una tarea, revisa el resumen y confirma. Cada entrada o salida queda trazada en Django.</p>
       </div>
       <a class="button secondary" href="conexion.html">Revisar conexión</a>
     </section>
@@ -62,16 +62,44 @@
 
       <p class="status-message" id="remote-inventory-status" role="status" aria-live="polite"></p>
 
+      <section class="inventory-task-shell" aria-labelledby="inventory-task-title">
+        <div class="inventory-task-heading">
+          <div>
+            <p class="eyebrow">Una tarea a la vez</p>
+            <h2 id="inventory-task-title">¿Qué necesitas hacer?</h2>
+          </div>
+          <p id="inventory-task-help">Puedes cambiar de tarea sin perder los datos que ya escribiste.</p>
+        </div>
+        <div class="inventory-task-tabs" role="tablist" aria-describedby="inventory-task-help">
+          <button class="inventory-task-tab" type="button" role="tab" aria-selected="false" aria-controls="remote-reception-panel" data-inventory-view="reception">
+            <span class="inventory-task-number" aria-hidden="true">1</span>
+            <span><strong>Recibir</strong><small>Crear un lote nuevo</small></span>
+            <span class="inventory-task-badge">Entrada</span>
+          </button>
+          <button class="inventory-task-tab" type="button" role="tab" aria-selected="false" aria-controls="remote-movement-panel" data-inventory-view="movement">
+            <span class="inventory-task-number" aria-hidden="true">2</span>
+            <span><strong>Descontar o corregir</strong><small>Consumo, merma o ajuste</small></span>
+            <span class="inventory-task-badge">Acción</span>
+          </button>
+          <button class="inventory-task-tab" type="button" role="tab" aria-selected="false" aria-controls="remote-inventory-panel" data-inventory-view="lots">
+            <span class="inventory-task-number" aria-hidden="true">3</span>
+            <span><strong>Revisar lotes</strong><small>Stock, FEFO y riesgos</small></span>
+            <span class="inventory-task-badge" data-task-badge="lots">0</span>
+          </button>
+          <button class="inventory-task-tab" type="button" role="tab" aria-selected="false" aria-controls="remote-history-panel" data-inventory-view="history">
+            <span class="inventory-task-number" aria-hidden="true">4</span>
+            <span><strong>Ver historial</strong><small>Movimientos auditados</small></span>
+            <span class="inventory-task-badge" data-task-badge="history">0</span>
+          </button>
+        </div>
+      </section>
+
       <section class="remote-inventory-grid">
-        <article class="panel remote-reception-panel">
-          <header class="panel-header">
-            <div><p class="eyebrow">Nueva entrada</p><h2>Registrar recepción</h2></div>
-          </header>
+        <article class="panel remote-reception-panel" id="remote-reception-panel" data-inventory-panel="reception" role="tabpanel">
+          <header class="panel-header"><div><p class="eyebrow">Nueva entrada</p><h2 tabindex="-1">Registrar recepción</h2></div></header>
           <form id="remote-reception-form" novalidate>
             <label>Producto
-              <select name="productId" id="remote-reception-product" required>
-                <option value="">Selecciona un producto</option>
-              </select>
+              <select name="productId" id="remote-reception-product" required><option value="">Selecciona un producto</option></select>
             </label>
             <div class="remote-form-pair">
               <label>Fecha de recepción<input name="receivedAt" id="remote-received-at" type="date" required></label>
@@ -84,83 +112,85 @@
             <p class="field-help" id="remote-reception-unit-help">La unidad se toma del producto remoto.</p>
             <label>Calidad al recibir
               <select name="quality">
-                <option value="good">Buena</option>
-                <option value="review">Revisar</option>
-                <option value="damaged">Dañada</option>
+                <option value="good">Buena</option><option value="review">Revisar</option><option value="damaged">Dañada</option>
               </select>
             </label>
             <label>Observaciones<textarea name="notes" maxlength="240" rows="3" placeholder="Proveedor, condición o referencia interna"></textarea></label>
+
+            <section class="remote-draft-review" aria-labelledby="remote-reception-draft-title">
+              <div class="remote-draft-heading"><div><p class="eyebrow">Revisión automática</p><h3 id="remote-reception-draft-title">Antes de guardar</h3></div><strong id="remote-reception-draft-count">0/4</strong></div>
+              <div class="remote-draft-progress" role="progressbar" aria-label="Datos esenciales de la recepción" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"><span id="remote-reception-draft-bar"></span></div>
+              <p id="remote-reception-draft-message">Completa los datos esenciales.</p>
+              <ul id="remote-reception-draft-list"></ul>
+            </section>
+
             <p class="remote-safety-note">Ante un corte de internet, vuelve a presionar el botón. La misma clave evita duplicar la recepción.</p>
-            <button class="button primary full" id="create-remote-reception" type="submit">Registrar recepción remota</button>
+            <button class="button primary full" id="create-remote-reception" type="submit">Revisar y registrar recepción</button>
           </form>
           <div class="remote-created" id="remote-reception-created" hidden>
             <strong>Recepción confirmada por el servidor</strong>
             <textarea id="remote-reception-summary" rows="5" readonly aria-label="Resumen de la recepción remota"></textarea>
+            <button class="button secondary full" type="button" data-switch-view="lots">Revisar el lote creado</button>
           </div>
         </article>
 
-        <article class="panel remote-movement-panel">
-          <header class="panel-header">
-            <div><p class="eyebrow">Salida o corrección</p><h2>Registrar movimiento</h2></div>
-          </header>
+        <article class="panel remote-movement-panel" id="remote-movement-panel" data-inventory-panel="movement" role="tabpanel">
+          <header class="panel-header"><div><p class="eyebrow">Salida o corrección</p><h2 tabindex="-1">Registrar movimiento</h2></div></header>
           <form id="remote-movement-form" novalidate>
             <label>Lote
-              <select name="lotId" id="remote-movement-lot" required>
-                <option value="">Selecciona un lote</option>
-              </select>
+              <select name="lotId" id="remote-movement-lot" required><option value="">Selecciona un lote</option></select>
             </label>
             <label>Tipo de movimiento
               <select name="movementType" id="remote-movement-type" required>
-                <option value="consumption">Consumo por venta o preparación</option>
-                <option value="waste">Merma</option>
-                <option value="supplier_return">Devolución a proveedor</option>
-                <option value="adjustment" id="remote-adjustment-option">Ajuste por conteo físico</option>
+                <option value="consumption">Consumo por venta o preparación</option><option value="waste">Merma</option><option value="supplier_return">Devolución a proveedor</option><option value="adjustment" id="remote-adjustment-option">Ajuste por conteo físico</option>
               </select>
             </label>
-            <label><span id="remote-movement-quantity-label">Cantidad a descontar</span>
-              <input name="quantity" id="remote-movement-quantity" type="number" min="0.001" step="0.001" inputmode="decimal" required>
-            </label>
+            <label><span id="remote-movement-quantity-label">Cantidad a descontar</span><input name="quantity" id="remote-movement-quantity" type="number" min="0.001" step="0.001" inputmode="decimal" required></label>
             <p class="field-help" id="remote-movement-unit-help">Selecciona un lote para revisar saldo y unidad.</p>
             <label>Motivo<textarea name="reason" maxlength="240" rows="3" required placeholder="Ej.: venta preparada, daño, devolución o conteo físico"></textarea></label>
             <label>Referencia opcional<input name="reference" maxlength="120" placeholder="Pedido, factura o nota interna"></label>
+
+            <section class="remote-draft-review" aria-labelledby="remote-movement-draft-title">
+              <div class="remote-draft-heading"><div><p class="eyebrow">Impacto previsto</p><h3 id="remote-movement-draft-title">Antes de descontar</h3></div><strong id="remote-movement-draft-count">0/4</strong></div>
+              <div class="remote-draft-progress" role="progressbar" aria-label="Datos esenciales del movimiento" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"><span id="remote-movement-draft-bar"></span></div>
+              <p id="remote-movement-draft-message">Completa los datos esenciales.</p>
+              <ul id="remote-movement-draft-list"></ul>
+            </section>
+
             <p class="remote-safety-note" id="remote-movement-role-note">Los ajustes de conteo requieren rol administrador. Los demás movimientos requieren rol operador.</p>
-            <button class="button primary full" id="create-remote-movement" type="submit">Registrar movimiento remoto</button>
+            <button class="button primary full" id="create-remote-movement" type="submit">Revisar y registrar movimiento</button>
           </form>
           <div class="remote-created" id="remote-movement-created" hidden>
             <strong>Movimiento confirmado por el servidor</strong>
             <textarea id="remote-movement-summary" rows="5" readonly aria-label="Resumen del movimiento remoto"></textarea>
+            <button class="button secondary full" type="button" data-switch-view="history">Ver en el historial</button>
           </div>
         </article>
 
-        <article class="panel remote-inventory-panel remote-wide-panel">
+        <article class="panel remote-inventory-panel remote-wide-panel" id="remote-inventory-panel" data-inventory-panel="lots" role="tabpanel">
           <header class="panel-header remote-inventory-header">
-            <div><p class="eyebrow">Lotes remotos</p><h2>Inventario disponible</h2></div>
-            <label class="remote-search"><span class="sr-only">Buscar lote</span><input id="remote-lot-search" type="search" placeholder="Buscar producto o estado" autocomplete="off"></label>
+            <div><p class="eyebrow">Lotes remotos</p><h2 tabindex="-1">Inventario disponible</h2></div>
+            <div class="remote-table-controls">
+              <label class="remote-search"><span>Buscar</span><input id="remote-lot-search" type="search" placeholder="Producto, estado o nota" autocomplete="off"></label>
+              <label><span>Mostrar</span><select id="remote-lot-filter"><option value="all">Todos los lotes</option><option value="fefo">Solo FEFO primero</option><option value="danger">Solo críticos</option><option value="warning">Solo en advertencia</option><option value="damaged">Solo dañados</option><option value="depleted">Solo agotados</option></select></label>
+            </div>
           </header>
-          <div class="remote-inventory-metrics" aria-label="Resumen del inventario remoto">
-            <span><strong id="remote-lot-count">0</strong> lotes</span>
-            <span><strong id="remote-critical-count">0</strong> críticos</span>
-          </div>
-          <div class="table-wrap">
-            <table class="remote-table remote-lot-table">
-              <thead><tr><th>Producto</th><th>Disponibilidad</th><th>Recepción</th><th>Fecha preferente</th><th>Riesgo</th><th>Costo</th><th>Acción</th></tr></thead>
-              <tbody id="remote-lots-body"></tbody>
-            </table>
-          </div>
+          <div class="remote-inventory-metrics" aria-label="Resumen del inventario remoto"><span><strong id="remote-lot-count">0</strong> lotes totales</span><span><strong id="remote-lot-visible-count">0</strong> visibles</span><span><strong id="remote-critical-count">0</strong> críticos</span></div>
+          <p class="remote-table-hint">En móvil, cada fila se presenta como una ficha. Usa “Mover” para preparar una salida o corrección.</p>
+          <div class="table-wrap"><table class="remote-table remote-lot-table"><caption class="sr-only">Lotes remotos disponibles</caption><thead><tr><th>Producto</th><th>Disponibilidad</th><th>Recepción</th><th>Fecha preferente</th><th>Riesgo</th><th>Costo</th><th>Acción</th></tr></thead><tbody id="remote-lots-body"></tbody></table></div>
           <div class="empty-state" id="remote-lots-empty" hidden>El servidor todavía no tiene lotes para este negocio.</div>
         </article>
 
-        <article class="panel remote-history-panel remote-wide-panel">
+        <article class="panel remote-history-panel remote-wide-panel" id="remote-history-panel" data-inventory-panel="history" role="tabpanel">
           <header class="panel-header remote-inventory-header">
-            <div><p class="eyebrow">Libro inmutable</p><h2>Movimientos recientes</h2></div>
-            <span class="remote-history-count"><strong id="remote-movement-count">0</strong> registros</span>
+            <div><p class="eyebrow">Libro inmutable</p><h2 tabindex="-1">Movimientos recientes</h2></div>
+            <div class="remote-table-controls">
+              <label class="remote-search"><span>Buscar</span><input id="remote-movement-search" type="search" placeholder="Producto, motivo, referencia o actor" autocomplete="off"></label>
+              <label><span>Tipo</span><select id="remote-movement-filter"><option value="all">Todos los movimientos</option><option value="consumption">Consumos</option><option value="waste">Mermas</option><option value="supplier_return">Devoluciones</option><option value="adjustment">Ajustes</option></select></label>
+            </div>
           </header>
-          <div class="table-wrap">
-            <table class="remote-table remote-movement-table">
-              <thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Variación</th><th>Saldo</th><th>Motivo</th><th>Actor</th></tr></thead>
-              <tbody id="remote-movements-body"></tbody>
-            </table>
-          </div>
+          <div class="remote-inventory-metrics" aria-label="Resumen del historial remoto"><span><strong id="remote-movement-count">0</strong> registros totales</span><span><strong id="remote-movement-visible-count">0</strong> visibles</span></div>
+          <div class="table-wrap"><table class="remote-table remote-movement-table"><caption class="sr-only">Historial inmutable de movimientos de inventario</caption><thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Variación</th><th>Saldo</th><th>Motivo</th><th>Actor</th></tr></thead><tbody id="remote-movements-body"></tbody></table></div>
           <div class="empty-state" id="remote-movements-empty" hidden>No existen movimientos remotos para este negocio.</div>
         </article>
       </section>
@@ -168,6 +198,7 @@
   </main>
 
   <footer class="page-footer"><div class="shell"><span>© 2026 <span data-business-name></span></span><span>Inventario autenticado y trazable · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/remote-inventory/experience.js"></script>
   <script type="module" src="assets/js/remote-inventory/app.js"></script>
 </body>
 </html>
