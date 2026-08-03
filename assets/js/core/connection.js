@@ -69,12 +69,20 @@ function safeSession(value) {
     memberships,
     organizationId: typeof value.organizationId === "string" ? value.organizationId : "",
     createdAt: typeof value.createdAt === "string" ? value.createdAt : "",
+    expiresAt: typeof value.expiresAt === "string" ? value.expiresAt : "",
   };
 }
 
 export function readApiSession() {
   try {
-    return safeSession(JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "null"));
+    const session = safeSession(JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "null"));
+    if (!session) return null;
+    const expiry = new Date(session.expiresAt).getTime();
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) {
+      sessionStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session;
   } catch {
     return null;
   }
@@ -82,7 +90,9 @@ export function readApiSession() {
 
 export function writeApiSession(session) {
   const normalized = safeSession(session);
-  if (!normalized) throw new Error("La sesión recibida no es válida.");
+  if (!normalized || !Number.isFinite(new Date(normalized.expiresAt).getTime())) {
+    throw new Error("La sesión recibida no es válida.");
+  }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(normalized));
   notifyConnectionChanged();
   return normalized;
@@ -201,6 +211,7 @@ export async function loginToApi(username, password) {
     memberships: payload.memberships,
     organizationId,
     createdAt: new Date().toISOString(),
+    expiresAt: payload.expires_at,
   });
 }
 
