@@ -1,8 +1,8 @@
 export const APP_CONFIG = Object.freeze({
   appName: "Crohnoz Fresh Market",
   storageNamespace: "crohnoz-fresh-market",
-  version: "0.5.0-pilot",
-  demoNotice: "Piloto comercial · datos ficticios · sin autenticación real",
+  version: "0.6.0-pilot",
+  demoNotice: "Piloto comercial · verifica si estás en modo local o conectado",
 });
 
 export const DEFAULT_BUSINESS = Object.freeze({
@@ -21,6 +21,7 @@ export const DEFAULT_BUSINESS = Object.freeze({
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   Promise.all([
     import("./guided-shell.js").then(() => import("./guided-shell-state.js")),
+    import("./connection-shell.js"),
     import("./hardening.js"),
   ]).catch((error) => console.warn("No se pudo montar una mejora progresiva.", error));
 }
