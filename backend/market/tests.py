@@ -1,8 +1,10 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
@@ -40,7 +42,7 @@ class MarketApiTests(APITestCase):
         self.assertNotIn("password", str(response.data).lower())
         self.assertEqual(len(response.data["memberships"]), 2)
         self.assertIsNone(response.data["default_organization"])
-        self.assertEqual(response.data["expires_when"], "browser_session_ends")
+        self.assertGreater(timezone.datetime.fromisoformat(response.data["expires_at"]), timezone.now())
 
     def test_login_rejects_invalid_credentials_with_friendly_message(self):
         self.client.credentials()
@@ -51,6 +53,13 @@ class MarketApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("incorrectos", str(response.data).lower())
+
+    def test_expired_token_is_rejected_and_removed(self):
+        Token.objects.filter(pk=self.token.pk).update(created=timezone.now() - timedelta(hours=13))
+        response = self.client.get(reverse("me"))
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("venció", str(response.data).lower())
+        self.assertFalse(Token.objects.filter(pk=self.token.pk).exists())
 
     def test_logout_invalidates_token(self):
         response = self.client.post(reverse("pilot-logout"))
