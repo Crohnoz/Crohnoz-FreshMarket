@@ -49,10 +49,12 @@ def _find_idempotent_event(*, organization, action: str, key: str) -> AuditEvent
     return next((event for event in events if event.payload.get("idempotency_key") == key), None)
 
 
-def _replay_or_conflict(*, organization, action: str, key: str, signature: str):
+def _replay_or_conflict(*, organization, action: str, key: str, signature: str, entity_id=None):
     event = _find_idempotent_event(organization=organization, action=action, key=key)
     if event is None:
         return None
+    if entity_id is not None and event.entity_id != str(entity_id):
+        raise WorkflowConflict("La clave de reintento ya fue usada en otro registro.", code="idempotency_conflict")
     if event.payload.get("request_signature") != signature:
         raise WorkflowConflict("La clave de reintento ya fue usada con datos diferentes.", code="idempotency_conflict")
     return event
@@ -159,17 +161,17 @@ class OrderWeighingSerializer(serializers.Serializer):
         return items
 
 
-def weighing_signature(validated_data: dict) -> str:
+def weighing_signature(order: Order, validated_data: dict) -> str:
     items = sorted(
         ({"id": str(item["id"]), "actual_quantity": canonical_decimal(item["actual_quantity"])} for item in validated_data["items"]),
         key=lambda item: item["id"],
     )
-    return canonical_signature({"items": items})
+    return canonical_signature({"order_id": str(order.pk), "items": items})
 
 
 def transition_order(*, order: Order, actor, target_status: str, action: str, request, payload: dict | None = None):
     idempotency_key = require_idempotency_key(request)
-    signature = canonical_signature(payload or {})
+    signature = canonical_signature({"order_id": str(order.pk), "payload": payload or {}})
     with transaction.atomic():
         locked = Order.objects.select_for_update().prefetch_related("items__product").get(pk=order.pk)
         replay = _replay_or_conflict(
@@ -177,6 +179,7 @@ def transition_order(*, order: Order, actor, target_status: str, action: str, re
             action=action,
             key=idempotency_key,
             signature=signature,
+            entity_id=locked.pk,
         )
         if replay is not None:
             return locked, True
@@ -218,7 +221,7 @@ def transition_order(*, order: Order, actor, target_status: str, action: str, re
 
 def confirm_order_weighing(*, order: Order, actor, validated_data: dict, request):
     idempotency_key = require_idempotency_key(request)
-    signature = weighing_signature(validated_data)
+    signature = weighing_signature(order, validated_data)
     with transaction.atomic():
         locked = Order.objects.select_for_update().prefetch_related("items__product").get(pk=order.pk)
         replay = _replay_or_conflict(
@@ -226,6 +229,7 @@ def confirm_order_weighing(*, order: Order, actor, validated_data: dict, request
             action="order.weighing_confirmed",
             key=idempotency_key,
             signature=signature,
+            entity_id=locked.pk,
         )
         if replay is not None:
             return locked, True
