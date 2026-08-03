@@ -21,6 +21,7 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("version", models.PositiveIntegerField(default=1)),
+                ("lot_version", models.PositiveIntegerField()),
                 ("movement_type", models.CharField(choices=[("consumption", "Consumo"), ("waste", "Merma"), ("adjustment", "Ajuste"), ("supplier_return", "Devolución a proveedor")], max_length=24)),
                 ("quantity_delta", models.DecimalField(decimal_places=3, max_digits=12)),
                 ("quantity_before", models.DecimalField(decimal_places=3, max_digits=12)),
