@@ -49,7 +49,7 @@ test("connection state is mounted globally and remains explicit", async () => {
   const guided = await text("assets/js/core/guided-shell.js");
   const tasks = await text("assets/js/domain/operator-tasks.js");
   assert.match(config, /connection-shell\.js/);
-  assert.match(config, /0\.7\.0-pilot/);
+  assert.match(config, /0\.8\.0-pilot/);
   assert.match(shell, /Modo local/);
   assert.match(shell, /API configurada, sin sesión/);
   assert.match(shell, /sesión protegida en esta pestaña/);
@@ -57,7 +57,9 @@ test("connection state is mounted globally and remains explicit", async () => {
   assert.match(guided, /conexion\.html/);
   assert.match(tasks, /connect-backend/);
   assert.match(tasks, /remote-orders/);
+  assert.match(tasks, /remote-inventory/);
   assert.match(tasks, /pedidos-remotos\.html/);
+  assert.match(tasks, /inventario-remoto\.html/);
 });
 
 test("login API and pilot seed command avoid default credentials", async () => {
@@ -84,17 +86,20 @@ test("connection assets pass syntax checks and are cached offline", async () => 
     "assets/js/core/guided-shell-state.js",
     "assets/js/connection/app.js",
     "assets/js/remote-orders/app.js",
+    "assets/js/remote-inventory/app.js",
     "sw.js",
   ]) execFileSync(process.execPath, ["--check", fileURLToPath(new URL(`../${path}`, import.meta.url))]);
   const worker = await text("sw.js");
   const netlify = await text("netlify.toml");
-  assert.match(worker, /crohnoz-fresh-market-v9/);
+  assert.match(worker, /crohnoz-fresh-market-v10/);
   assert.match(worker, /conexion\.html/);
   assert.match(worker, /pedidos-remotos\.html/);
+  assert.match(worker, /inventario-remoto\.html/);
   assert.match(worker, /assets\/js\/core\/connection\.js/);
   assert.match(worker, /assets\/css\/connection-shell\.css/);
   assert.match(netlify, /from = "\/conexion"/);
   assert.match(netlify, /from = "\/pedidos-remotos"/);
+  assert.match(netlify, /from = "\/inventario-remoto"/);
   assert.match(netlify, /connect-src 'self' https:/);
   assert.match(netlify, /http:\/\/localhost:8001/);
   assert.doesNotMatch(netlify, /localhost:\*/);
