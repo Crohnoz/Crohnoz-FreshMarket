@@ -68,6 +68,10 @@
   to = "/cuentas.html"
   status = 200
 [[redirects]]
+  from = "/dueno"
+  to = "/dueno.html"
+  status = 200
+[[redirects]]
   from = "/configurar"
   to = "/configurador.html"
   status = 200

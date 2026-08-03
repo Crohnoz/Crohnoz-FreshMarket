@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Panel del dueño para identidad, equipo, permisos y vista cliente de Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <title>Crohnoz Fresh Market · Panel del dueño</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/owner.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="operar.html"><span class="brand-mark">FM</span><span class="brand-copy"><strong>Crohnoz Fresh Market</strong><small>Panel del dueño</small></span></a>
+      <nav class="nav" aria-label="Navegación del negocio">
+        <a href="operar.html">Inicio</a>
+        <a href="index.html">Vista cliente</a>
+        <a aria-current="page" href="dueno.html">Panel dueño</a>
+        <a href="configurador.html">Respaldo</a>
+        <a href="conexion.html">Conexión</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="owner-main" id="main-content">
+    <div class="shell owner-shell">
+      <section class="owner-hero">
+        <div>
+          <p class="eyebrow">Control del negocio</p>
+          <h1>Tu negocio, tu equipo y lo que ve el cliente</h1>
+          <p>Configura la identidad, revisa los niveles de acceso y alterna entre la vista del dueño y la tienda pública sin perder el contexto.</p>
+        </div>
+        <div class="view-switcher" aria-label="Cambiar vista">
+          <a class="button primary" href="dueno.html" aria-current="page">Vista del dueño</a>
+          <a class="button secondary" href="index.html">Vista del cliente</a>
+        </div>
+      </section>
+
+      <section class="owner-status-grid" aria-label="Estado de acceso">
+        <article class="card access-current">
+          <p class="eyebrow">Acceso actual</p>
+          <div class="access-current-heading"><span class="access-level-badge" id="current-access-level">Nivel 3</span><span class="status" id="connection-mode">Modo local</span></div>
+          <h2 id="current-access-name">Dueño</h2>
+          <p id="current-access-summary">Control completo del negocio.</p>
+          <div class="capability-list" id="current-capabilities"></div>
+        </article>
+        <article class="card business-mode-card">
+          <p class="eyebrow">Escala operacional</p>
+          <h2 id="business-mode-title">Trabajo individual</h2>
+          <p id="business-mode-description">Una sola cuenta administra y opera. No se muestran controles de equipo innecesarios.</p>
+          <strong id="team-count">1 persona activa</strong>
+        </article>
+      </section>
+
+      <section class="owner-section" aria-labelledby="levels-title">
+        <div class="section-title"><div><p class="eyebrow">Privilegios comprensibles</p><h2 id="levels-title">Tres niveles para crecer sin perder control</h2><p>Los botones pueden cambiar, pero la autorización final siempre se valida en Django cuando el negocio está conectado.</p></div></div>
+        <div class="access-level-grid" id="access-level-grid"></div>
+      </section>
+
+      <section class="owner-section owner-workspace" aria-labelledby="identity-title">
+        <div class="section-title"><div><p class="eyebrow">Identidad y experiencia</p><h2 id="identity-title">Personaliza la tienda y revísala al instante</h2><p>En este piloto la identidad se guarda en el navegador y actualiza la vista previa. La publicación multiempresa se conectará al perfil público del backend.</p></div></div>
+        <div class="owner-config-grid">
+          <form class="card owner-form" id="owner-business-form">
+            <label>Nombre del negocio<input name="name" maxlength="60" required></label>
+            <label>Mensaje principal<textarea name="tagline" rows="3" maxlength="160"></textarea></label>
+            <label>Modo de operación<select name="operationMode"><option value="solo">Trabajo solo</option><option value="team">Tengo un equipo</option></select></label>
+            <div class="form-row"><label>Color principal<input name="primaryColor" type="color"></label><label>Color de acento<input name="accentColor" type="color"></label></div>
+            <div class="form-row"><label>Delivery en CLP<input name="deliveryFee" type="number" min="0" step="100"></label><label>Tolerancia de pesaje %<input name="tolerancePercent" type="number" min="0" step="0.5"></label></div>
+            <label>Máximo adicional autorizado<input name="maxExtraAmount" type="number" min="0" step="100"></label>
+            <label class="check-row"><input name="isOpen" type="checkbox"> Mostrar negocio abierto</label>
+            <label class="check-row"><input name="darkMode" type="checkbox"> Usar modo oscuro</label>
+            <button class="button primary full owner-save" type="submit">Guardar y actualizar vista cliente</button>
+            <div class="pilot-status" id="owner-save-status" role="status" aria-live="polite"></div>
+          </form>
+
+          <section class="card customer-preview-card" aria-labelledby="customer-preview-title">
+            <div class="preview-heading"><div><p class="eyebrow">Así lo verá el cliente</p><h3 id="customer-preview-title">Vista móvil de la tienda</h3></div><a class="button secondary small" href="index.html">Abrir completa</a></div>
+            <div class="phone-preview">
+              <iframe id="customer-preview" title="Vista previa de la tienda pública" src="index.html?owner-preview=1" loading="lazy"></iframe>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="owner-section" id="team-section" aria-labelledby="team-title">
+        <div class="section-title team-heading"><div><p class="eyebrow">Equipo y privilegios</p><h2 id="team-title">Personas con acceso al negocio</h2><p id="team-description">En modo conectado se muestran las membresías reales del negocio seleccionado.</p></div><button class="button secondary" id="refresh-team" type="button">Actualizar equipo</button></div>
+        <div class="card team-state" id="team-state" role="status" aria-live="polite">Revisando el modo de operación…</div>
+        <div class="team-list" id="team-list"></div>
+        <p class="team-limit"><strong>Alcance actual:</strong> el dueño puede cambiar niveles y activar o desactivar integrantes ya existentes. Invitaciones, recuperación de contraseña y MFA quedan como flujo de cuenta posterior.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>Panel del dueño · control por niveles</span><span>Crohnoz Fresh Market · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/owner/app.js"></script>
+  <script type="module" src="assets/js/core/guided-shell.js"></script>
+</body>
+</html>

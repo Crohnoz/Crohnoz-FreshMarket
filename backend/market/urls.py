@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .inventory_api import InventoryMovementViewSet
+from .team_api import TeamMemberView, TeamView
 from .views import (
     AuditEventViewSet,
     ConnectionSummaryView,
@@ -29,6 +30,8 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="pilot-logout"),
     path("me/", MeView.as_view(), name="me"),
     path("connection-summary/", ConnectionSummaryView.as_view(), name="connection-summary"),
+    path("team/", TeamView.as_view(), name="team"),
+    path("team/<uuid:membership_id>/", TeamMemberView.as_view(), name="team-member"),
     path("", include(router.urls)),
     path("auth/browser/", include("rest_framework.urls")),
 ]
