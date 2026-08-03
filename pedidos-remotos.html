@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Operación conectada de catálogo y pedidos para Crohnoz Fresh Market.">
+  <meta name="description" content="Operación conectada de catálogo, pedidos y preparación para Crohnoz Fresh Market.">
   <meta name="theme-color" content="#2f7d4a">
   <link rel="manifest" href="manifest.webmanifest">
   <title>Pedidos remotos · Crohnoz Fresh Market</title>
@@ -21,9 +21,9 @@
       </a>
       <nav class="nav" aria-label="Navegación principal">
         <a href="operar.html">Inicio operativo</a>
+        <a href="inventario-remoto.html">Inventario remoto</a>
         <a href="conexion.html">Conexión</a>
         <a href="ventas.html">Ventas locales</a>
-        <a href="integridad.html">Integridad</a>
       </nav>
     </div>
   </header>
@@ -31,9 +31,9 @@
   <main id="main-content" class="remote-main">
     <section class="shell remote-hero">
       <div>
-        <p class="eyebrow">Bloque conectado 0.7</p>
-        <h1>Catálogo y pedidos en Django</h1>
-        <p>Esta superficie trabaja únicamente con la organización autenticada. Nunca cambia silenciosamente a datos locales si la API falla.</p>
+        <p class="eyebrow">Bloque conectado 0.8</p>
+        <h1>Pedidos y preparación en Django</h1>
+        <p>Esta superficie crea pedidos, registra cantidades reales y avanza estados únicamente dentro de la organización autenticada.</p>
       </div>
       <a class="button secondary" href="conexion.html">Revisar conexión</a>
     </section>
@@ -82,7 +82,7 @@
             <label>Nombre del cliente<input name="customerName" maxlength="160" autocomplete="off" required></label>
             <label>Modalidad<select name="fulfillment"><option value="Retiro">Retiro</option><option value="Delivery">Delivery</option></select></label>
             <label>Observaciones<textarea name="notes" maxlength="400" rows="3" placeholder="Horario, maduración o indicaciones"></textarea></label>
-            <p class="remote-safety-note">Para esta etapa usa datos ficticios. Pagos, fiados y cierre siguen en las pantallas locales.</p>
+            <p class="remote-safety-note">Pagos, fiados y entrega final siguen fuera de este flujo. El pedido remoto termina en estado “Listo”.</p>
             <button class="button primary full" id="create-remote-order" type="submit">Crear pedido remoto</button>
           </form>
           <div class="remote-created" id="remote-created" hidden>
@@ -98,8 +98,8 @@
           <span class="result-count" id="remote-order-count"></span>
         </header>
         <div class="table-wrap">
-          <table class="remote-table">
-            <thead><tr><th>Pedido</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Creado</th></tr></thead>
+          <table class="remote-table remote-orders-workflow-table">
+            <thead><tr><th>Pedido</th><th>Cliente</th><th>Detalle</th><th>Estado</th><th>Total</th><th>Creado</th><th>Acción</th></tr></thead>
             <tbody id="remote-orders-body"></tbody>
           </table>
         </div>
@@ -108,7 +108,27 @@
     </div>
   </main>
 
-  <footer class="page-footer"><div class="shell"><span>© 2026 <span data-business-name></span></span><span>Catálogo y pedidos autenticados · Crohnoz Labs</span></div></footer>
+  <dialog class="remote-workflow-dialog" id="remote-weighing-dialog">
+    <form method="dialog" class="remote-workflow-card" id="remote-weighing-form">
+      <header>
+        <div>
+          <p class="eyebrow">Preparación remota</p>
+          <h2 id="remote-weighing-title">Registrar cantidades reales</h2>
+          <p id="remote-weighing-meta"></p>
+        </div>
+        <button class="remote-dialog-close" id="close-remote-weighing" type="button" aria-label="Cerrar">×</button>
+      </header>
+      <div class="remote-weighing-lines" id="remote-weighing-lines"></div>
+      <p class="status-message" id="remote-weighing-status" role="status" aria-live="polite"></p>
+      <p class="remote-safety-note">Debes registrar todas las líneas. El servidor recalcula cada total y controla la versión del pedido.</p>
+      <footer>
+        <button class="button secondary" id="cancel-remote-weighing" type="button">Cancelar</button>
+        <button class="button primary" id="save-remote-weighing" type="submit">Guardar pesaje remoto</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <footer class="page-footer"><div class="shell"><span>© 2026 <span data-business-name></span></span><span>Pedidos y preparación autenticados · Crohnoz Labs</span></div></footer>
   <script type="module" src="assets/js/remote-orders/app.js"></script>
 </body>
 </html>
