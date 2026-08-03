@@ -4,21 +4,22 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 
 ## Estado
 
-**Piloto comercial navegable con fundación Django y puente de sesión, pendiente de despliegue backend e integración operacional.** La interfaz conserva un modo local con datos ficticios. Django ya incorpora autenticación temporal, organizaciones, RBAC, catálogo, lotes, pedidos y auditoría servidor.
+**Piloto comercial con backend Django desplegable y primera operación remota separada.** La interfaz mantiene un modo local completo con datos ficticios. Django incorpora autenticación temporal, organizaciones, RBAC, catálogo, lotes, pedidos, idempotencia y auditoría servidor. El Blueprint de hosting está preparado, pero la instancia pública todavía debe crearse y verificarse.
 
-Versión actual: **0.6.0-pilot**.  
-Avance estimado del MVP real para Camila y Carmelo: **70%**.
+Versión actual: **0.7.0-pilot**.  
+Avance estimado del MVP real para Camila y Carmelo: **74%**.
 
 ## Páginas
 
-- `/index.html`: tienda pública.
+- `/index.html`: tienda pública local.
 - `/operar.html`: inicio guiado, prioridades, checklist y continuación de tareas.
-- `/admin.html`: preparación, pesaje, precios rápidos y merma.
-- `/cuentas.html`: fiados, abonos, operaciones rápidas y voz.
-- `/cierre.html`: conciliación diaria de efectivo.
-- `/inventario.html`: inventario perecible por lotes y prioridad FEFO.
-- `/compras.html`: proveedores, costos, recepción y precio sugerido.
-- `/ventas.html`: confirmación, cobro, entrega y comprobante interno.
+- `/admin.html`: preparación, pesaje, precios rápidos y merma local.
+- `/cuentas.html`: fiados, abonos, operaciones rápidas y voz local.
+- `/cierre.html`: conciliación diaria de efectivo local.
+- `/inventario.html`: inventario perecible por lotes y prioridad FEFO local.
+- `/compras.html`: proveedores, costos, recepción y precio sugerido local.
+- `/ventas.html`: confirmación, cobro, entrega y comprobante interno local.
+- `/pedidos-remotos.html`: catálogo autenticado y creación/listado de pedidos en Django.
 - `/asistente.html`: contexto operacional y propuestas revisables.
 - `/integridad.html`: diagnóstico de IDs, referencias, montos, saldos y fechas.
 - `/auditoria.html`: cadena local de cambios y exportación para Crohnoz Kernel.
@@ -27,7 +28,7 @@ Avance estimado del MVP real para Camila y Carmelo: **70%**.
 - `/configurador.html`: identidad, respaldo, restauración y restablecimiento demo.
 - `/scanner-lab.html`: laboratorio HID para lector de códigos.
 
-Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/integridad`, `/auditoria`, `/conexion`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
+Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/pedidos-remotos`, `/asistente`, `/integridad`, `/auditoria`, `/conexion`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
 
 ## Capacidades principales
 
@@ -38,8 +39,8 @@ Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/
 - recomendación de respaldo después de actividad local relevante;
 - tareas frecuentes separadas de herramientas secundarias;
 - búsqueda y filtros por área;
-- checklist de identidad, inventario, operación, integridad y respaldo;
-- regreso seguro a la última pantalla visitada;
+- checklist de identidad, inventario, operación, integridad, conexión y respaldo;
+- regreso seguro a la última pantalla visitada, incluida la operación remota;
 - navegación móvil enfocada en acciones cotidianas;
 - franja global que distingue modo local, API configurada y sesión conectada.
 
@@ -58,7 +59,21 @@ La pantalla `/conexion` permite:
 
 La URL y el modo se guardan en `localStorage`. El token, la identidad y la organización activa se guardan únicamente en `sessionStorage`, quedan fuera de los respaldos y vencen en el servidor.
 
-La conexión actual cubre sesión y lectura de resumen. Las operaciones comerciales cotidianas todavía permanecen locales hasta implementar sus repositorios API.
+### Catálogo y pedidos remotos
+
+La pantalla `/pedidos-remotos` trabaja solo con una sesión conectada:
+
+- consulta productos activos de la organización autenticada;
+- pagina colecciones remotas con límite defensivo;
+- busca por nombre, SKU o categoría;
+- crea pedidos con cantidades y precios del catálogo servidor;
+- lista pedidos recientes;
+- conserva la clave de reintento cuando hay un error de red;
+- evita duplicados mediante `idempotency_key`;
+- rechaza reutilizar una clave con un pedido diferente;
+- nunca cambia silenciosamente a datos locales.
+
+Esta superficie es deliberadamente separada. Las pantallas históricas continúan locales hasta que cada dominio tenga endpoints, pruebas, rollback y manejo offline definidos.
 
 ### Backend Django
 
@@ -67,17 +82,20 @@ El directorio `backend/` contiene:
 - Django 5.2 LTS;
 - Django REST Framework;
 - PostgreSQL para despliegue;
+- `DATABASE_URL` para hosting administrado;
+- WhiteNoise para los estáticos del admin;
 - organizaciones y membresías;
 - roles `owner`, `manager`, `operator` y `viewer`;
-- productos;
+- productos y filtro de activos;
 - lotes perecibles;
 - pedidos e ítems;
-- idempotencia por organización;
+- idempotencia por organización con replay seguro;
 - control optimista;
 - auditoría append-only con HMAC-SHA256;
 - tokens temporales con vencimiento;
 - Docker y Docker Compose;
-- comando `seed_pilot` para Camila y Carmelo.
+- comando `seed_pilot` para Camila y Carmelo;
+- Blueprint `render.yaml` con servicio y base aislados.
 
 ### Auditoría local y puente Kernel
 
@@ -98,7 +116,7 @@ La pantalla de auditoría permite verificar la cadena, filtrar eventos y descarg
 - clasificación saludable, advertencia o bloqueo crítico;
 - informe descargable.
 
-### Inventario, compras, ventas y cuentas
+### Inventario, compras, ventas y cuentas locales
 
 - lotes por recepción y prioridad FEFO;
 - costo, condición, maduración y fecha preferente;
@@ -117,8 +135,10 @@ La pantalla de auditoría permite verificar la cadena, filtrar eventos y descarg
 - análisis semántico antes de restaurar;
 - bloqueo ante errores críticos;
 - confirmación antes de reemplazar datos;
-- caché offline de superficies locales;
+- caché offline de superficies locales y del shell de pedidos remotos;
 - rollback explícito desde modo API a modo local.
+
+La pantalla remota puede abrirse desde caché, pero las consultas y escrituras requieren red y backend disponible. No existe una cola offline.
 
 ## Ejecutar el frontend
 
@@ -139,13 +159,30 @@ python manage.py migrate
 python manage.py runserver 8001
 ```
 
-Después abrir `http://localhost:8000/conexion.html` y usar como base API:
+Después abrir `http://localhost:8000/conexion.html`, usar como base API:
 
 ```text
 http://localhost:8001/api/v1
 ```
 
-Las instrucciones completas están en `backend/README.md` y `docs/API_BRIDGE.md`.
+e ingresar a `http://localhost:8000/pedidos-remotos.html`.
+
+Las instrucciones completas están en `backend/README.md`, `docs/API_BRIDGE.md` y `docs/REMOTE_OPERATIONS.md`.
+
+## Despliegue administrado preparado
+
+`render.yaml` declara:
+
+- un servicio web Python para Django;
+- una base PostgreSQL exclusiva de Fresh Market;
+- health check;
+- migraciones previas al despliegue;
+- carga inicial del piloto;
+- secretos generados;
+- contraseñas piloto solicitadas de forma segura;
+- CORS limitado al frontend productivo.
+
+El Blueprint todavía no equivale a un despliegue verificado. Después de crear la instancia deben comprobarse health, login, dos sesiones, catálogo, idempotencia, logs y backups antes de ingresar datos operacionales.
 
 ## Pruebas
 
@@ -165,9 +202,10 @@ La CI ejecuta frontend y backend por separado.
 ## Seguridad y límites
 
 - No ingresar datos personales, clínicos, financieros o sensibles durante esta fase.
-- El backend todavía no está desplegado públicamente.
+- El backend público todavía no ha sido creado ni verificado.
 - Una sesión conectada no significa que todas las pantallas estén sincronizadas.
-- Los flujos operacionales todavía escriben en `localStorage`.
+- Solo `/pedidos-remotos` opera catálogo y pedidos mediante Django.
+- Los demás flujos operacionales todavía escriben en `localStorage`.
 - No existe sincronización bidireccional ni cola offline.
 - El token temporal no reemplaza JWT rotatorio, OIDC ni recuperación de cuenta.
 - Los respaldos locales y paquetes Kernel no están cifrados.
@@ -180,19 +218,20 @@ La CI ejecuta frontend y backend por separado.
 
 ## Próximos bloques
 
-1. desplegar Django y PostgreSQL bajo HTTPS;
-2. restringir CORS y CSP a hosts exactos;
-3. ejecutar migraciones y preparar cuentas piloto;
-4. conectar lectura de catálogo;
-5. conectar creación y consulta de pedidos;
-6. conectar inventario, pagos, fiados y cierre;
-7. probar dos sesiones simultáneas;
-8. validar presencialmente con Camila y Carmelo.
+1. crear y verificar la instancia Django/PostgreSQL desde el Blueprint;
+2. restringir CSP al hostname exacto resultante;
+3. probar login y pedidos con Camila y Carmelo en dos sesiones;
+4. conectar actualización de estado y pesaje de pedidos;
+5. conectar inventario por lotes;
+6. conectar pagos, fiados y cierre;
+7. agregar cola offline e idempotencia a mutaciones compatibles;
+8. validar presencialmente con usuarios de baja familiaridad digital.
 
 ## Documentación relevante
 
 - `docs/MVP_STATUS.md`
 - `docs/API_BRIDGE.md`
+- `docs/REMOTE_OPERATIONS.md`
 - `docs/KERNEL_MIGRATION_BRIDGE.md`
 - `docs/LOCAL_CONTINUITY.md`
 - `docs/DATA_INTEGRITY.md`
