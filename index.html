@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Piloto comercial de Crohnoz Fresh Market para venta directa de productos frescos.">
+  <meta name="description" content="Piloto comercial de Crohnoz Fresh Market para venta directa de productos frescos y despensa local.">
   <meta name="theme-color" content="#2f7d4a">
   <link rel="manifest" href="manifest.webmanifest">
   <title>Crohnoz Fresh Market · Tienda demo</title>
@@ -35,20 +35,20 @@
       <div class="shell hero-grid">
         <div class="hero-copy">
           <span class="status success" id="business-status"></span>
-          <p class="hero-kicker">Tu verdulería, con una tienda propia</p>
-          <h1>Productos frescos, <span>pedido directo</span> y total transparente.</h1>
+          <p class="hero-kicker">Una vitrina cercana para Temuco</p>
+          <h1>Frutas, verduras y <span>productos del sur</span> en un pedido simple.</h1>
           <p data-business-tagline></p>
           <div class="hero-actions">
-            <a class="button primary" href="#catalogo">Ver productos</a>
+            <a class="button primary" href="#catalogo">Explorar catálogo</a>
             <a class="button secondary" href="operar.html">Explorar área del negocio</a>
           </div>
-          <div class="hero-notes"><span>✓ Compra sin intermediarios</span><span>✓ Preferencias de maduración</span><span>✓ Ajuste por peso real</span></div>
+          <div class="hero-notes"><span>✓ Más variedad de frutas y verduras</span><span>✓ Miel y mermeladas</span><span>✓ Ajuste por peso real</span></div>
         </div>
         <div class="hero-visual">
           <img class="hero-image" src="https://images.unsplash.com/photo-1757627550652-30788bfce978?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=72&w=1800" alt="Puesto de mercado con tomates, berenjenas y verduras frescas" fetchpriority="high">
           <div class="hero-image-shade" aria-hidden="true"></div>
-          <div class="hero-floating-card hero-floating-card-top"><span>Mercado fresco</span><strong>Precios y stock del día</strong></div>
-          <div class="hero-badge"><strong>Total estimado y final</strong><span>El comercio registra el peso real y confirma cualquier diferencia relevante.</span></div>
+          <div class="hero-floating-card hero-floating-card-top"><span>Selección para Temuco</span><strong>Frutas, verduras y despensa local</strong></div>
+          <div class="hero-badge"><strong>Pedido fácil de personalizar</strong><span>Elige presentación y preferencia solo cuando realmente lo necesites.</span></div>
         </div>
       </div>
     </section>
@@ -60,9 +60,9 @@
           <div><span>Retiro o delivery</span><strong>Pedido preparado para cada cliente</strong></div>
         </article>
         <article class="proof-card proof-stat">
-          <span>Pesaje transparente</span>
-          <strong>1 kg solicitado<br><em>1,08 kg preparado</em></strong>
-          <p>El sistema muestra la diferencia antes de confirmar el monto final.</p>
+          <span>Catálogo ampliado</span>
+          <strong>Frutas y verduras<br><em>más fáciles de encontrar</em></strong>
+          <p>Las categorías muestran cuántos productos hay y la búsqueda reconoce nombres cotidianos.</p>
         </article>
         <article class="proof-card proof-photo">
           <img src="https://images.pexels.com/photos/4451871/pexels-photo-4451871.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Caja surtida con frutas y verduras" loading="lazy" decoding="async">
@@ -73,13 +73,36 @@
 
     <section class="catalog" id="catalogo">
       <div class="shell">
-        <div class="section-title"><div><p class="eyebrow">Catálogo demo</p><h2>Elige cómo quieres cada producto</h2><p>Peso, presentación, maduración y política de sustitución en un mismo flujo.</p></div></div>
+        <div class="section-title catalog-title">
+          <div>
+            <p class="eyebrow">Catálogo demo para Temuco</p>
+            <h2>Encuentra lo que necesitas sin recorrer una lista interminable</h2>
+            <p>Parte por una categoría, busca por nombre y abre la personalización solo para cambiar formato, maduración o sustitución.</p>
+          </div>
+          <aside class="catalog-region-note">
+            <strong>Selección inicial del sur</strong>
+            <span>Frutas, verduras de temporada fría, miel y mermeladas artesanales.</span>
+          </aside>
+        </div>
         <div class="catalog-tools">
-          <div class="chips" id="category-list" aria-label="Categorías"></div>
-          <label class="search"><span class="sr-only">Buscar productos</span><input id="product-search" type="search" placeholder="Buscar fruta, verdura o caja…" autocomplete="off"></label>
+          <div class="chips" id="category-list" aria-label="Categorías del catálogo"></div>
+          <label class="search">
+            <span>Buscar productos</span>
+            <input id="product-search" type="search" placeholder="Ej.: manzana, miel, papas…" autocomplete="off">
+          </label>
+        </div>
+        <div class="catalog-summary">
+          <span class="result-count" id="catalog-result-count" tabindex="-1" aria-live="polite"></span>
+          <button class="button secondary small" id="clear-catalog-filters" type="button" hidden>Limpiar filtros</button>
         </div>
         <div class="product-grid" id="product-grid"></div>
-        <div class="empty-state" id="empty-products" hidden>No encontramos productos con esos filtros.</div>
+        <div class="empty-state" id="empty-products" hidden>
+          <strong>No encontramos productos con esos filtros.</strong>
+          <span>Prueba otra palabra o vuelve a ver todo el catálogo.</span>
+        </div>
+        <div class="catalog-more">
+          <button class="button secondary" id="load-more-products" type="button">Mostrar más productos</button>
+        </div>
       </div>
     </section>
   </main>

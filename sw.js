@@ -74,6 +74,7 @@ const CORE_ASSETS = [
   "/assets/js/domain/data-integrity.js",
   "/assets/js/domain/pricing.js",
   "/assets/js/domain/substitutions.js",
+  "/assets/js/domain/catalog-experience.js",
   "/assets/js/domain/inventory.js",
   "/assets/js/domain/purchasing.js",
   "/assets/js/domain/sales-flow.js",

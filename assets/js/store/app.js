@@ -3,11 +3,18 @@ import { readStorage, writeStorage } from "../core/storage.js";
 import { formatCLP } from "../core/format.js";
 import { calculateEstimatedTotal } from "../domain/pricing.js";
 import { SUBSTITUTION_POLICIES } from "../domain/substitutions.js";
+import {
+  CATALOG_PAGE_SIZE,
+  categoryProductCounts,
+  filterCatalogProducts,
+  paginateCatalog,
+} from "../domain/catalog-experience.js";
 import { categories, products } from "../data/demo-data.js";
 
 const business = readStorage("business", DEFAULT_BUSINESS);
 let cart = readStorage("cart", []);
 let activeCategory = "all";
+let visibleLimit = CATALOG_PAGE_SIZE;
 let lastFocusedElement = null;
 let toastTimer = null;
 
@@ -20,15 +27,9 @@ const cartCount = document.querySelector("#cart-count");
 const cartTotal = document.querySelector("#cart-total");
 const toast = document.querySelector("#toast");
 const customerName = document.querySelector("#customer-name");
+const loadMoreButton = document.querySelector("#load-more-products");
 const openCartButtons = [document.querySelector("#open-cart"), document.querySelector("#mobile-cart")].filter(Boolean);
-
-function normalizeText(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("es")
-    .trim();
-}
+const categoryCounts = categoryProductCounts(products, categories);
 
 function applyBusiness() {
   document.documentElement.style.setProperty("--primary", business.primaryColor);
@@ -55,56 +56,80 @@ function createOption(option) {
   return element;
 }
 
-function attachImageFallback(image, fallback) {
+function categoryName(categoryId) {
+  return categories.find((category) => category.id === categoryId)?.name ?? "Producto";
+}
+
+function initialsFor(value) {
+  return String(value ?? "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toLocaleUpperCase("es") ?? "")
+    .join("");
+}
+
+function normalizeSearchText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .trim();
+}
+
+function attachImageFallback(image, fallback, label) {
   image.addEventListener("error", () => {
     image.hidden = true;
     fallback.hidden = false;
+    fallback.querySelector("strong").textContent = label;
   }, { once: true });
 }
 
-function installCatalogSummary() {
-  const summary = document.createElement("div");
-  summary.className = "inline-toolbar";
-  summary.innerHTML = '<span class="result-count" id="catalog-result-count"></span><button class="button secondary small" id="clear-catalog-filters" type="button">Ver todos</button>';
-  document.querySelector(".catalog-tools").insertAdjacentElement("afterend", summary);
-  summary.querySelector("button").addEventListener("click", () => {
-    activeCategory = "all";
-    searchInput.value = "";
-    renderCategories();
-    renderProducts();
-    searchInput.focus();
-  });
+function resetCatalogPage() {
+  visibleLimit = CATALOG_PAGE_SIZE;
+}
+
+function clearCatalogFilters() {
+  activeCategory = "all";
+  searchInput.value = "";
+  resetCatalogPage();
+  renderCategories();
+  renderProducts();
+  searchInput.focus();
 }
 
 function renderProducts() {
-  const query = normalizeText(searchInput.value);
-  productGrid.replaceChildren();
-  const visible = products.filter((product) => {
-    const categoryMatch = activeCategory === "all" || product.category === activeCategory;
-    const searchMatch = !query || normalizeText(`${product.name} ${product.description} ${product.badge}`).includes(query);
-    return categoryMatch && searchMatch;
+  const filtered = filterCatalogProducts(products, {
+    category: activeCategory,
+    query: normalizeSearchText(searchInput.value),
   });
+  const page = paginateCatalog(filtered, visibleLimit);
+  productGrid.replaceChildren();
 
   const count = document.querySelector("#catalog-result-count");
-  if (count) count.textContent = `${visible.length} producto${visible.length === 1 ? "" : "s"}`;
+  if (count) {
+    count.textContent = page.total === page.visible.length
+      ? `${page.total} producto${page.total === 1 ? "" : "s"}`
+      : `Mostrando ${page.visible.length} de ${page.total} productos`;
+  }
   const clear = document.querySelector("#clear-catalog-filters");
-  if (clear) clear.hidden = !query && activeCategory === "all";
+  if (clear) clear.hidden = !searchInput.value.trim() && activeCategory === "all";
 
-  for (const product of visible) {
+  for (const product of page.visible) {
     const card = document.createElement("article");
     card.className = "product-card";
     card.innerHTML = `
       <div class="product-visual">
         <img loading="lazy" decoding="async">
-        <span class="product-emoji-fallback" hidden aria-hidden="true"></span>
-        <span class="product-photo-badge"></span>
+        <span class="product-image-fallback" hidden aria-hidden="true"><strong></strong><small>Imagen temporalmente no disponible</small></span>
       </div>
       <div class="product-body">
+        <span class="product-badge"></span>
         <div class="product-heading"><div><p class="eyebrow"></p><h3></h3></div><strong></strong></div>
         <p class="product-description"></p>
         <p class="product-defaults"></p>
         <details class="product-customization">
-          <summary>Cambiar presentación y preferencias</summary>
+          <summary aria-label="Cambiar presentación y preferencias">Personalizar producto</summary>
           <div class="product-controls">
             <label>Presentación<select data-role="option"></select></label>
             <label>Preferencia<select data-role="preference"></select></label>
@@ -115,14 +140,13 @@ function renderProducts() {
       </div>`;
 
     const image = card.querySelector(".product-visual img");
-    const fallback = card.querySelector(".product-emoji-fallback");
+    const fallback = card.querySelector(".product-image-fallback");
     image.src = product.image;
     image.alt = product.imageAlt;
     image.style.objectPosition = product.imagePosition ?? "center";
-    fallback.textContent = product.emoji;
-    attachImageFallback(image, fallback);
-    card.querySelector(".product-photo-badge").textContent = product.badge ?? "Producto fresco";
-    card.querySelector(".eyebrow").textContent = product.baseUnitLabel;
+    attachImageFallback(image, fallback, product.name);
+    card.querySelector(".product-badge").textContent = product.badge ?? "Producto fresco";
+    card.querySelector(".eyebrow").textContent = categoryName(product.category);
     card.querySelector("h3").textContent = product.name;
     card.querySelector(".product-heading strong").textContent = `${formatCLP(product.price)} / ${product.baseUnitLabel}`;
     card.querySelector(".product-description").textContent = product.description;
@@ -160,7 +184,11 @@ function renderProducts() {
     productGrid.append(card);
   }
 
-  document.querySelector("#empty-products").hidden = visible.length > 0;
+  document.querySelector("#empty-products").hidden = page.total > 0;
+  loadMoreButton.hidden = page.remaining === 0;
+  loadMoreButton.textContent = page.remaining > CATALOG_PAGE_SIZE
+    ? `Mostrar ${CATALOG_PAGE_SIZE} productos más`
+    : `Mostrar ${page.remaining} producto${page.remaining === 1 ? "" : "s"} más`;
 }
 
 function renderCategories() {
@@ -170,12 +198,17 @@ function renderCategories() {
     const active = activeCategory === category.id;
     button.className = `chip ${active ? "active" : ""}`;
     button.type = "button";
-    button.textContent = category.name;
+    button.innerHTML = `<span></span><small></small>`;
+    button.querySelector("span").textContent = category.name;
+    button.querySelector("small").textContent = String(categoryCounts[category.id] ?? 0);
     button.setAttribute("aria-pressed", String(active));
+    button.setAttribute("aria-label", `${category.name}: ${categoryCounts[category.id] ?? 0} productos`);
     button.addEventListener("click", () => {
       activeCategory = category.id;
+      resetCatalogPage();
       renderCategories();
       renderProducts();
+      document.querySelector("#catalog-result-count")?.focus({ preventScroll: true });
     });
     categoryList.append(button);
   });
@@ -192,7 +225,6 @@ function addToCart(product, optionId, preference, substitution) {
       id: lineId,
       productId: product.id,
       name: product.name,
-      emoji: product.emoji,
       image: product.image,
       imageAlt: product.imageAlt,
       imagePosition: product.imagePosition,
@@ -235,22 +267,22 @@ function renderCart() {
     const item = document.createElement("article");
     item.className = "cart-line";
     item.innerHTML = `
-      <span class="cart-media"><img loading="lazy" decoding="async"><span class="cart-emoji" hidden aria-hidden="true"></span></span>
+      <span class="cart-media"><img loading="lazy" decoding="async"><span class="cart-media-fallback" hidden aria-hidden="true"><strong></strong></span></span>
       <div><strong></strong><small></small><div class="stepper"><button type="button" data-step="-1">−</button><span></span><button type="button" data-step="1">+</button></div></div>
       <b></b>`;
     const image = item.querySelector(".cart-media img");
-    const fallback = item.querySelector(".cart-emoji");
+    const fallback = item.querySelector(".cart-media-fallback");
+    fallback.querySelector("strong").textContent = initialsFor(line.name);
     image.src = line.image ?? "";
     image.alt = line.imageAlt ?? line.name;
     image.style.objectPosition = line.imagePosition ?? "center";
-    fallback.textContent = line.emoji;
     if (!line.image) {
       image.hidden = true;
       fallback.hidden = false;
     } else {
-      attachImageFallback(image, fallback);
+      attachImageFallback(image, fallback, initialsFor(line.name));
     }
-    item.querySelector("strong").textContent = line.name;
+    item.querySelector("div > strong").textContent = line.name;
     item.querySelector("small").textContent = `${line.optionLabel} · ${line.preference}`;
     item.querySelector(".stepper span").textContent = line.multiplier;
     item.querySelector("b").textContent = formatCLP(lineTotal(line));
@@ -363,11 +395,19 @@ function trapCartFocus(event) {
 }
 
 applyBusiness();
-installCatalogSummary();
 renderCategories();
 renderProducts();
 renderCart();
-searchInput.addEventListener("input", renderProducts);
+searchInput.addEventListener("input", () => {
+  resetCatalogPage();
+  renderProducts();
+});
+document.querySelector("#clear-catalog-filters").addEventListener("click", clearCatalogFilters);
+loadMoreButton.addEventListener("click", () => {
+  visibleLimit += CATALOG_PAGE_SIZE;
+  renderProducts();
+  loadMoreButton.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
 openCartButtons.forEach((button) => button.addEventListener("click", openCart));
 document.querySelector("#close-cart").addEventListener("click", () => closeCart());
 document.querySelector("#overlay").addEventListener("click", () => closeCart());
