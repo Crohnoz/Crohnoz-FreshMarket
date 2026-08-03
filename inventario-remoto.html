@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Recepción e inventario remoto para Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Inventario remoto · Crohnoz Fresh Market</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/remote-orders.css">
+  <link rel="stylesheet" href="assets/css/remote-inventory.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="operar.html">
+        <span class="brand-mark">FM</span>
+        <span class="brand-copy"><strong data-business-name></strong><small>Inventario conectado</small></span>
+      </a>
+      <nav class="nav" aria-label="Navegación principal">
+        <a href="operar.html">Inicio operativo</a>
+        <a href="pedidos-remotos.html">Pedidos remotos</a>
+        <a href="conexion.html">Conexión</a>
+        <a href="inventario.html">Inventario local</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="remote-main">
+    <section class="shell remote-hero">
+      <div>
+        <p class="eyebrow">Bloque conectado 0.8</p>
+        <h1>Recepciones trazables en Django</h1>
+        <p>Cada recepción crea un lote nuevo en el negocio autenticado. Los lotes no se editan ni se eliminan directamente.</p>
+      </div>
+      <a class="button secondary" href="conexion.html">Revisar conexión</a>
+    </section>
+
+    <section class="shell" id="remote-inventory-blocker" hidden>
+      <article class="remote-blocker-card">
+        <span aria-hidden="true">📦</span>
+        <div>
+          <h2>Falta una sesión conectada</h2>
+          <p id="remote-inventory-blocker-message">Configura la API, inicia sesión y elige el negocio antes de recibir inventario.</p>
+          <a class="button primary" href="conexion.html">Ir a conectar</a>
+        </div>
+      </article>
+    </section>
+
+    <div class="shell remote-workspace" id="remote-inventory-workspace" hidden>
+      <section class="remote-summary" aria-labelledby="remote-inventory-summary-title">
+        <div>
+          <p class="eyebrow">Fuente de verdad</p>
+          <h2 id="remote-inventory-summary-title">Inventario del servidor</h2>
+          <p id="remote-inventory-connection-summary"></p>
+        </div>
+        <button class="button secondary" id="refresh-remote-inventory" type="button">Actualizar desde servidor</button>
+      </section>
+
+      <p class="status-message" id="remote-inventory-status" role="status" aria-live="polite"></p>
+
+      <section class="remote-inventory-grid">
+        <article class="panel remote-reception-panel">
+          <header class="panel-header">
+            <div><p class="eyebrow">Nueva entrada</p><h2>Registrar recepción</h2></div>
+          </header>
+          <form id="remote-reception-form" novalidate>
+            <label>Producto
+              <select name="productId" id="remote-reception-product" required>
+                <option value="">Selecciona un producto</option>
+              </select>
+            </label>
+            <div class="remote-form-pair">
+              <label>Fecha de recepción<input name="receivedAt" id="remote-received-at" type="date" required></label>
+              <label>Fecha preferente<input name="bestBefore" type="date"></label>
+            </div>
+            <div class="remote-form-pair">
+              <label>Cantidad recibida<input name="quantity" id="remote-reception-quantity" type="number" min="0.001" step="0.001" inputmode="decimal" required></label>
+              <label>Costo unitario<input name="unitCost" type="number" min="0" step="1" inputmode="decimal" required></label>
+            </div>
+            <p class="field-help" id="remote-reception-unit-help">La unidad se toma del producto remoto.</p>
+            <label>Calidad al recibir
+              <select name="quality">
+                <option value="good">Buena</option>
+                <option value="review">Revisar</option>
+                <option value="damaged">Dañada</option>
+              </select>
+            </label>
+            <label>Observaciones<textarea name="notes" maxlength="240" rows="3" placeholder="Proveedor, condición o referencia interna"></textarea></label>
+            <p class="remote-safety-note">Ante un corte de internet, vuelve a presionar el botón. La misma clave evita duplicar la recepción.</p>
+            <button class="button primary full" id="create-remote-reception" type="submit">Registrar recepción remota</button>
+          </form>
+          <div class="remote-created" id="remote-reception-created" hidden>
+            <strong>Recepción confirmada por el servidor</strong>
+            <textarea id="remote-reception-summary" rows="5" readonly aria-label="Resumen de la recepción remota"></textarea>
+          </div>
+        </article>
+
+        <article class="panel remote-inventory-panel">
+          <header class="panel-header remote-inventory-header">
+            <div><p class="eyebrow">Lotes remotos</p><h2>Inventario disponible</h2></div>
+            <label class="remote-search"><span class="sr-only">Buscar lote</span><input id="remote-lot-search" type="search" placeholder="Buscar producto o estado" autocomplete="off"></label>
+          </header>
+          <div class="remote-inventory-metrics" aria-label="Resumen del inventario remoto">
+            <span><strong id="remote-lot-count">0</strong> lotes</span>
+            <span><strong id="remote-critical-count">0</strong> críticos</span>
+          </div>
+          <div class="table-wrap">
+            <table class="remote-table remote-lot-table">
+              <thead><tr><th>Producto</th><th>Disponibilidad</th><th>Recepción</th><th>Fecha preferente</th><th>Riesgo</th><th>Costo</th></tr></thead>
+              <tbody id="remote-lots-body"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="remote-lots-empty" hidden>El servidor todavía no tiene lotes para este negocio.</div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>© 2026 <span data-business-name></span></span><span>Recepciones autenticadas · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/remote-inventory/app.js"></script>
+</body>
+</html>
