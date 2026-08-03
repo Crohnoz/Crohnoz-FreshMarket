@@ -11,9 +11,10 @@ Backend ejecutable para validar Crohnoz Fresh Market con Camila y Carmelo sin re
 - Organización explícita mediante `X-Organization-ID`.
 - Roles `owner`, `manager`, `operator` y `viewer`.
 - Auditoría servidor append-only con cadena HMAC-SHA256.
-- Control optimista obligatorio mediante `If-Match: <version>` en transiciones operacionales.
+- Libro append-only de movimientos de inventario.
+- Control optimista obligatorio mediante `If-Match: <version>` en mutaciones operacionales.
 - Token temporal del piloto con vencimiento servidor configurable, por defecto 12 horas.
-- Idempotencia en pedidos, recepciones y cambios de estado.
+- Idempotencia en pedidos, recepciones, movimientos y cambios de estado.
 
 La autenticación por token sigue siendo transitoria. Antes de una apertura comercial debe migrarse a JWT rotatorio u OIDC, agregar recuperación de cuenta, MFA opcional y una política de sesiones formal.
 
@@ -29,11 +30,9 @@ python manage.py migrate
 python manage.py runserver 8001
 ```
 
-Las variables del archivo `.env` deben cargarse en el shell o mediante el mecanismo seguro del entorno de ejecución. El repositorio no carga `.env` automáticamente y no debe contener secretos reales.
+Las variables del archivo `.env` deben cargarse mediante el mecanismo seguro del entorno. El repositorio no carga `.env` automáticamente y no debe contener secretos reales.
 
 ## Preparar el piloto de Camila y Carmelo
-
-El comando es idempotente: puede ejecutarse nuevamente para actualizar el negocio, los roles y el catálogo inicial.
 
 ```bash
 export CAMILA_PILOT_PASSWORD='una-clave-unica-de-al-menos-12-caracteres'
@@ -49,14 +48,14 @@ $env:CARMELO_PILOT_PASSWORD="otra-clave-unica-de-al-menos-12-caracteres"
 python manage.py seed_pilot
 ```
 
-El comando:
+El comando es idempotente y:
 
 - crea o actualiza una organización piloto;
 - asigna a Camila como `manager`;
 - asigna a Carmelo como `operator`;
-- carga tomate, palta, lechuga y banana como catálogo ficticio;
+- carga un catálogo ficticio;
 - no genera contraseñas predeterminadas;
-- no imprime las contraseñas en consola.
+- no imprime contraseñas.
 
 ## Ejecutar con PostgreSQL local
 
@@ -67,50 +66,37 @@ docker compose up --build
 
 API local: `http://localhost:8001/api/v1/health/`  
 Admin: `http://localhost:8001/admin/`  
-Pantalla de conexión: `http://localhost:8000/conexion.html`  
+Conexión: `http://localhost:8000/conexion.html`  
 Inventario remoto: `http://localhost:8000/inventario-remoto.html`  
 Pedidos remotos: `http://localhost:8000/pedidos-remotos.html`
 
 ## Blueprint administrado
 
-El archivo `render.yaml` de la raíz declara recursos aislados para este producto:
+`render.yaml` declara recursos aislados:
 
 - servicio `crohnoz-fresh-market-api`;
 - base `crohnoz-fresh-market-db`;
 - PostgreSQL sin acceso público directo;
 - health check `/api/v1/health/`;
-- migraciones durante el build compatible con el plan declarado;
-- carga inicial mediante `seed_pilot` solo en la primera instancia;
+- migraciones durante el build;
+- carga inicial del piloto;
 - secretos generados para Django y auditoría;
-- contraseñas de Camila y Carmelo solicitadas al crear el Blueprint.
+- contraseñas solicitadas al crear el Blueprint.
 
-Flujo de despliegue:
+Flujo:
 
-1. Conectar este repositorio como Blueprint en Render.
-2. Revisar que el Blueprint apunte a `main`.
-3. Ingresar `CAMILA_PILOT_PASSWORD` y `CARMELO_PILOT_PASSWORD` por el panel seguro.
+1. Conectar el repositorio como Blueprint.
+2. Confirmar que apunta a `main`.
+3. Ingresar las contraseñas piloto por el panel seguro.
 4. Aplicar el Blueprint.
-5. Esperar que build, migraciones, seed y health check terminen correctamente.
+5. Verificar build, migraciones, seed y health check.
 6. Copiar la URL HTTPS terminada en `/api/v1`.
 7. Probarla desde `/conexion`.
-8. Restringir el CSP de Netlify al hostname definitivo de la API.
+8. Restringir el CSP de Netlify al hostname definitivo.
 
-No se debe ejecutar `seed_pilot` con claves enviadas por correo, chat público, commits o logs.
+No ejecutar `seed_pilot` con claves enviadas por correo, chat público, commits o logs.
 
-## Flujo de conexión del frontend
-
-1. Abrir `/conexion.html`.
-2. Configurar la base API, por ejemplo `http://localhost:8001/api/v1`.
-3. Probar el endpoint de salud.
-4. Ingresar con la cuenta individual.
-5. Elegir la organización si la cuenta posee más de una membresía.
-6. Verificar rol, conteos y catálogo del servidor.
-7. Abrir `/inventario-remoto.html` para registrar una recepción ficticia.
-8. Abrir `/pedidos-remotos.html` para crear, preparar, pesar y marcar listo un pedido.
-
-El frontend guarda únicamente la URL y el modo local/API en `localStorage`. El token, la identidad y la organización activa viven en `sessionStorage`, no entran en respaldos y desaparecen al cerrar sesión, cerrar la pestaña o detectar el vencimiento informado por el servidor.
-
-## Endpoints del puente
+## Endpoints principales
 
 - `GET /api/v1/health/`
 - `POST /api/v1/auth/login/`
@@ -121,6 +107,8 @@ El frontend guarda únicamente la URL y el modo local/API en `localStorage`. El 
 - `GET /api/v1/products/?is_active=true`
 - `GET /api/v1/inventory-lots/`
 - `POST /api/v1/inventory-lots/receive/`
+- `GET /api/v1/inventory-movements/`
+- `POST /api/v1/inventory-movements/`
 - `GET` y `POST /api/v1/orders/`
 - `POST /api/v1/orders/{id}/start-preparing/`
 - `POST /api/v1/orders/{id}/confirm-weighing/`
@@ -135,60 +123,104 @@ El servidor:
 
 - valida producto activo y organización;
 - exige cantidad positiva y costo no negativo;
+- exige cantidades enteras para unidad y paquete;
 - crea el lote con disponibilidad inicial completa;
 - registra `inventorylot.received`;
 - devuelve replay seguro para la misma solicitud;
 - responde conflicto si la clave cambia de contenido.
 
-Los lotes no aceptan creación, reemplazo, edición ni eliminación genérica. Los ajustes futuros deben implementarse mediante movimientos de inventario.
+Los lotes no aceptan creación, reemplazo, edición ni eliminación genérica.
 
-## Pedidos y preparación
+## Movimientos de inventario
 
-La creación remota incluye `idempotency_key` en el cuerpo:
-
-- el primer envío crea el pedido y devuelve `201`;
-- un reintento idéntico devuelve el mismo pedido con `200` y `X-Idempotent-Replay: true`;
-- reutilizar la clave con datos diferentes devuelve `409`;
-- solo se genera un evento `order.created`.
-
-El backend ignora intentos del cliente de elegir estado, medio de pago u origen: todo pedido nuevo comienza como `confirmed`, `pending`, `operator`. También rechaza cantidades reales prellenadas.
-
-Las transiciones exigen dos headers:
+`POST /inventory-movements/` exige:
 
 ```text
-If-Match: <version>
-Idempotency-Key: <clave estable>
+If-Match: <version-del-lote>
+Idempotency-Key: <clave-estable>
 ```
+
+Tipos:
+
+- `consumption`: descuenta consumo; rol `operator`.
+- `waste`: descuenta merma; rol `operator`.
+- `supplier_return`: descuenta devolución; rol `operator`.
+- `adjustment`: fija un nuevo saldo; rol `manager`.
+
+Cada movimiento guarda:
+
+- saldo anterior;
+- variación;
+- saldo resultante;
+- motivo y referencia;
+- actor;
+- firma de solicitud;
+- clave de idempotencia.
 
 Reglas:
 
+- no existe saldo negativo;
+- una salida no supera la disponibilidad;
+- unidad y paquete requieren enteros;
+- un ajuste no supera la recepción original;
+- un lote dañado no se consume;
+- un lote agotado no admite nuevas salidas;
+- versión obsoleta devuelve `409`;
+- replay idéntico devuelve `200` y `X-Idempotent-Replay: true`;
+- clave cruzada entre lote, tipo o contenido devuelve `409`;
+- movimientos no aceptan `PATCH` ni `DELETE`.
+
+## FEFO remoto
+
+Antes de `consumption`, el servidor bloquea organización y lotes dentro de la transacción y determina el primer lote utilizable:
+
+1. activo y con saldo;
+2. calidad distinta de `damaged`;
+3. fecha preferente más próxima;
+4. si no hay fecha, recepción más antigua;
+5. desempate por creación e ID.
+
+Consumir un lote posterior devuelve `400` indicando el lote prioritario. Al agotarse el primero, el siguiente queda habilitado. Un replay exitoso no se invalida si después aparece una recepción con fecha anterior.
+
+La versión actual no distribuye automáticamente una cantidad entre varios lotes; se registran movimientos separados.
+
+## Pedidos y preparación
+
+La creación remota incluye `idempotency_key`:
+
+- primer envío: `201`;
+- replay idéntico: `200` y `X-Idempotent-Replay: true`;
+- misma clave con datos distintos: `409`;
+- una sola auditoría `order.created`.
+
+El backend fija todo pedido nuevo como `confirmed`, `pending`, `operator` y rechaza cantidades reales prellenadas.
+
+Las transiciones exigen `If-Match` e `Idempotency-Key`:
+
 - `confirmed → preparing`;
-- cantidades reales solo en `preparing`;
-- el pesaje incluye exactamente todas las líneas;
-- el servidor recalcula el total;
+- pesaje completo solo en `preparing`;
+- recálculo del total en servidor;
 - `preparing → ready` solo con todas las líneas completas;
 - versión obsoleta devuelve `409`;
-- la misma clave no puede cruzarse entre pedidos;
+- una clave no cruza pedidos;
 - `PUT`, `PATCH` y `DELETE` genéricos están bloqueados.
 
 ## Seguridad del puente
 
-- Los intentos de login están limitados a 8 por minuto por origen.
-- Los tokens vencidos son rechazados en todas las peticiones.
-- Cada login rota el token anterior; logout lo elimina explícitamente.
-- Un token vencido que siga almacenado en la tabla no vuelve a ser válido y se reemplaza en el próximo login.
-- El frontend solo acepta HTTPS, salvo `localhost` y `127.0.0.1` para desarrollo.
-- La contraseña no se persiste y el formulario se limpia después de cada intento.
-- CORS usa la allowlist exacta del frontend productivo en el Blueprint.
-- Cada petición operacional vuelve a validar membresía y rol.
-- Cambiar de URL API elimina la sesión anterior del navegador.
-- Las operaciones remotas no cambian silenciosamente al modo local.
-- Las mutaciones críticas usan transacciones, idempotencia y control de versión.
+- Login limitado a 8 intentos por minuto por origen.
+- Tokens vencidos rechazados.
+- Cada login rota el token anterior; logout lo elimina.
+- Frontend solo acepta HTTPS, salvo `localhost` y `127.0.0.1`.
+- La contraseña no se persiste.
+- CORS usa una allowlist exacta.
+- Cada petición vuelve a validar membresía y rol.
+- Cambiar la URL API elimina la sesión anterior.
+- No existe fallback silencioso a modo local.
+- Mutaciones críticas usan transacciones, idempotencia y versión.
 
 ## Variables relevantes
 
-- `DATABASE_URL`, preferida en hosting administrado.
-- `DATABASE_*`, alternativa para despliegues manuales.
+- `DATABASE_URL` o `DATABASE_*`.
 - `DJANGO_SECRET_KEY`.
 - `DJANGO_ALLOWED_HOSTS` o `RENDER_EXTERNAL_HOSTNAME`.
 - `DJANGO_CORS_ALLOWED_ORIGINS`.
@@ -200,12 +232,12 @@ Reglas:
 
 ## Límites de esta versión
 
-- El Blueprint está listo, pero la instancia pública todavía debe crearse y verificarse.
-- Catálogo, recepción, pedidos, preparación y estado listo tienen superficies API separadas.
-- Ajustes/mermas, descuento FEFO, cobro, fiado, entrega y cierre todavía permanecen locales.
+- El Blueprint está listo, pero la instancia pública debe crearse y verificarse.
+- Catálogo, recepción, movimientos, pedidos, preparación y estado listo tienen API separada.
+- No hay reparto automático entre lotes, cobro, fiado, entrega ni cierre remotos.
 - No existe sincronización bidireccional ni cola offline.
-- No hay recuperación de contraseña ni envío de correo.
-- Debe verificarse la política real de backups del proveedor antes de usar datos operacionales.
-- El CSP del frontend permite temporalmente conexiones HTTPS a cualquier host y debe restringirse al hostname definitivo.
-- No hay importador ejecutable del paquete Kernel todavía.
+- No hay recuperación de contraseña ni correo.
+- Debe verificarse la política real de backups del proveedor.
+- El CSP debe restringirse al hostname definitivo.
+- No hay importador ejecutable del paquete Kernel.
 - No deben usarse datos personales reales en esta fase.
