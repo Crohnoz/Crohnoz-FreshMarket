@@ -4,6 +4,7 @@ const KNOWN_OPERATOR_PAGES = new Set([
   "auditoria.html",
   "cierre.html",
   "compras.html",
+  "conexion.html",
   "configurador.html",
   "cuentas.html",
   "integridad.html",
@@ -25,9 +26,11 @@ export function buildOperatorReadiness({
   visitedPages = [],
   continuityMeta = {},
   integrityMeta = {},
+  connection = {},
 } = {}) {
   const visited = new Set(Array.isArray(visitedPages) ? visitedPages : []);
   const integrityScanned = Number.isFinite(Date.parse(integrityMeta.lastScanAt));
+  const connectionState = String(connection.state ?? "local");
   const items = [
     {
       id: "identity",
@@ -58,6 +61,19 @@ export function buildOperatorReadiness({
         : "Revisa referencias, saldos, montos y fechas antes del respaldo.",
       href: "integridad.html",
       complete: integrityScanned && integrityMeta.status !== "blocked",
+    },
+    {
+      id: "connection",
+      label: "Conectar una cuenta piloto",
+      description: connectionState === "connected"
+        ? "La cuenta, el rol y el negocio están verificados por Django."
+        : connectionState === "organization-required"
+          ? "La sesión está iniciada, pero falta elegir el negocio."
+          : connectionState === "configured"
+            ? "La API está configurada; falta ingresar con una cuenta individual."
+            : "Comprueba la API e ingresa con la cuenta de Camila o Carmelo.",
+      href: "conexion.html",
+      complete: connectionState === "connected",
     },
     {
       id: "backup",
