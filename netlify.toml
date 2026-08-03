@@ -28,6 +28,10 @@
   to = "/ventas.html"
   status = 200
 [[redirects]]
+  from = "/pedidos-remotos"
+  to = "/pedidos-remotos.html"
+  status = 200
+[[redirects]]
   from = "/asistente"
   to = "/asistente.html"
   status = 200
