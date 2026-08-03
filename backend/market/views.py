@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from django.contrib.auth import authenticate
 from django.db import IntegrityError, connection, transaction
+from django.utils import timezone
 from rest_framework import mixins, status, viewsets
-from rest_framework.exceptions import APIException
+from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -51,7 +54,49 @@ class HealthView(APIView):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
-        return Response({"status": "ok", "service": "crohnoz-fresh-market-api", "version": "0.1.0-mvp"})
+        return Response({"status": "ok", "service": "crohnoz-fresh-market-api", "version": "0.2.0-mvp"})
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        username = str(request.data.get("username", "")).strip()
+        password = str(request.data.get("password", ""))
+        if not username or not password:
+            raise ValidationError({"credentials": "Ingresa usuario y contraseña."})
+
+        user = authenticate(request=request, username=username, password=password)
+        if user is None or not user.is_active:
+            raise ValidationError({"credentials": "Usuario o contraseña incorrectos."}, code="invalid_credentials")
+
+        token, _ = Token.objects.get_or_create(user=user)
+        memberships = list(
+            Membership.objects.select_related("organization")
+            .filter(user=user, is_active=True, organization__status=Organization.Status.ACTIVE)
+            .order_by("organization__name")
+        )
+        if not memberships:
+            token.delete()
+            raise ValidationError({"membership": "La cuenta no tiene un negocio activo asignado."})
+
+        default_organization = memberships[0].organization_id if len(memberships) == 1 else None
+        return Response({
+            "token": token.key,
+            "user": UserSummarySerializer(user).data,
+            "memberships": MembershipSerializer(memberships, many=True).data,
+            "default_organization": default_organization,
+            "expires_when": "browser_session_ends",
+        })
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        Token.objects.filter(user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeView(APIView):
@@ -62,6 +107,27 @@ class MeView(APIView):
         return Response({
             "user": UserSummarySerializer(request.user).data,
             "memberships": MembershipSerializer(memberships, many=True).data,
+        })
+
+
+class ConnectionSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        context = resolve_organization_context(request)
+        organization = context.organization
+        products = Product.objects.filter(organization=organization, is_active=True).order_by("name")
+        return Response({
+            "organization": OrganizationSerializer(organization).data,
+            "membership": MembershipSerializer(context.membership).data,
+            "counts": {
+                "products": products.count(),
+                "inventory_lots": InventoryLot.objects.filter(organization=organization).count(),
+                "orders": Order.objects.filter(organization=organization).count(),
+                "audit_events": AuditEvent.objects.filter(organization=organization).count(),
+            },
+            "product_preview": ProductSerializer(products[:6], many=True).data,
+            "server_time": timezone.now().isoformat(),
         })
 
 
