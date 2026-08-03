@@ -4,9 +4,10 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 
 ## Estado
 
-**Piloto comercial funcionalmente completo, pendiente de validación física y backend real.** La interfaz usa datos ficticios y `localStorage`. No existe autenticación, persistencia central, aislamiento multiempresa ni garantía transaccional.
+**Piloto comercial navegable con fundación Django y puente de sesión, pendiente de despliegue backend e integración operacional.** La interfaz conserva un modo local con datos ficticios. Django ya incorpora autenticación temporal, organizaciones, RBAC, catálogo, lotes, pedidos y auditoría servidor.
 
-Versión actual: **0.5.0-pilot**.
+Versión actual: **0.6.0-pilot**.  
+Avance estimado del MVP real para Camila y Carmelo: **70%**.
 
 ## Páginas
 
@@ -21,11 +22,12 @@ Versión actual: **0.5.0-pilot**.
 - `/asistente.html`: contexto operacional y propuestas revisables.
 - `/integridad.html`: diagnóstico de IDs, referencias, montos, saldos y fechas.
 - `/auditoria.html`: cadena local de cambios y exportación para Crohnoz Kernel.
+- `/conexion.html`: configuración API, login, organización y resumen del backend.
 - `/validacion.html`: diagnóstico técnico y pruebas de usuario.
 - `/configurador.html`: identidad, respaldo, restauración y restablecimiento demo.
 - `/scanner-lab.html`: laboratorio HID para lector de códigos.
 
-Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/integridad`, `/auditoria`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
+Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/integridad`, `/auditoria`, `/conexion`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
 
 ## Capacidades principales
 
@@ -35,107 +37,90 @@ Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/asistente`, `/
 - bloqueo prioritario ante errores críticos de coherencia;
 - recomendación de respaldo después de actividad local relevante;
 - tareas frecuentes separadas de herramientas secundarias;
-- filtros por área;
+- búsqueda y filtros por área;
 - checklist de identidad, inventario, operación, integridad y respaldo;
-- regreso seguro a la última pantalla operacional visitada;
-- navegación móvil enfocada en acciones cotidianas.
+- regreso seguro a la última pantalla visitada;
+- navegación móvil enfocada en acciones cotidianas;
+- franja global que distingue modo local, API configurada y sesión conectada.
+
+### Puente frontend–Django
+
+La pantalla `/conexion` permite:
+
+- configurar una URL API HTTPS;
+- comprobar el endpoint de salud;
+- iniciar sesión con una cuenta individual;
+- elegir organización cuando existen varias membresías;
+- visualizar usuario, negocio y rol;
+- consultar conteos y catálogo preliminar del servidor;
+- cerrar sesión;
+- volver explícitamente al modo local.
+
+La URL y el modo se guardan en `localStorage`. El token, la identidad y la organización activa se guardan únicamente en `sessionStorage`, quedan fuera de los respaldos y vencen en el servidor.
+
+La conexión actual cubre sesión y lectura de resumen. Las operaciones comerciales cotidianas todavía permanecen locales hasta implementar sus repositorios API.
+
+### Backend Django
+
+El directorio `backend/` contiene:
+
+- Django 5.2 LTS;
+- Django REST Framework;
+- PostgreSQL para despliegue;
+- organizaciones y membresías;
+- roles `owner`, `manager`, `operator` y `viewer`;
+- productos;
+- lotes perecibles;
+- pedidos e ítems;
+- idempotencia por organización;
+- control optimista;
+- auditoría append-only con HMAC-SHA256;
+- tokens temporales con vencimiento;
+- Docker y Docker Compose;
+- comando `seed_pilot` para Camila y Carmelo.
 
 ### Auditoría local y puente Kernel
 
-Las escrituras comerciales pasan por una capa transversal de auditoría. Se registran configuración, pedidos, precios, inventario, proveedores, compras, pagos, fiados, operaciones, mermas, cierres, propuestas y validaciones.
+Las escrituras comerciales locales pasan por una capa transversal de auditoría. Cada evento incluye secuencia, fecha, organización declarada, actor local, colección, digests y hash anterior/propio.
 
-Cada evento contiene:
-
-- secuencia incremental;
-- fecha ISO;
-- organización local declarada;
-- actor y rol declarados;
-- colección afectada;
-- conteo antes y después;
-- digest del estado anterior y posterior;
-- hash del evento anterior;
-- hash propio.
-
-No se copia el contenido comercial completo dentro del evento. Carrito, navegación y preferencias visuales quedan fuera para reducir ruido.
-
-La pantalla de auditoría permite:
-
-- verificar secuencia, enlaces y hashes;
-- filtrar por colección y acción;
-- buscar eventos;
-- revisar el nivel de confianza;
-- descargar un paquete `crohnoz-kernel-import-package` versión 1;
-- bloquear la exportación cuando la cadena está dañada.
-
-El actor actual siempre aparece como **local no verificado**. Esta capa detecta manipulación accidental del historial, pero no autentica personas, no entrega no repudio y no sustituye auditoría servidor.
-
-### Contratos de producción
-
-El repositorio incluye contratos versionados, todavía no desplegados:
-
-- `docs/contracts/fresh-market.openapi.yaml`: API multiempresa, JWT, RBAC, idempotencia y control optimista.
-- `docs/contracts/postgresql-schema.sql`: organizaciones, membresías, datos operacionales, RLS, constraints, import jobs y auditoría append-only.
-- `docs/contracts/kernel-import-package.schema.json`: envoltura JSON del paquete de migración.
-- `docs/KERNEL_MIGRATION_BRIDGE.md`: flujo de importación, matriz RBAC, fases y criterios de salida.
-
-El SQL es una especificación de diseño. Debe convertirse en migraciones Django revisadas antes de ejecutarse.
+La pantalla de auditoría permite verificar la cadena, filtrar eventos y descargar un paquete `crohnoz-kernel-import-package` versión 1. El actor local sigue siendo **no verificado**; la identidad autenticada real corresponde al backend Django.
 
 ### Integridad de datos
 
-- diagnóstico local y de solo lectura;
+- diagnóstico local de solo lectura;
 - estado efectivo materializado antes de auditar o respaldar;
 - IDs ausentes o duplicados;
-- referencias rotas entre pedidos, pagos, clientes, compras, proveedores, lotes y transacciones;
+- referencias rotas;
 - cantidades, costos, precios, totales y saldos inválidos;
 - stock negativo;
-- fechas defectuosas o incoherentes;
-- conciliación matemática del cierre diario;
-- clasificación en saludable, revisión recomendada o bloqueo crítico;
-- filtros, búsqueda e informe descargable;
-- reglas preparadas para constraints PostgreSQL y validadores Django/DRF.
+- fechas incoherentes;
+- conciliación matemática del cierre;
+- clasificación saludable, advertencia o bloqueo crítico;
+- informe descargable.
 
-### Inventario perecible
+### Inventario, compras, ventas y cuentas
 
-- lotes por recepción;
-- costo, condición y maduración;
-- fecha de consumo preferente;
-- saldo por lote;
-- venta, merma y ajuste;
-- prioridad FEFO y valor en riesgo.
-
-### Compras, ventas y cuentas
-
-- proveedores demo, costos e historial de compras;
-- creación de lotes y sugerencias de precio por margen/merma;
+- lotes por recepción y prioridad FEFO;
+- costo, condición, maduración y fecha preferente;
+- proveedores, historial de compras y precios sugeridos;
 - cantidades solicitadas y reales;
 - confirmación de diferencias;
-- pagos en efectivo, transferencia o fiado;
+- efectivo, transferencia y fiado;
+- clientes, cargos, abonos y saldos;
 - comprobante interno no tributario;
-- clientes, cargos, abonos y saldos.
-
-### Asistencia preparada para IA
-
-- contexto de inventario, deuda, compras y cierres;
-- respuesta con confianza y evidencia;
-- propuestas pendientes hasta revisión humana;
-- aprobación o rechazo explícito;
-- importación desde transcripción revisada;
-- JSON Schema para backend futuro.
+- cierre diario y conciliación de caja.
 
 ### Continuidad local
 
-- instantánea efectiva autosuficiente;
-- respaldo JSON versión 2 limitado a 2 MB;
-- checksum para detectar alteraciones accidentales;
+- respaldo JSON versión 2 con checksum;
 - compatibilidad con respaldos versión 1;
-- validación de producto, versión, namespace, fecha y colecciones;
 - análisis semántico antes de restaurar;
-- restauración bloqueada ante errores críticos;
-- confirmación explícita antes de reemplazar datos;
-- evento único `snapshot.restore` después de recuperar una copia;
-- caché offline de operación, integridad, auditoría y continuidad.
+- bloqueo ante errores críticos;
+- confirmación antes de reemplazar datos;
+- caché offline de superficies locales;
+- rollback explícito desde modo API a modo local.
 
-## Ejecutar
+## Ejecutar el frontend
 
 ```bash
 python -m http.server 8000
@@ -143,33 +128,75 @@ python -m http.server 8000
 
 Abrir `http://localhost:8000/operar.html`.
 
+## Ejecutar el backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver 8001
+```
+
+Después abrir `http://localhost:8000/conexion.html` y usar como base API:
+
+```text
+http://localhost:8001/api/v1
+```
+
+Las instrucciones completas están en `backend/README.md` y `docs/API_BRIDGE.md`.
+
 ## Pruebas
 
 ```bash
 npm test
 ```
 
-La suite cubre mediciones, pesaje, códigos, fiados, voz, imágenes, cierre, inventario, compras, márgenes, pedidos, propuestas, rutas, UX reversible, respaldo, checksum, compatibilidad anterior, corrupción semántica, auditoría encadenada, paquete Kernel, contratos, onboarding y caché offline.
+```bash
+cd backend
+python manage.py check
+python manage.py makemigrations --check --dry-run
+python manage.py test
+```
+
+La CI ejecuta frontend y backend por separado.
 
 ## Seguridad y límites
 
-- No ingresar datos reales, personales, clínicos, financieros o sensibles.
-- `localStorage` no sincroniza dispositivos y puede perderse.
-- Los respaldos y paquetes Kernel son manuales, no cifrados y contienen datos completos.
-- FNV-1a detecta alteraciones accidentales; no es firma digital, HMAC ni autenticación.
-- El actor local no está autenticado.
-- El auditor comprueba coherencia interna, no veracidad comercial.
-- Restablecer el piloto elimina también su historial local.
-- El service worker mejora continuidad, pero no constituye respaldo.
+- No ingresar datos personales, clínicos, financieros o sensibles durante esta fase.
+- El backend todavía no está desplegado públicamente.
+- Una sesión conectada no significa que todas las pantallas estén sincronizadas.
+- Los flujos operacionales todavía escriben en `localStorage`.
+- No existe sincronización bidireccional ni cola offline.
+- El token temporal no reemplaza JWT rotatorio, OIDC ni recuperación de cuenta.
+- Los respaldos locales y paquetes Kernel no están cifrados.
+- El CSP permite temporalmente conexiones HTTPS amplias y debe restringirse al host definitivo de la API.
+- El service worker mejora continuidad local, pero no constituye respaldo del backend.
 - Voz, cámara y escáner dependen del navegador y hardware.
-- Las fotografías externas deben migrarse a infraestructura controlada.
 - Los precios son sugerencias, no decisiones automáticas.
 - El comprobante interno no es documento tributario.
 - El cierre no reemplaza contabilidad formal ni conciliación bancaria.
 
-## Producción futura
+## Próximos bloques
 
-Django, DRF, PostgreSQL, JWT, organizaciones, membresías, RBAC servidor, auditoría transaccional, idempotencia, control optimista, constraints, almacenamiento privado, import jobs, backups automáticos cifrados, restauraciones probadas, observabilidad, privacidad, pagos e integración tributaria.
+1. desplegar Django y PostgreSQL bajo HTTPS;
+2. restringir CORS y CSP a hosts exactos;
+3. ejecutar migraciones y preparar cuentas piloto;
+4. conectar lectura de catálogo;
+5. conectar creación y consulta de pedidos;
+6. conectar inventario, pagos, fiados y cierre;
+7. probar dos sesiones simultáneas;
+8. validar presencialmente con Camila y Carmelo.
+
+## Documentación relevante
+
+- `docs/MVP_STATUS.md`
+- `docs/API_BRIDGE.md`
+- `docs/KERNEL_MIGRATION_BRIDGE.md`
+- `docs/LOCAL_CONTINUITY.md`
+- `docs/DATA_INTEGRITY.md`
+- `backend/README.md`
 
 ## Referencia de reutilización
 
