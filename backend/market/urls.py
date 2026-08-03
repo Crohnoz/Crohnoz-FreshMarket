@@ -1,6 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from .inventory_api import InventoryMovementViewSet
 from .views import (
     AuditEventViewSet,
     ConnectionSummaryView,
@@ -18,6 +19,7 @@ router = DefaultRouter()
 router.register("organizations", OrganizationViewSet, basename="organization")
 router.register("products", ProductViewSet, basename="product")
 router.register("inventory-lots", InventoryLotViewSet, basename="inventory-lot")
+router.register("inventory-movements", InventoryMovementViewSet, basename="inventory-movement")
 router.register("orders", OrderViewSet, basename="order")
 router.register("audit-events", AuditEventViewSet, basename="audit-event")
 

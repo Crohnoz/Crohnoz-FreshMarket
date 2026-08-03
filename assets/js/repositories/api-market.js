@@ -1,5 +1,5 @@
 import { ApiError, apiRequest, connectionState } from "../core/connection.js";
-import { normalizeRemoteLot } from "../domain/remote-inventory.js";
+import { normalizeRemoteLot, normalizeRemoteMovement } from "../domain/remote-inventory.js";
 import { normalizeRemoteOrder, normalizeRemoteProduct, unwrapPaginated } from "../domain/remote-orders.js";
 
 function requireConnected() {
@@ -46,6 +46,35 @@ export async function receiveRemoteLot(payload, { idempotencyKey } = {}) {
     headers: { "Idempotency-Key": String(idempotencyKey ?? "") },
     timeoutMs: 18000,
   }));
+}
+
+export async function listRemoteInventoryMovements({ lot = "", product = "", movementType = "" } = {}) {
+  const query = {};
+  if (lot) query.lot = lot;
+  if (product) query.product = product;
+  if (movementType) query.movement_type = movementType;
+  const records = await fetchAllPages("inventory-movements", query);
+  return records.map(normalizeRemoteMovement);
+}
+
+export async function createRemoteInventoryMovement(lot, payload, { idempotencyKey } = {}) {
+  requireConnected();
+  if (!lot?.id || !Number.isInteger(Number(lot.version))) {
+    throw new ApiError("El lote remoto no contiene una versión válida. Actualiza la pantalla.", { code: "invalid_lot_version" });
+  }
+  const response = await apiRequest("inventory-movements/", {
+    method: "POST",
+    body: payload,
+    headers: {
+      "If-Match": String(lot.version),
+      "Idempotency-Key": String(idempotencyKey ?? ""),
+    },
+    timeoutMs: 18000,
+  });
+  return {
+    lot: normalizeRemoteLot(response?.lot),
+    movement: normalizeRemoteMovement(response?.movement),
+  };
 }
 
 export async function listRemoteOrders({ status = "" } = {}) {

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from rest_framework import serializers
 
-from .models import AuditEvent, InventoryLot, Membership, Order, OrderItem, Organization, Product
+from .models import AuditEvent, InventoryLot, InventoryMovement, Membership, Order, OrderItem, Organization, Product
 from .services import recalculate_order_total
 
 
@@ -39,14 +39,15 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class InventoryLotSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sale_unit = serializers.CharField(source="product.sale_unit", read_only=True)
 
     class Meta:
         model = InventoryLot
         fields = [
-            "id", "product", "product_name", "received_at", "best_before", "quantity_received",
+            "id", "product", "product_name", "product_sale_unit", "received_at", "best_before", "quantity_received",
             "quantity_available", "unit_cost", "quality", "status", "notes", "created_at", "updated_at", "version",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "version"]
+        read_only_fields = ["id", "product_name", "product_sale_unit", "created_at", "updated_at", "version"]
 
     def validate_product(self, product):
         organization = self.context["organization"]
@@ -68,6 +69,22 @@ class InventoryLotSerializer(serializers.ModelSerializer):
         if received_at and best_before and best_before < received_at:
             raise serializers.ValidationError({"best_before": "La fecha preferente no puede ser anterior a la recepción."})
         return attrs
+
+
+class InventoryMovementSerializer(serializers.ModelSerializer):
+    product = serializers.UUIDField(source="lot.product_id", read_only=True)
+    product_name = serializers.CharField(source="lot.product.name", read_only=True)
+    product_sale_unit = serializers.CharField(source="lot.product.sale_unit", read_only=True)
+    created_by = UserSummarySerializer(read_only=True)
+
+    class Meta:
+        model = InventoryMovement
+        fields = [
+            "id", "lot", "product", "product_name", "product_sale_unit", "movement_type",
+            "quantity_delta", "quantity_before", "quantity_after", "reason", "reference",
+            "idempotency_key", "created_by", "created_at", "lot_version",
+        ]
+        read_only_fields = fields
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

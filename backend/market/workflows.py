@@ -8,7 +8,7 @@ from django.db import transaction
 from rest_framework import serializers, status
 from rest_framework.exceptions import APIException, ValidationError
 
-from .models import AuditEvent, InventoryLot, Order, Organization, Product
+from .models import AuditEvent, InventoryLot, InventoryMovement, Order, Organization, Product
 from .services import recalculate_order_total, record_audit_event
 
 
@@ -36,12 +36,12 @@ def require_idempotency_key(request) -> str:
     return key
 
 
-def require_if_match(request, current_version: int) -> None:
+def require_if_match(request, current_version: int, entity_label: str = "registro") -> None:
     expected = str(request.headers.get("If-Match", "")).strip().strip('"')
     if not expected:
-        raise ValidationError({"if_match": "Actualiza la pantalla antes de continuar; falta la versión del pedido."})
+        raise ValidationError({"if_match": f"Actualiza la pantalla antes de continuar; falta la versión del {entity_label}."})
     if expected != str(current_version):
-        raise WorkflowConflict("El pedido cambió. Actualiza la pantalla antes de guardar nuevamente.", code="stale_order")
+        raise WorkflowConflict(f"El {entity_label} cambió. Actualiza la pantalla antes de guardar nuevamente.", code=f"stale_{entity_label}")
 
 
 def _find_idempotent_event(*, organization, action: str, key: str) -> AuditEvent | None:
@@ -83,6 +83,9 @@ class InventoryReceptionSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs.get("best_before") and attrs["best_before"] < attrs["received_at"]:
             raise serializers.ValidationError({"best_before": "La fecha preferente no puede ser anterior a la recepción."})
+        quantity = attrs["quantity_received"]
+        if attrs["product"].sale_unit != Product.SaleUnit.KILOGRAM and quantity != quantity.to_integral_value():
+            raise serializers.ValidationError({"quantity_received": "Los productos por unidad o paquete requieren cantidades enteras."})
         return attrs
 
 
@@ -149,6 +152,134 @@ def receive_inventory(*, organization, actor, validated_data: dict, idempotency_
         return lot, False
 
 
+class InventoryQuantityMovementSerializer(serializers.Serializer):
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+    reason = serializers.CharField(min_length=3, max_length=240, trim_whitespace=True)
+    reference = serializers.CharField(max_length=120, required=False, allow_blank=True, default="", trim_whitespace=True)
+
+
+class InventoryAdjustmentSerializer(serializers.Serializer):
+    quantity_available = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0"))
+    reason = serializers.CharField(min_length=3, max_length=240, trim_whitespace=True)
+    reference = serializers.CharField(max_length=120, required=False, allow_blank=True, default="", trim_whitespace=True)
+
+
+def _validate_whole_inventory_quantity(lot: InventoryLot, value: Decimal, field: str) -> None:
+    if lot.product.sale_unit != Product.SaleUnit.KILOGRAM and value != value.to_integral_value():
+        raise ValidationError({field: f"La cantidad de {lot.product.name} debe ser un número entero."})
+
+
+def inventory_movement_signature(*, lot: InventoryLot, movement_type: str, requested_value: Decimal, reason: str, reference: str) -> str:
+    return canonical_signature({
+        "lot_id": str(lot.pk),
+        "movement_type": movement_type,
+        "requested_value": canonical_decimal(requested_value),
+        "reason": reason,
+        "reference": reference,
+    })
+
+
+def apply_inventory_movement(*, lot: InventoryLot, actor, movement_type: str, validated_data: dict, request):
+    idempotency_key = require_idempotency_key(request)
+    value_field = "quantity_available" if movement_type == InventoryMovement.MovementType.ADJUSTMENT else "quantity"
+    requested_value = validated_data[value_field]
+    reason = validated_data["reason"]
+    reference = validated_data.get("reference", "")
+    signature = inventory_movement_signature(
+        lot=lot,
+        movement_type=movement_type,
+        requested_value=requested_value,
+        reason=reason,
+        reference=reference,
+    )
+
+    with transaction.atomic():
+        Organization.objects.select_for_update().get(pk=lot.organization_id)
+        locked = InventoryLot.objects.select_for_update().select_related("product").get(pk=lot.pk)
+        existing = InventoryMovement.objects.select_related("lot__product", "created_by").filter(
+            organization=locked.organization,
+            idempotency_key=idempotency_key,
+        ).first()
+        if existing is not None:
+            if existing.lot_id != locked.pk or existing.movement_type != movement_type:
+                raise WorkflowConflict("La clave de reintento ya fue usada en otro movimiento.", code="idempotency_conflict")
+            if existing.request_signature != signature:
+                raise WorkflowConflict("La clave de reintento ya fue usada con datos diferentes.", code="idempotency_conflict")
+            return locked, existing, True
+
+        require_if_match(request, locked.version, "lote")
+        if locked.status == InventoryLot.Status.DISCARDED:
+            raise WorkflowConflict("El lote está descartado y no admite nuevos movimientos.", code="discarded_lot")
+        _validate_whole_inventory_quantity(locked, requested_value, value_field)
+
+        before = locked.quantity_available
+        if movement_type == InventoryMovement.MovementType.ADJUSTMENT:
+            after = requested_value
+            if after > locked.quantity_received:
+                raise ValidationError({"quantity_available": "El saldo ajustado no puede superar lo originalmente recibido; registra una nueva recepción."})
+            delta = after - before
+            if delta == 0:
+                raise ValidationError({"quantity_available": "El nuevo saldo debe ser diferente del saldo actual."})
+        else:
+            if before <= 0:
+                raise WorkflowConflict("El lote está agotado y no tiene saldo disponible.", code="depleted_lot")
+            if movement_type == InventoryMovement.MovementType.CONSUMPTION and locked.quality == InventoryLot.Quality.DAMAGED:
+                raise ValidationError({"lot": "Un lote marcado como dañado no puede consumirse; registra merma o devolución."})
+            if requested_value > before:
+                raise ValidationError({"quantity": "La cantidad no puede superar el saldo disponible del lote."})
+            delta = -requested_value
+            after = before + delta
+
+        locked.quantity_available = after
+        locked.status = InventoryLot.Status.DEPLETED if after == 0 else InventoryLot.Status.ACTIVE
+        locked.version += 1
+        locked.full_clean()
+        locked.save(update_fields=["quantity_available", "status", "version", "updated_at"])
+
+        movement = InventoryMovement(
+            organization=locked.organization,
+            lot=locked,
+            movement_type=movement_type,
+            quantity_delta=delta,
+            quantity_before=before,
+            quantity_after=after,
+            reason=reason,
+            reference=reference,
+            idempotency_key=idempotency_key,
+            request_signature=signature,
+            created_by=actor,
+        )
+        movement.full_clean()
+        movement.save()
+
+        action = {
+            InventoryMovement.MovementType.CONSUMPTION: "inventorylot.consumed",
+            InventoryMovement.MovementType.WASTE: "inventorylot.wasted",
+            InventoryMovement.MovementType.ADJUSTMENT: "inventorylot.adjusted",
+            InventoryMovement.MovementType.SUPPLIER_RETURN: "inventorylot.returned_to_supplier",
+        }[movement_type]
+        record_audit_event(
+            organization=locked.organization,
+            actor=actor,
+            action=action,
+            entity_type=locked._meta.label_lower,
+            entity_id=str(locked.pk),
+            payload={
+                "movement_id": str(movement.pk),
+                "movement_type": movement_type,
+                "quantity_before": canonical_decimal(before),
+                "quantity_delta": canonical_decimal(delta),
+                "quantity_after": canonical_decimal(after),
+                "reason": reason,
+                "reference": reference,
+                "idempotency_key": idempotency_key,
+                "request_signature": signature,
+                "version": locked.version,
+            },
+        )
+        return locked, movement, False
+
+
 class WeighingLineSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     actual_quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
@@ -188,7 +319,7 @@ def transition_order(*, order: Order, actor, target_status: str, action: str, re
         if replay is not None:
             return locked, True
 
-        require_if_match(request, locked.version)
+        require_if_match(request, locked.version, "pedido")
         allowed_from = {
             Order.Status.PREPARING: Order.Status.CONFIRMED,
             Order.Status.READY: Order.Status.PREPARING,
@@ -239,7 +370,7 @@ def confirm_order_weighing(*, order: Order, actor, validated_data: dict, request
         if replay is not None:
             return locked, True
 
-        require_if_match(request, locked.version)
+        require_if_match(request, locked.version, "pedido")
         if locked.status != Order.Status.PREPARING:
             raise WorkflowConflict("Solo un pedido en preparación puede registrar peso real.", code="invalid_order_transition")
 

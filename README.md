@@ -4,10 +4,10 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 
 ## Estado
 
-**Piloto comercial con backend Django desplegable y operaciones remotas separadas.** La interfaz mantiene un modo local completo con datos ficticios. Django incorpora autenticación temporal, organizaciones, RBAC, catálogo, recepción de lotes, pedidos, preparación, idempotencia, control de versión y auditoría servidor. El Blueprint de hosting está preparado, pero la instancia pública todavía debe crearse y verificarse.
+**Piloto comercial con backend Django desplegable y operaciones remotas separadas.** La interfaz mantiene un modo local completo con datos ficticios. Django incorpora autenticación temporal, organizaciones, RBAC, catálogo, recepción y movimientos de lotes, pedidos, preparación, idempotencia, control de versión y auditoría servidor. El Blueprint de hosting está preparado, pero la instancia pública todavía debe crearse y verificarse.
 
-Versión actual: **0.8.0-pilot**.  
-Avance estimado del MVP real para Camila y Carmelo: **79%**.
+Versión actual: **0.9.0-pilot**.  
+Avance estimado de gestión del MVP real para Camila y Carmelo: **82%**.
 
 ## Páginas
 
@@ -17,7 +17,7 @@ Avance estimado del MVP real para Camila y Carmelo: **79%**.
 - `/cuentas.html`: fiados, abonos, operaciones rápidas y voz local.
 - `/cierre.html`: conciliación diaria de efectivo local.
 - `/inventario.html`: inventario perecible por lotes y prioridad FEFO local.
-- `/inventario-remoto.html`: recepción y consulta de lotes en Django.
+- `/inventario-remoto.html`: recepciones, saldos, movimientos FEFO e historial en Django.
 - `/compras.html`: proveedores, costos, recepción y precio sugerido local.
 - `/ventas.html`: confirmación, cobro, entrega y comprobante interno local.
 - `/pedidos-remotos.html`: catálogo, creación, preparación, cantidades reales y estado listo en Django.
@@ -65,16 +65,22 @@ La URL y el modo se guardan en `localStorage`. El token, la identidad y la organ
 
 La pantalla `/inventario-remoto`:
 
-- consulta catálogo y lotes de la organización autenticada;
-- registra producto, fechas, cantidad, costo, calidad y observaciones;
+- consulta catálogo, lotes y movimientos de la organización autenticada;
+- registra recepciones con producto, fechas, cantidad, costo, calidad y observaciones;
 - crea lotes activos con disponibilidad inicial igual a la recepción;
-- conserva la clave de reintento si la red falla;
-- devuelve el mismo lote ante un replay idéntico;
-- muestra riesgo por calidad y fecha preferente;
-- nunca escribe una recepción en el almacenamiento local;
-- no permite editar o eliminar lotes directamente.
+- registra consumo, merma y devolución a proveedor con rol operador;
+- restringe ajustes absolutos de conteo a `manager` y `owner`;
+- exige `If-Match` e `Idempotency-Key` para cada movimiento;
+- conserva la clave ante timeout y reproduce el mismo resultado sin duplicar;
+- registra saldo anterior, variación, saldo resultante, motivo, referencia y actor;
+- muestra un historial inmutable y filtrable;
+- marca el lote FEFO prioritario y bloquea el consumo de un lote posterior;
+- omite lotes dañados de la prioridad de consumo;
+- exige cantidades enteras para productos por unidad o paquete;
+- nunca escribe recepciones o movimientos en el almacenamiento local;
+- no permite editar ni eliminar directamente lotes o movimientos.
 
-Los ajustes, mermas y devoluciones deberán implementarse como movimientos trazables en un incremento posterior.
+El consumo sigue registrándose contra un lote explícito. El servidor aplica la prioridad FEFO, pero todavía no reparte automáticamente una sola solicitud entre varios lotes cuando el primero no alcanza.
 
 ### Pedidos y preparación remotos
 
@@ -110,11 +116,13 @@ El directorio `backend/` contiene:
 - roles `owner`, `manager`, `operator` y `viewer`;
 - productos y filtro de activos;
 - recepción idempotente de lotes;
+- libro append-only de movimientos de inventario;
+- prioridad FEFO transaccional para consumo;
 - pedidos e ítems con unidad de venta;
 - transiciones `confirmed → preparing → ready`;
 - pesaje completo y recálculo servidor;
 - idempotencia por organización y entidad;
-- control optimista obligatorio en transiciones;
+- control optimista obligatorio en mutaciones operacionales;
 - auditoría append-only con HMAC-SHA256;
 - tokens temporales con vencimiento;
 - Docker y Docker Compose;
@@ -206,7 +214,7 @@ Las instrucciones completas están en `backend/README.md`, `docs/API_BRIDGE.md` 
 - contraseñas piloto solicitadas de forma segura;
 - CORS limitado al frontend productivo.
 
-El Blueprint todavía no equivale a un despliegue verificado. Después de crear la instancia deben comprobarse health, login, dos sesiones, recepción, preparación, idempotencia, versiones, logs y backups antes de ingresar datos operacionales.
+El Blueprint todavía no equivale a un despliegue verificado. Después de crear la instancia deben comprobarse health, login, dos sesiones, recepción, movimientos FEFO, preparación, idempotencia, versiones, logs y backups antes de ingresar datos operacionales.
 
 ## Pruebas
 
@@ -231,7 +239,7 @@ La CI ejecuta frontend y backend por separado.
 - Solo `/inventario-remoto` y `/pedidos-remotos` operan mediante Django.
 - Los flujos locales permanecen separados y no se sincronizan automáticamente.
 - No existe cola offline ni resolución bidireccional de conflictos.
-- No existe aún descuento FEFO remoto, cobro, fiado, entrega final ni cierre remoto.
+- No existe todavía asignación automática de una salida entre varios lotes, cobro, fiado, entrega final ni cierre remoto.
 - El token temporal no reemplaza JWT rotatorio, OIDC ni recuperación de cuenta.
 - Los respaldos locales y paquetes Kernel no están cifrados.
 - El CSP permite temporalmente conexiones HTTPS amplias y debe restringirse al host definitivo de la API.
@@ -245,8 +253,8 @@ La CI ejecuta frontend y backend por separado.
 
 1. crear y verificar la instancia Django/PostgreSQL desde el Blueprint;
 2. restringir CSP al hostname exacto resultante;
-3. probar recepción y preparación con Camila y Carmelo en dos sesiones;
-4. implementar movimientos de inventario y descuento FEFO remoto;
+3. probar recepción, movimientos y preparación con Camila y Carmelo en dos sesiones;
+4. integrar consumo de inventario con pedidos y reparto automático entre lotes FEFO;
 5. conectar cobro, entrega, pagos y fiados;
 6. conectar cierre diario y respaldos del servidor;
 7. agregar cola offline para mutaciones compatibles;

@@ -49,7 +49,7 @@ test("connection state is mounted globally and remains explicit", async () => {
   const guided = await text("assets/js/core/guided-shell.js");
   const tasks = await text("assets/js/domain/operator-tasks.js");
   assert.match(config, /connection-shell\.js/);
-  assert.match(config, /0\.8\.0-pilot/);
+  assert.match(config, /0\.9\.0-pilot/);
   assert.match(shell, /Modo local/);
   assert.match(shell, /API configurada, sin sesión/);
   assert.match(shell, /sesión protegida en esta pestaña/);
@@ -91,7 +91,7 @@ test("connection assets pass syntax checks and are cached offline", async () => 
   ]) execFileSync(process.execPath, ["--check", fileURLToPath(new URL(`../${path}`, import.meta.url))]);
   const worker = await text("sw.js");
   const netlify = await text("netlify.toml");
-  assert.match(worker, /crohnoz-fresh-market-v10/);
+  assert.match(worker, /crohnoz-fresh-market-v11/);
   assert.match(worker, /conexion\.html/);
   assert.match(worker, /pedidos-remotos\.html/);
   assert.match(worker, /inventario-remoto\.html/);

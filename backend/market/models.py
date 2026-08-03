@@ -121,6 +121,56 @@ class InventoryLot(UUIDTimestampedModel):
         return f"{self.product} · {self.received_at}"
 
 
+class InventoryMovement(UUIDTimestampedModel):
+    class MovementType(models.TextChoices):
+        CONSUMPTION = "consumption", "Consumo"
+        WASTE = "waste", "Merma"
+        ADJUSTMENT = "adjustment", "Ajuste"
+        SUPPLIER_RETURN = "supplier_return", "Devolución a proveedor"
+
+    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="inventory_movements")
+    lot = models.ForeignKey(InventoryLot, on_delete=models.PROTECT, related_name="movements")
+    lot_version = models.PositiveIntegerField(default=1)
+    movement_type = models.CharField(max_length=24, choices=MovementType.choices)
+    quantity_delta = models.DecimalField(max_digits=12, decimal_places=3)
+    quantity_before = models.DecimalField(max_digits=12, decimal_places=3)
+    quantity_after = models.DecimalField(max_digits=12, decimal_places=3)
+    reason = models.CharField(max_length=240)
+    reference = models.CharField(max_length=120, blank=True)
+    idempotency_key = models.CharField(max_length=96)
+    request_signature = models.CharField(max_length=64)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="market_inventory_movements")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["organization", "idempotency_key"], name="uniq_inventory_movement_idempotency_per_org"),
+            models.CheckConstraint(condition=~Q(quantity_delta=0), name="inventory_movement_delta_nonzero"),
+            models.CheckConstraint(condition=Q(quantity_before__gte=0), name="inventory_movement_before_nonnegative"),
+            models.CheckConstraint(condition=Q(quantity_after__gte=0), name="inventory_movement_after_nonnegative"),
+        ]
+        ordering = ["-created_at", "-id"]
+
+    def clean(self) -> None:
+        super().clean()
+        if self.lot_id and self.organization_id != self.lot.organization_id:
+            raise ValidationError({"lot": "El lote debe pertenecer a la misma organización."})
+        if self.quantity_after != self.quantity_before + self.quantity_delta:
+            raise ValidationError({"quantity_after": "El saldo resultante no coincide con el movimiento."})
+
+    def save(self, *args, **kwargs) -> None:
+        if self.pk and InventoryMovement.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Los movimientos de inventario son inmutables.")
+        if self._state.adding and self.lot_id:
+            self.lot_version = self.lot.version
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Los movimientos de inventario no se pueden eliminar.")
+
+    def __str__(self) -> str:
+        return f"{self.lot} · {self.movement_type} · {self.quantity_delta}"
+
+
 class Order(UUIDTimestampedModel):
     class Status(models.TextChoices):
         DRAFT = "draft", "Borrador"
