@@ -5,14 +5,33 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
   createRemoteOrderPayload,
+  createRemoteWeighingPayload,
   generateRemotePublicId,
   normalizeRemoteOrder,
   normalizeRemoteProduct,
+  remoteOrderCanBeReady,
   unwrapPaginated,
 } from "../assets/js/domain/remote-orders.js";
 
 async function text(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
+}
+
+function preparingOrder(overrides = {}) {
+  return {
+    id: "order-1",
+    publicId: "FM-API-1",
+    status: "preparing",
+    version: 2,
+    items: [{
+      id: "line-1",
+      productName: "Palta",
+      productSaleUnit: "kg",
+      requestedQuantity: 1.25,
+      actualQuantity: null,
+    }],
+    ...overrides,
+  };
 }
 
 test("remote collections and decimals normalize API payloads", () => {
@@ -36,10 +55,12 @@ test("remote collections and decimals normalize API payloads", () => {
     status: "confirmed",
     payment_method: "pending",
     total: "5625.00",
+    version: 3,
     items: [{
       id: "line-1",
       product: "product-1",
       product_name: "Palta",
+      product_sale_unit: "kg",
       requested_quantity: "1.250",
       actual_quantity: null,
       unit_price: "4500.00",
@@ -47,10 +68,12 @@ test("remote collections and decimals normalize API payloads", () => {
     }],
   });
   assert.equal(order.total, 5625);
+  assert.equal(order.version, 3);
   assert.equal(order.items[0].requestedQuantity, 1.25);
+  assert.equal(order.items[0].productSaleUnit, "kg");
 });
 
-test("remote order payload requires customer, idempotency and positive lines", () => {
+test("remote order payload requires customer, idempotency and unique positive lines", () => {
   const payload = createRemoteOrderPayload({
     customerName: "Cliente piloto",
     publicId: "FM-API-20260802-001",
@@ -67,6 +90,29 @@ test("remote order payload requires customer, idempotency and positive lines", (
     idempotencyKey: "short",
     lines: [],
   }), /cliente válido|clave segura|al menos un producto/);
+  assert.throws(() => createRemoteOrderPayload({
+    customerName: "Cliente",
+    publicId: "FM-2",
+    idempotencyKey: "safe-request-key",
+    lines: [
+      { productId: "product-1", quantity: 1, unitPrice: 1000 },
+      { productId: "product-1", quantity: 2, unitPrice: 1000 },
+    ],
+  }), /una sola vez/);
+});
+
+test("remote weighing requires every current line and respects units", () => {
+  const order = preparingOrder();
+  assert.deepEqual(createRemoteWeighingPayload(order, [{ id: "line-1", actualQuantity: "1.300" }]), [
+    { id: "line-1", actual_quantity: 1.3 },
+  ]);
+  assert.equal(remoteOrderCanBeReady(order), false);
+  assert.equal(remoteOrderCanBeReady({ ...order, items: [{ ...order.items[0], actualQuantity: 1.3 }] }), true);
+  assert.throws(() => createRemoteWeighingPayload(order, []), /exactamente todas/);
+  const unitOrder = preparingOrder({
+    items: [{ ...order.items[0], productName: "Lechuga", productSaleUnit: "unit" }],
+  });
+  assert.throws(() => createRemoteWeighingPayload(unitOrder, [{ id: "line-1", actualQuantity: "1.5" }]), /número entero/);
 });
 
 test("remote public identifiers remain operator readable", () => {
@@ -74,18 +120,24 @@ test("remote public identifiers remain operator readable", () => {
   assert.equal(generateRemotePublicId(date, "abc-123"), "FM-API-20260802-224005-ABC123");
 });
 
-test("remote workspace is explicit and never silently falls back to local data", async () => {
+test("remote workspace exposes explicit versioned workflow without local fallback", async () => {
   const html = await text("pedidos-remotos.html");
   const app = await text("assets/js/remote-orders/app.js");
   const repository = await text("assets/js/repositories/api-market.js");
   for (const id of [
     "remote-blocker", "remote-workspace", "remote-products-body", "remote-order-form",
-    "create-remote-order", "remote-orders-body", "refresh-remote",
+    "create-remote-order", "remote-orders-body", "refresh-remote", "remote-weighing-dialog",
+    "remote-weighing-form", "remote-weighing-lines", "save-remote-weighing",
   ]) assert.match(html, new RegExp(`id=["']${id}["']`));
-  assert.match(html, /Nunca cambia silenciosamente a datos locales/i);
+  assert.match(html, /controla la versión del pedido/i);
   assert.match(repository, /requireConnected/);
-  assert.match(repository, /apiRequest\("orders\//);
+  assert.match(repository, /If-Match/);
+  assert.match(repository, /Idempotency-Key/);
+  assert.match(repository, /start-preparing/);
+  assert.match(repository, /confirm-weighing/);
+  assert.match(repository, /mark-ready/);
   assert.doesNotMatch(repository, /localStorage|readStorage|writeStorage/);
+  assert.match(app, /workflowKeys/);
   assert.match(app, /La clave de reintento se conserva/);
 });
 
