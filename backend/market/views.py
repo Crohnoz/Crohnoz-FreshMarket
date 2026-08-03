@@ -32,7 +32,6 @@ from .services import record_audit_event
 from .workflows import (
     InventoryReceptionSerializer,
     OrderWeighingSerializer,
-    WorkflowConflict,
     confirm_order_weighing,
     receive_inventory,
     transition_order,
@@ -86,7 +85,7 @@ def request_order_signature(payload) -> dict:
             {
                 "product": str(item.get("product", "")),
                 "requested_quantity": canonical_decimal(item.get("requested_quantity")),
-                "actual_quantity": canonical_decimal(item.get("actual_quantity")),
+                "actual_quantity": None,
                 "unit_price": canonical_decimal(item.get("unit_price")),
             }
             for item in (payload.get("items") or [])
@@ -122,7 +121,7 @@ class HealthView(APIView):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
-        return Response({"status": "ok", "service": "crohnoz-fresh-market-api", "version": "0.4.0-mvp"})
+        return Response({"status": "ok", "service": "crohnoz-fresh-market-api", "version": "0.3.0-mvp"})
 
 
 class LoginView(APIView):
@@ -313,6 +312,8 @@ class InventoryLotViewSet(OrganizationScopedViewSet):
         return queryset
 
     def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         raise MethodNotAllowed("POST", detail="Usa /inventory-lots/receive/ para registrar una recepción trazable.")
 
     def update(self, request, *args, **kwargs):
@@ -386,6 +387,8 @@ class OrderViewSet(OrganizationScopedViewSet):
         if len(idempotency_key) < 8 or len(idempotency_key) > 96:
             raise ValidationError({"idempotency_key": "El pedido requiere una clave de reintento de 8 a 96 caracteres."})
         items = request.data.get("items") or []
+        if any(item.get("actual_quantity") not in (None, "") for item in items):
+            raise ValidationError({"items": "La cantidad real se registra únicamente durante la preparación."})
         product_ids = [str(item.get("product", "")) for item in items]
         if len(product_ids) != len(set(product_ids)):
             raise ValidationError({"items": "Cada producto debe aparecer una sola vez en el pedido."})
