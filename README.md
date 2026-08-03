@@ -4,10 +4,10 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 
 ## Estado
 
-**Piloto comercial con backend Django desplegable y primera operación remota separada.** La interfaz mantiene un modo local completo con datos ficticios. Django incorpora autenticación temporal, organizaciones, RBAC, catálogo, lotes, pedidos, idempotencia y auditoría servidor. El Blueprint de hosting está preparado, pero la instancia pública todavía debe crearse y verificarse.
+**Piloto comercial con backend Django desplegable y operaciones remotas separadas.** La interfaz mantiene un modo local completo con datos ficticios. Django incorpora autenticación temporal, organizaciones, RBAC, catálogo, recepción de lotes, pedidos, preparación, idempotencia, control de versión y auditoría servidor. El Blueprint de hosting está preparado, pero la instancia pública todavía debe crearse y verificarse.
 
-Versión actual: **0.7.0-pilot**.  
-Avance estimado del MVP real para Camila y Carmelo: **74%**.
+Versión actual: **0.8.0-pilot**.  
+Avance estimado del MVP real para Camila y Carmelo: **79%**.
 
 ## Páginas
 
@@ -17,9 +17,10 @@ Avance estimado del MVP real para Camila y Carmelo: **74%**.
 - `/cuentas.html`: fiados, abonos, operaciones rápidas y voz local.
 - `/cierre.html`: conciliación diaria de efectivo local.
 - `/inventario.html`: inventario perecible por lotes y prioridad FEFO local.
+- `/inventario-remoto.html`: recepción y consulta de lotes en Django.
 - `/compras.html`: proveedores, costos, recepción y precio sugerido local.
 - `/ventas.html`: confirmación, cobro, entrega y comprobante interno local.
-- `/pedidos-remotos.html`: catálogo autenticado y creación/listado de pedidos en Django.
+- `/pedidos-remotos.html`: catálogo, creación, preparación, cantidades reales y estado listo en Django.
 - `/asistente.html`: contexto operacional y propuestas revisables.
 - `/integridad.html`: diagnóstico de IDs, referencias, montos, saldos y fechas.
 - `/auditoria.html`: cadena local de cambios y exportación para Crohnoz Kernel.
@@ -28,7 +29,7 @@ Avance estimado del MVP real para Camila y Carmelo: **74%**.
 - `/configurador.html`: identidad, respaldo, restauración y restablecimiento demo.
 - `/scanner-lab.html`: laboratorio HID para lector de códigos.
 
-Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/pedidos-remotos`, `/asistente`, `/integridad`, `/auditoria`, `/conexion`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
+Alias Netlify: `/operar`, `/inventario`, `/inventario-remoto`, `/compras`, `/ventas`, `/pedidos-remotos`, `/asistente`, `/integridad`, `/auditoria`, `/conexion`, `/validacion`, `/cierre`, `/dashboard`, `/cuentas`, `/configurar` y `/scanner`.
 
 ## Capacidades principales
 
@@ -40,7 +41,8 @@ Alias Netlify: `/operar`, `/inventario`, `/compras`, `/ventas`, `/pedidos-remoto
 - tareas frecuentes separadas de herramientas secundarias;
 - búsqueda y filtros por área;
 - checklist de identidad, inventario, operación, integridad, conexión y respaldo;
-- regreso seguro a la última pantalla visitada, incluida la operación remota;
+- destinos remotos cuando existe una sesión conectada;
+- regreso seguro a la última pantalla visitada;
 - navegación móvil enfocada en acciones cotidianas;
 - franja global que distingue modo local, API configurada y sesión conectada.
 
@@ -59,7 +61,22 @@ La pantalla `/conexion` permite:
 
 La URL y el modo se guardan en `localStorage`. El token, la identidad y la organización activa se guardan únicamente en `sessionStorage`, quedan fuera de los respaldos y vencen en el servidor.
 
-### Catálogo y pedidos remotos
+### Inventario remoto
+
+La pantalla `/inventario-remoto`:
+
+- consulta catálogo y lotes de la organización autenticada;
+- registra producto, fechas, cantidad, costo, calidad y observaciones;
+- crea lotes activos con disponibilidad inicial igual a la recepción;
+- conserva la clave de reintento si la red falla;
+- devuelve el mismo lote ante un replay idéntico;
+- muestra riesgo por calidad y fecha preferente;
+- nunca escribe una recepción en el almacenamiento local;
+- no permite editar o eliminar lotes directamente.
+
+Los ajustes, mermas y devoluciones deberán implementarse como movimientos trazables en un incremento posterior.
+
+### Pedidos y preparación remotos
 
 La pantalla `/pedidos-remotos` trabaja solo con una sesión conectada:
 
@@ -67,13 +84,18 @@ La pantalla `/pedidos-remotos` trabaja solo con una sesión conectada:
 - pagina colecciones remotas con límite defensivo;
 - busca por nombre, SKU o categoría;
 - crea pedidos con cantidades y precios del catálogo servidor;
-- lista pedidos recientes;
-- conserva la clave de reintento cuando hay un error de red;
-- evita duplicados mediante `idempotency_key`;
-- rechaza reutilizar una clave con un pedido diferente;
+- fuerza estado, medio de pago y origen seguros en el backend;
+- evita productos duplicados y cantidades reales prellenadas;
+- lista pedidos recientes y sus líneas;
+- inicia preparación mediante una transición explícita;
+- registra exactamente todas las cantidades reales;
+- recalcula líneas y total en Django;
+- marca listo solo cuando todas las líneas están completas;
+- usa `If-Match` para detectar versiones obsoletas;
+- conserva claves de reintento por pedido y acción;
 - nunca cambia silenciosamente a datos locales.
 
-Esta superficie es deliberadamente separada. Las pantallas históricas continúan locales hasta que cada dominio tenga endpoints, pruebas, rollback y manejo offline definidos.
+Las pantallas históricas continúan locales hasta que cada dominio tenga endpoints, pruebas, rollback y manejo offline definidos.
 
 ### Backend Django
 
@@ -87,10 +109,12 @@ El directorio `backend/` contiene:
 - organizaciones y membresías;
 - roles `owner`, `manager`, `operator` y `viewer`;
 - productos y filtro de activos;
-- lotes perecibles;
-- pedidos e ítems;
-- idempotencia por organización con replay seguro;
-- control optimista;
+- recepción idempotente de lotes;
+- pedidos e ítems con unidad de venta;
+- transiciones `confirmed → preparing → ready`;
+- pesaje completo y recálculo servidor;
+- idempotencia por organización y entidad;
+- control optimista obligatorio en transiciones;
 - auditoría append-only con HMAC-SHA256;
 - tokens temporales con vencimiento;
 - Docker y Docker Compose;
@@ -135,10 +159,10 @@ La pantalla de auditoría permite verificar la cadena, filtrar eventos y descarg
 - análisis semántico antes de restaurar;
 - bloqueo ante errores críticos;
 - confirmación antes de reemplazar datos;
-- caché offline de superficies locales y del shell de pedidos remotos;
+- caché offline de superficies locales y shells remotos;
 - rollback explícito desde modo API a modo local.
 
-La pantalla remota puede abrirse desde caché, pero las consultas y escrituras requieren red y backend disponible. No existe una cola offline.
+Las pantallas remotas pueden abrirse desde caché, pero sus consultas y escrituras requieren red y backend disponible. No existe una cola offline.
 
 ## Ejecutar el frontend
 
@@ -165,7 +189,7 @@ Después abrir `http://localhost:8000/conexion.html`, usar como base API:
 http://localhost:8001/api/v1
 ```
 
-e ingresar a `http://localhost:8000/pedidos-remotos.html`.
+e ingresar a `http://localhost:8000/inventario-remoto.html` o `http://localhost:8000/pedidos-remotos.html`.
 
 Las instrucciones completas están en `backend/README.md`, `docs/API_BRIDGE.md` y `docs/REMOTE_OPERATIONS.md`.
 
@@ -176,13 +200,13 @@ Las instrucciones completas están en `backend/README.md`, `docs/API_BRIDGE.md` 
 - un servicio web Python para Django;
 - una base PostgreSQL exclusiva de Fresh Market;
 - health check;
-- migraciones previas al despliegue;
+- migraciones durante el build compatible con el plan declarado;
 - carga inicial del piloto;
 - secretos generados;
 - contraseñas piloto solicitadas de forma segura;
 - CORS limitado al frontend productivo.
 
-El Blueprint todavía no equivale a un despliegue verificado. Después de crear la instancia deben comprobarse health, login, dos sesiones, catálogo, idempotencia, logs y backups antes de ingresar datos operacionales.
+El Blueprint todavía no equivale a un despliegue verificado. Después de crear la instancia deben comprobarse health, login, dos sesiones, recepción, preparación, idempotencia, versiones, logs y backups antes de ingresar datos operacionales.
 
 ## Pruebas
 
@@ -204,9 +228,10 @@ La CI ejecuta frontend y backend por separado.
 - No ingresar datos personales, clínicos, financieros o sensibles durante esta fase.
 - El backend público todavía no ha sido creado ni verificado.
 - Una sesión conectada no significa que todas las pantallas estén sincronizadas.
-- Solo `/pedidos-remotos` opera catálogo y pedidos mediante Django.
-- Los demás flujos operacionales todavía escriben en `localStorage`.
-- No existe sincronización bidireccional ni cola offline.
+- Solo `/inventario-remoto` y `/pedidos-remotos` operan mediante Django.
+- Los flujos locales permanecen separados y no se sincronizan automáticamente.
+- No existe cola offline ni resolución bidireccional de conflictos.
+- No existe aún descuento FEFO remoto, cobro, fiado, entrega final ni cierre remoto.
 - El token temporal no reemplaza JWT rotatorio, OIDC ni recuperación de cuenta.
 - Los respaldos locales y paquetes Kernel no están cifrados.
 - El CSP permite temporalmente conexiones HTTPS amplias y debe restringirse al host definitivo de la API.
@@ -220,11 +245,11 @@ La CI ejecuta frontend y backend por separado.
 
 1. crear y verificar la instancia Django/PostgreSQL desde el Blueprint;
 2. restringir CSP al hostname exacto resultante;
-3. probar login y pedidos con Camila y Carmelo en dos sesiones;
-4. conectar actualización de estado y pesaje de pedidos;
-5. conectar inventario por lotes;
-6. conectar pagos, fiados y cierre;
-7. agregar cola offline e idempotencia a mutaciones compatibles;
+3. probar recepción y preparación con Camila y Carmelo en dos sesiones;
+4. implementar movimientos de inventario y descuento FEFO remoto;
+5. conectar cobro, entrega, pagos y fiados;
+6. conectar cierre diario y respaldos del servidor;
+7. agregar cola offline para mutaciones compatibles;
 8. validar presencialmente con usuarios de baja familiaridad digital.
 
 ## Documentación relevante
