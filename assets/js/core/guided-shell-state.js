@@ -14,6 +14,7 @@ function normalizedPage() {
     cuentas: "cuentas.html",
     cierre: "cierre.html",
     inventario: "inventario.html",
+    "inventario-remoto": "inventario-remoto.html",
     compras: "compras.html",
     ventas: "ventas.html",
     "pedidos-remotos": "pedidos-remotos.html",

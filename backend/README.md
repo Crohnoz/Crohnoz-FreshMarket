@@ -11,9 +11,9 @@ Backend ejecutable para validar Crohnoz Fresh Market con Camila y Carmelo sin re
 - Organización explícita mediante `X-Organization-ID`.
 - Roles `owner`, `manager`, `operator` y `viewer`.
 - Auditoría servidor append-only con cadena HMAC-SHA256.
-- Control optimista opcional mediante `If-Match: <version>`.
+- Control optimista obligatorio mediante `If-Match: <version>` en transiciones operacionales.
 - Token temporal del piloto con vencimiento servidor configurable, por defecto 12 horas.
-- Pedidos con clave de idempotencia por organización.
+- Idempotencia en pedidos, recepciones y cambios de estado.
 
 La autenticación por token sigue siendo transitoria. Antes de una apertura comercial debe migrarse a JWT rotatorio u OIDC, agregar recuperación de cuenta, MFA opcional y una política de sesiones formal.
 
@@ -68,7 +68,8 @@ docker compose up --build
 API local: `http://localhost:8001/api/v1/health/`  
 Admin: `http://localhost:8001/admin/`  
 Pantalla de conexión: `http://localhost:8000/conexion.html`  
-Operación remota: `http://localhost:8000/pedidos-remotos.html`
+Inventario remoto: `http://localhost:8000/inventario-remoto.html`  
+Pedidos remotos: `http://localhost:8000/pedidos-remotos.html`
 
 ## Blueprint administrado
 
@@ -78,7 +79,7 @@ El archivo `render.yaml` de la raíz declara recursos aislados para este product
 - base `crohnoz-fresh-market-db`;
 - PostgreSQL sin acceso público directo;
 - health check `/api/v1/health/`;
-- migraciones antes de cada despliegue;
+- migraciones durante el build compatible con el plan declarado;
 - carga inicial mediante `seed_pilot` solo en la primera instancia;
 - secretos generados para Django y auditoría;
 - contraseñas de Camila y Carmelo solicitadas al crear el Blueprint.
@@ -104,8 +105,8 @@ No se debe ejecutar `seed_pilot` con claves enviadas por correo, chat público, 
 4. Ingresar con la cuenta individual.
 5. Elegir la organización si la cuenta posee más de una membresía.
 6. Verificar rol, conteos y catálogo del servidor.
-7. Abrir `/pedidos-remotos.html`.
-8. Consultar productos activos, crear un pedido ficticio y comprobar que aparezca en el listado remoto.
+7. Abrir `/inventario-remoto.html` para registrar una recepción ficticia.
+8. Abrir `/pedidos-remotos.html` para crear, preparar, pesar y marcar listo un pedido.
 
 El frontend guarda únicamente la URL y el modo local/API en `localStorage`. El token, la identidad y la organización activa viven en `sessionStorage`, no entran en respaldos y desaparecen al cerrar sesión, cerrar la pestaña o detectar el vencimiento informado por el servidor.
 
@@ -118,20 +119,57 @@ El frontend guarda únicamente la URL y el modo local/API en `localStorage`. El 
 - `GET /api/v1/connection-summary/`
 - `GET /api/v1/organizations/`
 - `GET /api/v1/products/?is_active=true`
-- `/api/v1/inventory-lots/`
+- `GET /api/v1/inventory-lots/`
+- `POST /api/v1/inventory-lots/receive/`
 - `GET` y `POST /api/v1/orders/`
+- `POST /api/v1/orders/{id}/start-preparing/`
+- `POST /api/v1/orders/{id}/confirm-weighing/`
+- `POST /api/v1/orders/{id}/mark-ready/`
 - `GET /api/v1/audit-events/` para `manager` y `owner`
 
-## Idempotencia de pedidos
+## Recepción de inventario
 
-Cada creación remota incluye `idempotency_key`:
+`POST /inventory-lots/receive/` requiere `Idempotency-Key`.
+
+El servidor:
+
+- valida producto activo y organización;
+- exige cantidad positiva y costo no negativo;
+- crea el lote con disponibilidad inicial completa;
+- registra `inventorylot.received`;
+- devuelve replay seguro para la misma solicitud;
+- responde conflicto si la clave cambia de contenido.
+
+Los lotes no aceptan creación, reemplazo, edición ni eliminación genérica. Los ajustes futuros deben implementarse mediante movimientos de inventario.
+
+## Pedidos y preparación
+
+La creación remota incluye `idempotency_key` en el cuerpo:
 
 - el primer envío crea el pedido y devuelve `201`;
 - un reintento idéntico devuelve el mismo pedido con `200` y `X-Idempotent-Replay: true`;
 - reutilizar la clave con datos diferentes devuelve `409`;
 - solo se genera un evento `order.created`.
 
-La pantalla remota conserva la clave después de un error de red y la rota únicamente cuando recibe una respuesta exitosa.
+El backend ignora intentos del cliente de elegir estado, medio de pago u origen: todo pedido nuevo comienza como `confirmed`, `pending`, `operator`. También rechaza cantidades reales prellenadas.
+
+Las transiciones exigen dos headers:
+
+```text
+If-Match: <version>
+Idempotency-Key: <clave estable>
+```
+
+Reglas:
+
+- `confirmed → preparing`;
+- cantidades reales solo en `preparing`;
+- el pesaje incluye exactamente todas las líneas;
+- el servidor recalcula el total;
+- `preparing → ready` solo con todas las líneas completas;
+- versión obsoleta devuelve `409`;
+- la misma clave no puede cruzarse entre pedidos;
+- `PUT`, `PATCH` y `DELETE` genéricos están bloqueados.
 
 ## Seguridad del puente
 
@@ -144,7 +182,8 @@ La pantalla remota conserva la clave después de un error de red y la rota únic
 - CORS usa la allowlist exacta del frontend productivo en el Blueprint.
 - Cada petición operacional vuelve a validar membresía y rol.
 - Cambiar de URL API elimina la sesión anterior del navegador.
-- La operación remota no cambia silenciosamente al modo local ante un error del servidor.
+- Las operaciones remotas no cambian silenciosamente al modo local.
+- Las mutaciones críticas usan transacciones, idempotencia y control de versión.
 
 ## Variables relevantes
 
@@ -162,7 +201,8 @@ La pantalla remota conserva la clave después de un error de red y la rota únic
 ## Límites de esta versión
 
 - El Blueprint está listo, pero la instancia pública todavía debe crearse y verificarse.
-- Catálogo y pedidos ya tienen una superficie API separada; ventas, pagos, fiados, lotes y cierre cotidianos todavía permanecen locales.
+- Catálogo, recepción, pedidos, preparación y estado listo tienen superficies API separadas.
+- Ajustes/mermas, descuento FEFO, cobro, fiado, entrega y cierre todavía permanecen locales.
 - No existe sincronización bidireccional ni cola offline.
 - No hay recuperación de contraseña ni envío de correo.
 - Debe verificarse la política real de backups del proveedor antes de usar datos operacionales.

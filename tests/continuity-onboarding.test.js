@@ -25,7 +25,7 @@ test("checksummed backups round-trip and reject invalid input", () => {
   const entries = { business: { name: "Mercado" }, orders: [{ id: "FM-1" }, { id: "FM-2" }] };
   const envelope = createBackupEnvelope(entries, {
     namespace: "crohnoz-fresh-market",
-    appVersion: "0.7.0-pilot",
+    appVersion: "0.8.0-pilot",
     exportedAt: "2026-08-02T19:00:00.000Z",
   });
   const restored = parseBackupText(serializeBackup(envelope), { expectedNamespace: "crohnoz-fresh-market" });
@@ -60,15 +60,18 @@ test("readiness and resume targets preserve operator safety", () => {
   const ready = buildOperatorReadiness({
     business: { ...defaults, name: "Mi negocio" },
     defaultBusiness: defaults,
-    visitedPages: ["inventario.html", "pedidos-remotos.html"],
+    visitedPages: ["inventario-remoto.html", "pedidos-remotos.html"],
     continuityMeta: { lastBackupAt: "2026-08-02T19:00:00.000Z" },
     integrityMeta: { lastScanAt: "2026-08-02T18:55:00.000Z", status: "healthy" },
     connection: { state: "connected" },
   });
   assert.equal(ready.percent, 100);
+  assert.equal(ready.items.find((item) => item.id === "inventory")?.href, "inventario-remoto.html");
+  assert.equal(ready.items.find((item) => item.id === "operation")?.href, "pedidos-remotos.html");
   assert.equal(normalizeResumeTarget({ href: "integridad.html", label: "Integridad" })?.href, "integridad.html");
   assert.equal(normalizeResumeTarget({ href: "conexion.html", label: "Conexión" })?.href, "conexion.html");
   assert.equal(normalizeResumeTarget({ href: "pedidos-remotos.html", label: "Pedidos remotos" })?.href, "pedidos-remotos.html");
+  assert.equal(normalizeResumeTarget({ href: "inventario-remoto.html", label: "Inventario remoto" })?.href, "inventario-remoto.html");
   assert.equal(normalizeResumeTarget({ href: "https://example.com", label: "Fuera" }), null);
 });
 
@@ -90,7 +93,7 @@ test("configuration, onboarding and operator home expose continuity controls", a
   assert.match(home, /href="conexion\.html">Conexión/);
 });
 
-test("continuity and connected scripts pass syntax checks and cache v9", async () => {
+test("continuity and connected scripts pass syntax checks and cache v10", async () => {
   for (const path of [
     "assets/js/core/config.js",
     "assets/js/core/storage.js",
@@ -100,6 +103,7 @@ test("continuity and connected scripts pass syntax checks and cache v9", async (
     "assets/js/configurator/app.js",
     "assets/js/connection/app.js",
     "assets/js/remote-orders/app.js",
+    "assets/js/remote-inventory/app.js",
     "assets/js/repositories/api-market.js",
     "assets/js/integrity/app.js",
     "assets/js/audit/app.js",
@@ -108,6 +112,7 @@ test("continuity and connected scripts pass syntax checks and cache v9", async (
     "assets/js/domain/audit-trail.js",
     "assets/js/domain/data-integrity.js",
     "assets/js/domain/remote-orders.js",
+    "assets/js/domain/remote-inventory.js",
     "assets/js/domain/operator-readiness.js",
     "assets/js/operator/home.js",
     "sw.js",
@@ -118,11 +123,13 @@ test("continuity and connected scripts pass syntax checks and cache v9", async (
   const config = await text("assets/js/core/config.js");
   assert.match(storage, /recordStorageMutation/);
   assert.match(storage, /recordSnapshotRestore/);
-  assert.match(worker, /crohnoz-fresh-market-v9/);
+  assert.match(worker, /crohnoz-fresh-market-v10/);
   assert.match(worker, /auditoria\.html/);
   assert.match(worker, /conexion\.html/);
   assert.match(worker, /pedidos-remotos\.html/);
+  assert.match(worker, /inventario-remoto\.html/);
   assert.match(worker, /assets\/js\/domain\/remote-orders\.js/);
+  assert.match(worker, /assets\/js\/domain\/remote-inventory\.js/);
   assert.match(worker, /assets\/js\/repositories\/api-market\.js/);
-  assert.match(config, /0\.7\.0-pilot/);
+  assert.match(config, /0\.8\.0-pilot/);
 });

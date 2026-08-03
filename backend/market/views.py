@@ -9,7 +9,8 @@ from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.decorators import action
+from rest_framework.exceptions import APIException, MethodNotAllowed, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -28,6 +29,13 @@ from .serializers import (
     UserSummarySerializer,
 )
 from .services import record_audit_event
+from .workflows import (
+    InventoryReceptionSerializer,
+    OrderWeighingSerializer,
+    confirm_order_weighing,
+    receive_inventory,
+    transition_order,
+)
 
 
 class LoginRateThrottle(AnonRateThrottle):
@@ -69,15 +77,15 @@ def request_order_signature(payload) -> dict:
     return {
         "public_id": str(payload.get("public_id", "")).strip(),
         "customer_name": str(payload.get("customer_name", "")).strip(),
-        "status": str(payload.get("status", Order.Status.DRAFT)),
-        "payment_method": str(payload.get("payment_method", Order.PaymentMethod.PENDING)),
-        "source": str(payload.get("source", Order.Source.OPERATOR)),
+        "status": Order.Status.CONFIRMED,
+        "payment_method": Order.PaymentMethod.PENDING,
+        "source": Order.Source.OPERATOR,
         "notes": str(payload.get("notes", "")),
         "items": [
             {
                 "product": str(item.get("product", "")),
                 "requested_quantity": canonical_decimal(item.get("requested_quantity")),
-                "actual_quantity": canonical_decimal(item.get("actual_quantity")),
+                "actual_quantity": None,
                 "unit_price": canonical_decimal(item.get("unit_price")),
             }
             for item in (payload.get("items") or [])
@@ -288,13 +296,67 @@ class ProductViewSet(OrganizationScopedViewSet):
 
 class InventoryLotViewSet(OrganizationScopedViewSet):
     serializer_class = InventoryLotSerializer
+    minimum_role_by_action = {
+        **OrganizationScopedViewSet.minimum_role_by_action,
+        "receive": Membership.Role.OPERATOR,
+    }
 
     def get_queryset(self):
-        return InventoryLot.objects.select_related("product").filter(organization=self.organization_context.organization)
+        queryset = InventoryLot.objects.select_related("product").filter(organization=self.organization_context.organization)
+        requested_status = str(self.request.query_params.get("status", "")).strip()
+        product_id = str(self.request.query_params.get("product", "")).strip()
+        if requested_status:
+            queryset = queryset.filter(status=requested_status)
+        if product_id:
+            queryset = queryset.filter(product_id=product_id)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        raise MethodNotAllowed("POST", detail="Usa /inventory-lots/receive/ para registrar una recepción trazable.")
+
+    def update(self, request, *args, **kwargs):
+        raise MethodNotAllowed("PUT", detail="Los lotes no se reemplazan directamente; usa movimientos de inventario.")
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed("PATCH", detail="Los lotes no se editan directamente; usa movimientos de inventario.")
+
+    def destroy(self, request, *args, **kwargs):
+        raise MethodNotAllowed("DELETE", detail="Los lotes no se eliminan; deben agotarse o descartarse mediante movimientos.")
+
+    @action(detail=False, methods=["post"], url_path="receive")
+    def receive(self, request):
+        serializer = InventoryReceptionSerializer(
+            data=request.data,
+            context={"organization": self.organization_context.organization},
+        )
+        serializer.is_valid(raise_exception=True)
+        key = str(request.headers.get("Idempotency-Key", "")).strip()
+        if len(key) < 8 or len(key) > 96:
+            raise ValidationError({"idempotency_key": "Envía una clave de reintento segura de 8 a 96 caracteres."})
+        lot, replay = receive_inventory(
+            organization=self.organization_context.organization,
+            actor=request.user,
+            validated_data=serializer.validated_data,
+            idempotency_key=key,
+        )
+        headers = {"X-Idempotent-Replay": "true"} if replay else {}
+        return Response(
+            InventoryLotSerializer(lot, context=self.get_serializer_context()).data,
+            status=status.HTTP_200_OK if replay else status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
 
 class OrderViewSet(OrganizationScopedViewSet):
     serializer_class = OrderSerializer
+    minimum_role_by_action = {
+        **OrganizationScopedViewSet.minimum_role_by_action,
+        "start_preparing": Membership.Role.OPERATOR,
+        "confirm_weighing": Membership.Role.OPERATOR,
+        "mark_ready": Membership.Role.OPERATOR,
+    }
 
     def get_queryset(self):
         queryset = Order.objects.select_related("created_by").prefetch_related("items__product").filter(
@@ -305,6 +367,15 @@ class OrderViewSet(OrganizationScopedViewSet):
             queryset = queryset.filter(status=requested_status)
         return queryset
 
+    def update(self, request, *args, **kwargs):
+        raise MethodNotAllowed("PUT", detail="Usa las transiciones explícitas del pedido; no se permite reemplazarlo completo.")
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed("PATCH", detail="Usa start-preparing, confirm-weighing o mark-ready.")
+
+    def destroy(self, request, *args, **kwargs):
+        raise MethodNotAllowed("DELETE", detail="Los pedidos no se eliminan porque forman parte de la trazabilidad.")
+
     def replay_or_conflict(self, existing: Order, payload) -> Response:
         if stored_order_signature(existing) != request_order_signature(payload):
             raise Conflict("La clave de reintento ya fue usada para un pedido diferente.", code="idempotency_conflict")
@@ -313,16 +384,21 @@ class OrderViewSet(OrganizationScopedViewSet):
 
     def create(self, request, *args, **kwargs):
         idempotency_key = str(request.data.get("idempotency_key", "")).strip()
-        if idempotency_key:
-            existing = self.get_queryset().filter(idempotency_key=idempotency_key).first()
-            if existing:
-                return self.replay_or_conflict(existing, request.data)
+        if len(idempotency_key) < 8 or len(idempotency_key) > 96:
+            raise ValidationError({"idempotency_key": "El pedido requiere una clave de reintento de 8 a 96 caracteres."})
+        items = request.data.get("items") or []
+        if any(item.get("actual_quantity") not in (None, "") for item in items):
+            raise ValidationError({"items": "La cantidad real se registra únicamente durante la preparación."})
+        product_ids = [str(item.get("product", "")) for item in items]
+        if len(product_ids) != len(set(product_ids)):
+            raise ValidationError({"items": "Cada producto debe aparecer una sola vez en el pedido."})
+        existing = self.get_queryset().filter(idempotency_key=idempotency_key).first()
+        if existing:
+            return self.replay_or_conflict(existing, request.data)
         try:
             with transaction.atomic():
                 return super().create(request, *args, **kwargs)
         except IntegrityError:
-            if not idempotency_key:
-                raise
             existing = self.get_queryset().filter(idempotency_key=idempotency_key).first()
             if not existing:
                 raise
@@ -333,6 +409,9 @@ class OrderViewSet(OrganizationScopedViewSet):
             instance = serializer.save(
                 organization=self.organization_context.organization,
                 created_by=self.request.user,
+                status=Order.Status.CONFIRMED,
+                payment_method=Order.PaymentMethod.PENDING,
+                source=Order.Source.OPERATOR,
             )
             record_audit_event(
                 organization=self.organization_context.organization,
@@ -342,6 +421,43 @@ class OrderViewSet(OrganizationScopedViewSet):
                 entity_id=str(instance.pk),
                 payload={"public_id": instance.public_id, "total": str(instance.total), "version": instance.version},
             )
+
+    @action(detail=True, methods=["post"], url_path="start-preparing")
+    def start_preparing(self, request, pk=None):
+        order, replay = transition_order(
+            order=self.get_object(),
+            actor=request.user,
+            target_status=Order.Status.PREPARING,
+            action="order.preparing_started",
+            request=request,
+        )
+        headers = {"X-Idempotent-Replay": "true"} if replay else {}
+        return Response(self.get_serializer(order).data, headers=headers)
+
+    @action(detail=True, methods=["post"], url_path="confirm-weighing")
+    def confirm_weighing(self, request, pk=None):
+        serializer = OrderWeighingSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order, replay = confirm_order_weighing(
+            order=self.get_object(),
+            actor=request.user,
+            validated_data=serializer.validated_data,
+            request=request,
+        )
+        headers = {"X-Idempotent-Replay": "true"} if replay else {}
+        return Response(self.get_serializer(order).data, headers=headers)
+
+    @action(detail=True, methods=["post"], url_path="mark-ready")
+    def mark_ready(self, request, pk=None):
+        order, replay = transition_order(
+            order=self.get_object(),
+            actor=request.user,
+            target_status=Order.Status.READY,
+            action="order.marked_ready",
+            request=request,
+        )
+        headers = {"X-Idempotent-Replay": "true"} if replay else {}
+        return Response(self.get_serializer(order).data, headers=headers)
 
 
 class AuditEventViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):

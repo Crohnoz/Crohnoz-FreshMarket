@@ -20,6 +20,10 @@
   to = "/inventario.html"
   status = 200
 [[redirects]]
+  from = "/inventario-remoto"
+  to = "/inventario-remoto.html"
+  status = 200
+[[redirects]]
   from = "/compras"
   to = "/compras.html"
   status = 200

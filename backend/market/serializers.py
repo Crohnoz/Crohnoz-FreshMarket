@@ -72,13 +72,14 @@ class InventoryLotSerializer(serializers.ModelSerializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
+    product_sale_unit = serializers.CharField(source="product.sale_unit", read_only=True)
 
     class Meta:
         model = OrderItem
         fields = [
-            "id", "product", "product_name", "requested_quantity", "actual_quantity", "unit_price", "line_total",
+            "id", "product", "product_name", "product_sale_unit", "requested_quantity", "actual_quantity", "unit_price", "line_total",
         ]
-        read_only_fields = ["id", "line_total"]
+        read_only_fields = ["id", "product_name", "product_sale_unit", "line_total"]
 
     def validate_product(self, product):
         organization = self.context["organization"]
