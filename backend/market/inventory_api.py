@@ -15,6 +15,17 @@ from .serializers import InventoryLotSerializer, InventoryMovementSerializer
 from .workflows import InventoryAdjustmentSerializer, InventoryQuantityMovementSerializer
 
 
+def validated_uuid(value, field_name):
+    normalized = str(value or "").strip()
+    if not normalized:
+        return ""
+    try:
+        UUID(normalized)
+    except (TypeError, ValueError):
+        raise ValidationError({field_name: f"El identificador de {field_name} no es válido."})
+    return normalized
+
+
 class InventoryMovementViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = InventoryMovementSerializer
     permission_classes = [IsAuthenticated]
@@ -28,9 +39,11 @@ class InventoryMovementViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         queryset = InventoryMovement.objects.select_related("lot__product", "created_by").filter(
             organization=self.organization_context.organization
         )
-        lot_id = str(self.request.query_params.get("lot", "")).strip()
-        product_id = str(self.request.query_params.get("product", "")).strip()
+        lot_id = validated_uuid(self.request.query_params.get("lot"), "lot")
+        product_id = validated_uuid(self.request.query_params.get("product"), "product")
         movement_type = str(self.request.query_params.get("movement_type", "")).strip()
+        if movement_type and movement_type not in InventoryMovement.MovementType.values:
+            raise ValidationError({"movement_type": "El tipo de movimiento no es válido."})
         if lot_id:
             queryset = queryset.filter(lot_id=lot_id)
         if product_id:
@@ -48,13 +61,9 @@ class InventoryMovementViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
         required_role = Membership.Role.MANAGER if movement_type == InventoryMovement.MovementType.ADJUSTMENT else Membership.Role.OPERATOR
         require_role(self.organization_context, required_role)
 
-        lot_id = str(request.data.get("lot", "")).strip()
+        lot_id = validated_uuid(request.data.get("lot"), "lot")
         if not lot_id:
             raise ValidationError({"lot": "Selecciona un lote del negocio activo."})
-        try:
-            UUID(lot_id)
-        except (TypeError, ValueError):
-            raise ValidationError({"lot": "El identificador del lote no es válido."})
         lot = get_object_or_404(
             InventoryLot.objects.select_related("product").filter(organization=self.organization_context.organization),
             pk=lot_id,
