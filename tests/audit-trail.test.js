@@ -170,7 +170,7 @@ test("Netlify and offline shell expose audit assets", async () => {
   const netlify = await text("netlify.toml");
   const worker = await text("sw.js");
   assert.match(netlify, /from = "\/auditoria"[\s\S]*to = "\/auditoria\.html"/);
-  assert.match(worker, /crohnoz-fresh-market-v7/);
+  assert.match(worker, /crohnoz-fresh-market-v\d+/);
   assert.match(worker, /\/auditoria\.html/);
   assert.match(worker, /assets\/css\/audit\.css/);
   assert.match(worker, /assets\/js\/audit\/app\.js/);

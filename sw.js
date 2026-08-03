@@ -1,5 +1,5 @@
-const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v7";
-const CACHE_NAME = "crohnoz-fresh-market-v8";
+const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v8";
+const CACHE_NAME = "crohnoz-fresh-market-v9";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -8,6 +8,7 @@ const CORE_ASSETS = [
   "/inventario.html",
   "/compras.html",
   "/ventas.html",
+  "/pedidos-remotos.html",
   "/asistente.html",
   "/validacion.html",
   "/integridad.html",
@@ -23,6 +24,7 @@ const CORE_ASSETS = [
   "/assets/css/guided-shell.css",
   "/assets/css/connection-shell.css",
   "/assets/css/connection.css",
+  "/assets/css/remote-orders.css",
   "/assets/css/hardening.css",
   "/assets/css/usability-audit.css",
   "/assets/css/ux-polish.css",
@@ -51,6 +53,8 @@ const CORE_ASSETS = [
   "/assets/js/operator/home.js",
   "/assets/js/configurator/app.js",
   "/assets/js/connection/app.js",
+  "/assets/js/remote-orders/app.js",
+  "/assets/js/repositories/api-market.js",
   "/assets/js/integrity/app.js",
   "/assets/js/audit/navigation.js",
   "/assets/js/audit/app.js",
@@ -69,6 +73,7 @@ const CORE_ASSETS = [
   "/assets/js/domain/inventory.js",
   "/assets/js/domain/purchasing.js",
   "/assets/js/domain/sales-flow.js",
+  "/assets/js/domain/remote-orders.js",
   "/assets/js/domain/operator-guidance.js",
   "/assets/js/domain/operator-readiness.js",
   "/assets/js/domain/operator-tasks.js",

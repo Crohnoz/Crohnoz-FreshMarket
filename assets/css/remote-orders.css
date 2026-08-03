@@ -1,0 +1,202 @@
+.remote-main {
+  padding-block: 2rem 4rem;
+}
+
+.remote-hero,
+.remote-summary,
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.remote-hero {
+  margin-bottom: 1.5rem;
+}
+
+.remote-hero h1,
+.remote-summary h2,
+.panel-header h2 {
+  margin: 0.2rem 0 0.45rem;
+}
+
+.remote-hero p,
+.remote-summary p {
+  max-width: 72ch;
+}
+
+.remote-blocker-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.remote-blocker-card > span {
+  font-size: 2rem;
+}
+
+.remote-workspace {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.remote-summary {
+  padding: 1rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+
+.remote-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.75fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.panel {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-header {
+  margin-bottom: 1rem;
+}
+
+.remote-search {
+  width: min(100%, 21rem);
+}
+
+.remote-search input,
+.remote-order-panel input,
+.remote-order-panel select,
+.remote-order-panel textarea,
+.remote-created textarea {
+  width: 100%;
+}
+
+.remote-order-panel form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.remote-order-panel label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.remote-safety-note {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--warning-soft, #fff6d8);
+  font-size: 0.9rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.remote-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.remote-table th,
+.remote-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.remote-table th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.remote-product-name {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.remote-product-name small,
+.remote-order-meta {
+  color: var(--muted);
+}
+
+.remote-quantity {
+  width: 7.5rem;
+  min-height: 2.75rem;
+}
+
+.remote-created {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.remote-created textarea {
+  resize: vertical;
+}
+
+.remote-orders-panel {
+  min-width: 0;
+}
+
+.remote-status-chip {
+  display: inline-flex;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+@media (max-width: 880px) {
+  .remote-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .remote-hero,
+  .remote-summary,
+  .panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .remote-search {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .remote-main {
+    padding-top: 1rem;
+  }
+
+  .panel,
+  .remote-summary,
+  .remote-blocker-card {
+    padding: 1rem;
+  }
+
+  .remote-table th,
+  .remote-table td {
+    padding: 0.6rem;
+  }
+}

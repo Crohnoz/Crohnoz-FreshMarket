@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Operación conectada de catálogo y pedidos para Crohnoz Fresh Market.">
+  <meta name="theme-color" content="#2f7d4a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Pedidos remotos · Crohnoz Fresh Market</title>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/remote-orders.css">
+</head>
+<body>
+  <div class="demo-banner" id="demo-notice"></div>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="operar.html">
+        <span class="brand-mark">FM</span>
+        <span class="brand-copy"><strong data-business-name></strong><small>Operación conectada</small></span>
+      </a>
+      <nav class="nav" aria-label="Navegación principal">
+        <a href="operar.html">Inicio operativo</a>
+        <a href="conexion.html">Conexión</a>
+        <a href="ventas.html">Ventas locales</a>
+        <a href="integridad.html">Integridad</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="remote-main">
+    <section class="shell remote-hero">
+      <div>
+        <p class="eyebrow">Bloque conectado 0.7</p>
+        <h1>Catálogo y pedidos en Django</h1>
+        <p>Esta superficie trabaja únicamente con la organización autenticada. Nunca cambia silenciosamente a datos locales si la API falla.</p>
+      </div>
+      <a class="button secondary" href="conexion.html">Revisar conexión</a>
+    </section>
+
+    <section class="shell" id="remote-blocker" hidden>
+      <article class="remote-blocker-card">
+        <span aria-hidden="true">🌐</span>
+        <div>
+          <h2>Falta una sesión conectada</h2>
+          <p id="remote-blocker-message">Configura la API, inicia sesión y elige el negocio antes de usar esta operación.</p>
+          <a class="button primary" href="conexion.html">Ir a conectar</a>
+        </div>
+      </article>
+    </section>
+
+    <div class="shell remote-workspace" id="remote-workspace" hidden>
+      <section class="remote-summary" aria-labelledby="remote-summary-title">
+        <div>
+          <p class="eyebrow">Fuente de verdad</p>
+          <h2 id="remote-summary-title">Backend conectado</h2>
+          <p id="remote-connection-summary"></p>
+        </div>
+        <button class="button secondary" id="refresh-remote" type="button">Actualizar desde servidor</button>
+      </section>
+
+      <p class="status-message" id="remote-status" role="status" aria-live="polite"></p>
+
+      <section class="remote-grid">
+        <article class="panel remote-catalog-panel">
+          <header class="panel-header">
+            <div><p class="eyebrow">Catálogo remoto</p><h2>Productos activos</h2></div>
+            <label class="remote-search"><span class="sr-only">Buscar producto</span><input id="remote-product-search" type="search" placeholder="Buscar por nombre, SKU o categoría" autocomplete="off"></label>
+          </header>
+          <div class="table-wrap">
+            <table class="remote-table">
+              <thead><tr><th>Producto</th><th>Precio</th><th>Cantidad</th></tr></thead>
+              <tbody id="remote-products-body"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="remote-products-empty" hidden>No hay productos activos en el servidor.</div>
+        </article>
+
+        <article class="panel remote-order-panel">
+          <header class="panel-header"><div><p class="eyebrow">Nuevo pedido</p><h2>Crear en Django</h2></div></header>
+          <form id="remote-order-form" novalidate>
+            <label>Nombre del cliente<input name="customerName" maxlength="160" autocomplete="off" required></label>
+            <label>Modalidad<select name="fulfillment"><option value="Retiro">Retiro</option><option value="Delivery">Delivery</option></select></label>
+            <label>Observaciones<textarea name="notes" maxlength="400" rows="3" placeholder="Horario, maduración o indicaciones"></textarea></label>
+            <p class="remote-safety-note">Para esta etapa usa datos ficticios. Pagos, fiados y cierre siguen en las pantallas locales.</p>
+            <button class="button primary full" id="create-remote-order" type="submit">Crear pedido remoto</button>
+          </form>
+          <div class="remote-created" id="remote-created" hidden>
+            <strong>Pedido confirmado por el servidor</strong>
+            <textarea id="remote-created-summary" rows="5" readonly aria-label="Resumen del pedido remoto"></textarea>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel remote-orders-panel">
+        <header class="panel-header">
+          <div><p class="eyebrow">Servidor</p><h2>Pedidos recientes</h2></div>
+          <span class="result-count" id="remote-order-count"></span>
+        </header>
+        <div class="table-wrap">
+          <table class="remote-table">
+            <thead><tr><th>Pedido</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Creado</th></tr></thead>
+            <tbody id="remote-orders-body"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="remote-orders-empty" hidden>El servidor todavía no tiene pedidos para este negocio.</div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="page-footer"><div class="shell"><span>© 2026 <span data-business-name></span></span><span>Catálogo y pedidos autenticados · Crohnoz Labs</span></div></footer>
+  <script type="module" src="assets/js/remote-orders/app.js"></script>
+</body>
+</html>

@@ -16,6 +16,7 @@ function normalizedPage() {
     inventario: "inventario.html",
     compras: "compras.html",
     ventas: "ventas.html",
+    "pedidos-remotos": "pedidos-remotos.html",
     asistente: "asistente.html",
     validacion: "validacion.html",
     integridad: "integridad.html",

@@ -10,6 +10,7 @@ const KNOWN_OPERATOR_PAGES = new Set([
   "integridad.html",
   "inventario.html",
   "operar.html",
+  "pedidos-remotos.html",
   "scanner-lab.html",
   "validacion.html",
   "ventas.html",
@@ -51,7 +52,7 @@ export function buildOperatorReadiness({
       label: "Probar una operación",
       description: "Simula una venta, un abono o la preparación de un pedido.",
       href: "ventas.html",
-      complete: ["ventas.html", "cuentas.html", "admin.html"].some((page) => visited.has(page)),
+      complete: ["ventas.html", "cuentas.html", "admin.html", "pedidos-remotos.html"].some((page) => visited.has(page)),
     },
     {
       id: "integrity",

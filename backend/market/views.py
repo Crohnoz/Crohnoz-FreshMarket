@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -54,6 +55,56 @@ def api_exception_handler(exc, context):
     return response
 
 
+def canonical_decimal(value) -> str | None:
+    if value in (None, ""):
+        return None
+    try:
+        decimal_value = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return str(value)
+    return format(decimal_value.normalize(), "f")
+
+
+def request_order_signature(payload) -> dict:
+    return {
+        "public_id": str(payload.get("public_id", "")).strip(),
+        "customer_name": str(payload.get("customer_name", "")).strip(),
+        "status": str(payload.get("status", Order.Status.DRAFT)),
+        "payment_method": str(payload.get("payment_method", Order.PaymentMethod.PENDING)),
+        "source": str(payload.get("source", Order.Source.OPERATOR)),
+        "notes": str(payload.get("notes", "")),
+        "items": [
+            {
+                "product": str(item.get("product", "")),
+                "requested_quantity": canonical_decimal(item.get("requested_quantity")),
+                "actual_quantity": canonical_decimal(item.get("actual_quantity")),
+                "unit_price": canonical_decimal(item.get("unit_price")),
+            }
+            for item in (payload.get("items") or [])
+        ],
+    }
+
+
+def stored_order_signature(order: Order) -> dict:
+    return {
+        "public_id": order.public_id,
+        "customer_name": order.customer_name,
+        "status": order.status,
+        "payment_method": order.payment_method,
+        "source": order.source,
+        "notes": order.notes,
+        "items": [
+            {
+                "product": str(item.product_id),
+                "requested_quantity": canonical_decimal(item.requested_quantity),
+                "actual_quantity": canonical_decimal(item.actual_quantity),
+                "unit_price": canonical_decimal(item.unit_price),
+            }
+            for item in order.items.all()
+        ],
+    }
+
+
 class HealthView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -62,7 +113,7 @@ class HealthView(APIView):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
-        return Response({"status": "ok", "service": "crohnoz-fresh-market-api", "version": "0.2.0-mvp"})
+        return Response({"status": "ok", "service": "crohnoz-fresh-market-api", "version": "0.3.0-mvp"})
 
 
 class LoginView(APIView):
@@ -226,7 +277,13 @@ class ProductViewSet(OrganizationScopedViewSet):
     }
 
     def get_queryset(self):
-        return Product.objects.filter(organization=self.organization_context.organization)
+        queryset = Product.objects.filter(organization=self.organization_context.organization)
+        active = str(self.request.query_params.get("is_active", "")).strip().lower()
+        if active in {"1", "true", "yes"}:
+            queryset = queryset.filter(is_active=True)
+        elif active in {"0", "false", "no"}:
+            queryset = queryset.filter(is_active=False)
+        return queryset.order_by("name")
 
 
 class InventoryLotViewSet(OrganizationScopedViewSet):
@@ -240,9 +297,36 @@ class OrderViewSet(OrganizationScopedViewSet):
     serializer_class = OrderSerializer
 
     def get_queryset(self):
-        return Order.objects.select_related("created_by").prefetch_related("items__product").filter(
+        queryset = Order.objects.select_related("created_by").prefetch_related("items__product").filter(
             organization=self.organization_context.organization
         )
+        requested_status = str(self.request.query_params.get("status", "")).strip()
+        if requested_status:
+            queryset = queryset.filter(status=requested_status)
+        return queryset
+
+    def replay_or_conflict(self, existing: Order, payload) -> Response:
+        if stored_order_signature(existing) != request_order_signature(payload):
+            raise Conflict("La clave de reintento ya fue usada para un pedido diferente.", code="idempotency_conflict")
+        serializer = self.get_serializer(existing)
+        return Response(serializer.data, status=status.HTTP_200_OK, headers={"X-Idempotent-Replay": "true"})
+
+    def create(self, request, *args, **kwargs):
+        idempotency_key = str(request.data.get("idempotency_key", "")).strip()
+        if idempotency_key:
+            existing = self.get_queryset().filter(idempotency_key=idempotency_key).first()
+            if existing:
+                return self.replay_or_conflict(existing, request.data)
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError:
+            if not idempotency_key:
+                raise
+            existing = self.get_queryset().filter(idempotency_key=idempotency_key).first()
+            if not existing:
+                raise
+            return self.replay_or_conflict(existing, request.data)
 
     def perform_create(self, serializer):
         with transaction.atomic():

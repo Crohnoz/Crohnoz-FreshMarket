@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: crohnoz-fresh-market-api
+    runtime: python
+    plan: free
+    region: ohio
+    rootDir: backend
+    buildCommand: bash build.sh
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
+    healthCheckPath: /api/v1/health/
+    initialDeployHook: python manage.py seed_pilot
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crohnoz-fresh-market-db
+          property: connectionString
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: AUDIT_HMAC_KEY
+        generateValue: true
+      - key: DJANGO_CORS_ALLOWED_ORIGINS
+        value: https://crohnozfreshmarket.netlify.app
+      - key: PILOT_TOKEN_MAX_HOURS
+        value: "12"
+      - key: CAMILA_PILOT_PASSWORD
+        sync: false
+      - key: CARMELO_PILOT_PASSWORD
+        sync: false
+
+databases:
+  - name: crohnoz-fresh-market-db
+    plan: free
+    region: ohio
+    postgresMajorVersion: "17"
+    databaseName: fresh_market
+    user: fresh_market
+    ipAllowList: []
