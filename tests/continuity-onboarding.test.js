@@ -25,7 +25,7 @@ test("checksummed backups round-trip and reject invalid input", () => {
   const entries = { business: { name: "Mercado" }, orders: [{ id: "FM-1" }, { id: "FM-2" }] };
   const envelope = createBackupEnvelope(entries, {
     namespace: "crohnoz-fresh-market",
-    appVersion: "0.8.0-pilot",
+    appVersion: "0.9.0-pilot",
     exportedAt: "2026-08-02T19:00:00.000Z",
   });
   const restored = parseBackupText(serializeBackup(envelope), { expectedNamespace: "crohnoz-fresh-market" });
@@ -93,7 +93,7 @@ test("configuration, onboarding and operator home expose continuity controls", a
   assert.match(home, /href="conexion\.html">Conexión/);
 });
 
-test("continuity and connected scripts pass syntax checks and cache v10", async () => {
+test("continuity and connected scripts pass syntax checks and cache v11", async () => {
   for (const path of [
     "assets/js/core/config.js",
     "assets/js/core/storage.js",
@@ -123,7 +123,7 @@ test("continuity and connected scripts pass syntax checks and cache v10", async 
   const config = await text("assets/js/core/config.js");
   assert.match(storage, /recordStorageMutation/);
   assert.match(storage, /recordSnapshotRestore/);
-  assert.match(worker, /crohnoz-fresh-market-v10/);
+  assert.match(worker, /crohnoz-fresh-market-v11/);
   assert.match(worker, /auditoria\.html/);
   assert.match(worker, /conexion\.html/);
   assert.match(worker, /pedidos-remotos\.html/);
@@ -131,5 +131,5 @@ test("continuity and connected scripts pass syntax checks and cache v10", async 
   assert.match(worker, /assets\/js\/domain\/remote-orders\.js/);
   assert.match(worker, /assets\/js\/domain\/remote-inventory\.js/);
   assert.match(worker, /assets\/js\/repositories\/api-market\.js/);
-  assert.match(config, /0\.8\.0-pilot/);
+  assert.match(config, /0\.9\.0-pilot/);
 });
