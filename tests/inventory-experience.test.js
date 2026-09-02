@@ -121,7 +121,7 @@ test("guided inventory assets are valid and cached", async () => {
 
   const worker = await text("sw.js");
   const css = await text("assets/css/remote-inventory.css");
-  assert.match(worker, /crohnoz-fresh-market-v11/);
+  assert.match(worker, /crohnoz-fresh-market-v12/);
   assert.match(worker, /assets\/js\/remote-inventory\/experience\.js/);
   assert.match(worker, /assets\/js\/domain\/inventory-experience\.js/);
   assert.match(css, /inventory-task-tabs/);

@@ -1,5 +1,5 @@
-const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v11";
-const CACHE_NAME = "crohnoz-fresh-market-v12";
+const PREVIOUS_CACHE_NAME = "crohnoz-fresh-market-v12";
+const CACHE_NAME = "crohnoz-fresh-market-v13";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,

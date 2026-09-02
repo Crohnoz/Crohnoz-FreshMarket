@@ -5,6 +5,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
@@ -168,6 +170,46 @@ class LogoutView(APIView):
 
     def post(self, request):
         Token.objects.filter(user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current_password = str(request.data.get("current_password", ""))
+        new_password = str(request.data.get("new_password", ""))
+        confirmation = str(request.data.get("new_password_confirmation", ""))
+
+        if not current_password or not new_password or not confirmation:
+            raise ValidationError({"password": "Completa la contraseña actual, la nueva y su confirmación."})
+        if not request.user.check_password(current_password):
+            raise ValidationError({"current_password": "La contraseña actual no es correcta."})
+        if new_password != confirmation:
+            raise ValidationError({"new_password_confirmation": "Las contraseñas nuevas no coinciden."})
+        if new_password == current_password:
+            raise ValidationError({"new_password": "La contraseña nueva debe ser distinta de la actual."})
+        if len(new_password) < 12:
+            raise ValidationError({"new_password": "Usa al menos 12 caracteres."})
+
+        try:
+            password_validation.validate_password(new_password, user=request.user)
+        except DjangoValidationError as exc:
+            raise ValidationError({"new_password": list(exc.messages)}) from exc
+
+        context = resolve_organization_context(request)
+        with transaction.atomic():
+            request.user.set_password(new_password)
+            request.user.save(update_fields=["password"])
+            record_audit_event(
+                organization=context.organization,
+                actor=request.user,
+                action="account.password_changed",
+                entity_type=request.user._meta.label_lower,
+                entity_id=str(request.user.pk),
+                payload={"tokens_revoked": True},
+            )
+            Token.objects.filter(user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

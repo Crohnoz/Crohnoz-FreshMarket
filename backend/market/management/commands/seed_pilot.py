@@ -19,41 +19,33 @@ PILOT_PRODUCTS = [
 
 
 class Command(BaseCommand):
-    help = "Crea o actualiza el negocio piloto y las cuentas separadas de Camila y Carmelo."
+    help = "Crea o actualiza la verdulería piloto y la cuenta propietaria de Camila."
 
     def add_arguments(self, parser):
-        parser.add_argument("--organization-name", default="Mercado Piloto Camila y Carmelo")
-        parser.add_argument("--organization-slug", default="mercado-piloto-camila-carmelo")
-        parser.add_argument("--camila-username", default="camila")
-        parser.add_argument("--carmelo-username", default="carmelo")
+        parser.add_argument("--organization-name", default="Verdulería piloto de Camila")
+        parser.add_argument("--organization-slug", default="verduleria-piloto-camila")
+        parser.add_argument("--camila-username", default="administracion")
 
     @transaction.atomic
     def handle(self, *args, **options):
         camila_password = os.getenv("CAMILA_PILOT_PASSWORD", "")
-        carmelo_password = os.getenv("CARMELO_PILOT_PASSWORD", "")
-        if not camila_password or not carmelo_password:
+        if not camila_password:
             raise CommandError(
-                "Define CAMILA_PILOT_PASSWORD y CARMELO_PILOT_PASSWORD antes de ejecutar el comando. "
+                "Define CAMILA_PILOT_PASSWORD antes de ejecutar el comando. "
                 "No se generan claves predeterminadas."
             )
-        if len(camila_password) < 12 or len(carmelo_password) < 12:
-            raise CommandError("Las contraseñas del piloto deben tener al menos 12 caracteres.")
+        if len(camila_password) < 12:
+            raise CommandError("La contraseña del piloto debe tener al menos 12 caracteres.")
 
         organization, _ = Organization.objects.update_or_create(
             slug=options["organization_slug"],
             defaults={"name": options["organization_name"], "status": Organization.Status.ACTIVE},
         )
         camila = self._upsert_user(options["camila_username"], "Camila", camila_password)
-        carmelo = self._upsert_user(options["carmelo_username"], "Carmelo", carmelo_password)
         Membership.objects.update_or_create(
             user=camila,
             organization=organization,
-            defaults={"role": Membership.Role.MANAGER, "is_active": True},
-        )
-        Membership.objects.update_or_create(
-            user=carmelo,
-            organization=organization,
-            defaults={"role": Membership.Role.OPERATOR, "is_active": True},
+            defaults={"role": Membership.Role.OWNER, "is_active": True},
         )
         for product in PILOT_PRODUCTS:
             Product.objects.update_or_create(
@@ -63,7 +55,7 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(self.style.SUCCESS(
-            f"Piloto preparado: {organization.name} · Camila manager · Carmelo operator · "
+            f"Piloto preparado: {organization.name} · Camila owner · "
             f"{len(PILOT_PRODUCTS)} productos. No se imprimieron contraseñas."
         ))
 

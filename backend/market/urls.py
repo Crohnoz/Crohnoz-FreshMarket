@@ -5,6 +5,7 @@ from .inventory_api import InventoryMovementViewSet
 from .team_api import TeamMemberView, TeamView
 from .views import (
     AuditEventViewSet,
+    ChangePasswordView,
     ConnectionSummaryView,
     HealthView,
     InventoryLotViewSet,
@@ -28,6 +29,7 @@ urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
     path("auth/login/", LoginView.as_view(), name="pilot-login"),
     path("auth/logout/", LogoutView.as_view(), name="pilot-logout"),
+    path("auth/change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("me/", MeView.as_view(), name="me"),
     path("connection-summary/", ConnectionSummaryView.as_view(), name="connection-summary"),
     path("team/", TeamView.as_view(), name="team"),

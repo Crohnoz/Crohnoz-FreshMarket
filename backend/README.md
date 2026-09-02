@@ -1,6 +1,6 @@
 # Backend MVP · Crohnoz Fresh Market
 
-Backend ejecutable para validar Crohnoz Fresh Market con Camila y Carmelo sin reemplazar silenciosamente la operación local existente.
+Backend ejecutable para validar Crohnoz Fresh Market en la verdulería de Camila sin reemplazar silenciosamente la operación local existente.
 
 ## Decisión técnica
 
@@ -32,11 +32,10 @@ python manage.py runserver 8001
 
 Las variables del archivo `.env` deben cargarse mediante el mecanismo seguro del entorno. El repositorio no carga `.env` automáticamente y no debe contener secretos reales.
 
-## Preparar el piloto de Camila y Carmelo
+## Preparar el primer piloto con Camila
 
 ```bash
 export CAMILA_PILOT_PASSWORD='una-clave-unica-de-al-menos-12-caracteres'
-export CARMELO_PILOT_PASSWORD='otra-clave-unica-de-al-menos-12-caracteres'
 python manage.py seed_pilot
 ```
 
@@ -44,15 +43,14 @@ En PowerShell:
 
 ```powershell
 $env:CAMILA_PILOT_PASSWORD="una-clave-unica-de-al-menos-12-caracteres"
-$env:CARMELO_PILOT_PASSWORD="otra-clave-unica-de-al-menos-12-caracteres"
 python manage.py seed_pilot
 ```
 
 El comando es idempotente y:
 
 - crea o actualiza una organización piloto;
-- asigna a Camila como `manager`;
-- asigna a Carmelo como `operator`;
+- crea la cuenta genérica `administracion` para Camila;
+- asigna a Camila como `owner`, con control administrativo completo;
 - carga un catálogo ficticio;
 - no genera contraseñas predeterminadas;
 - no imprime contraseñas.
@@ -87,7 +85,7 @@ Flujo:
 
 1. Conectar el repositorio como Blueprint.
 2. Confirmar que apunta a `main`.
-3. Ingresar las contraseñas piloto por el panel seguro.
+3. Ingresar la contraseña temporal de Camila por el panel seguro.
 4. Aplicar el Blueprint.
 5. Verificar build, migraciones, seed y health check.
 6. Copiar la URL HTTPS terminada en `/api/v1`.
@@ -101,6 +99,7 @@ No ejecutar `seed_pilot` con claves enviadas por correo, chat público, commits 
 - `GET /api/v1/health/`
 - `POST /api/v1/auth/login/`
 - `POST /api/v1/auth/logout/`
+- `POST /api/v1/auth/change-password/`
 - `GET /api/v1/me/`
 - `GET /api/v1/connection-summary/`
 - `GET /api/v1/organizations/`
@@ -210,6 +209,7 @@ Las transiciones exigen `If-Match` e `Idempotency-Key`:
 - Login limitado a 8 intentos por minuto por origen.
 - Tokens vencidos rechazados.
 - Cada login rota el token anterior; logout lo elimina.
+- Cambiar la contraseña exige la clave actual, valida la nueva, registra auditoría e invalida todas las sesiones.
 - Frontend solo acepta HTTPS, salvo `localhost` y `127.0.0.1`.
 - La contraseña no se persiste.
 - CORS usa una allowlist exacta.
@@ -228,7 +228,6 @@ Las transiciones exigen `If-Match` e `Idempotency-Key`:
 - `AUDIT_HMAC_KEY`.
 - `PILOT_TOKEN_MAX_HOURS`, entre 1 y 24.
 - `CAMILA_PILOT_PASSWORD`.
-- `CARMELO_PILOT_PASSWORD`.
 
 ## Límites de esta versión
 

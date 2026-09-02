@@ -223,6 +223,18 @@ export async function logoutFromApi() {
   }
 }
 
+export async function changeApiPassword(currentPassword, newPassword, confirmation) {
+  await apiRequest("auth/change-password/", {
+    method: "POST",
+    body: {
+      current_password: String(currentPassword ?? ""),
+      new_password: String(newPassword ?? ""),
+      new_password_confirmation: String(confirmation ?? ""),
+    },
+  });
+  clearApiSession();
+}
+
 export function fetchConnectionSummary() {
   return apiRequest("connection-summary/");
 }

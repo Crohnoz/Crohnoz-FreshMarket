@@ -46,7 +46,7 @@
 
           <section class="card connection-card" id="login-card">
             <div class="connection-card-heading"><div class="connection-step"><span class="connection-step-number">2</span><div><p class="eyebrow">Cuenta individual</p><h2>Ingresar al piloto</h2></div></div></div>
-            <p>Camila y Carmelo deben usar cuentas distintas. La contraseña nunca se guarda en el navegador.</p>
+            <p>Camila ingresa con su cuenta administrativa individual. La contraseña nunca se guarda en el navegador.</p>
             <form class="connection-form" id="login-form">
               <label>Usuario<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
               <label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
@@ -78,6 +78,15 @@
               </div>
               <div><p class="eyebrow">Catálogo del servidor</p><div class="connection-products" id="summary-product-preview"></div></div>
               <div class="connection-actions"><button class="button secondary" id="refresh-summary" type="button">Actualizar resumen</button><button class="button danger" id="logout-api" type="button">Cerrar sesión</button></div>
+              <button class="button secondary connection-password-trigger" id="show-password-form" type="button">Cambiar contraseña</button>
+              <form class="connection-form connection-password-form" id="change-password-form" hidden>
+                <div><p class="eyebrow">Seguridad de la cuenta</p><h3>Cambiar contraseña</h3></div>
+                <label>Contraseña actual<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+                <label>Nueva contraseña<input name="newPassword" type="password" autocomplete="new-password" minlength="12" required><small>Usa al menos 12 caracteres y evita datos fáciles de adivinar.</small></label>
+                <label>Confirmar nueva contraseña<input name="newPasswordConfirmation" type="password" autocomplete="new-password" minlength="12" required></label>
+                <div class="connection-actions"><button class="button primary" type="submit">Guardar nueva contraseña</button><button class="button secondary" id="cancel-password-change" type="button">Cancelar</button></div>
+                <div class="pilot-status connection-status" id="password-status" role="status" aria-live="polite"></div>
+              </form>
               <div class="pilot-status connection-status" id="summary-status" role="status" aria-live="polite"></div>
             </div>
           </section>

@@ -93,6 +93,42 @@ class MarketApiTests(APITestCase):
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Token.objects.filter(user=self.camila).exists())
 
+    def test_password_change_requires_current_password_and_preserves_session_on_error(self):
+        response = self.client.post(
+            reverse("change-password"),
+            {
+                "current_password": "incorrecta",
+                "new_password": "new-safe-test-password-2026",
+                "new_password_confirmation": "new-safe-test-password-2026",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.organization.id),
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertTrue(self.camila.check_password("safe-test-password"))
+        self.assertTrue(Token.objects.filter(key=self.token.key).exists())
+
+    def test_password_change_revokes_tokens_and_records_audit(self):
+        new_password = "new-safe-test-password-2026"
+        response = self.client.post(
+            reverse("change-password"),
+            {
+                "current_password": "safe-test-password",
+                "new_password": new_password,
+                "new_password_confirmation": new_password,
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.organization.id),
+        )
+        self.assertEqual(response.status_code, 204, response.data)
+        self.camila.refresh_from_db()
+        self.assertTrue(self.camila.check_password(new_password))
+        self.assertFalse(Token.objects.filter(user=self.camila).exists())
+        event = AuditEvent.objects.get(action="account.password_changed")
+        self.assertEqual(event.organization, self.organization)
+        self.assertEqual(event.actor, self.camila)
+        self.assertTrue(event.payload["tokens_revoked"])
+
     def test_login_rotates_previous_token_and_invalidates_old_credentials(self):
         first_key = self.token.key
         self.client.credentials()
