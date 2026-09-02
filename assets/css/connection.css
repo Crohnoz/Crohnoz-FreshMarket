@@ -36,6 +36,9 @@
 .connection-safety li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 9px; align-items: start; color: var(--muted); line-height: 1.45; }
 .connection-safety b { color: var(--success); }
 .connection-status { min-height: 24px; }
+.connection-password-trigger { width: 100%; }
+.connection-password-form { margin-top: 2px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
+.connection-password-form[hidden] { display: none; }
 @media (max-width: 860px) {
   .connection-hero { grid-template-columns: 1fr; align-items: start; }
   .connection-hero-badge { min-width: 0; min-height: 0; justify-items: start; text-align: left; }

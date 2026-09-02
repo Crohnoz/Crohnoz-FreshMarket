@@ -1,5 +1,6 @@
 import { APP_CONFIG } from "../core/config.js";
 import {
+  changeApiPassword,
   clearApiSession,
   connectionState,
   fetchConnectionSummary,
@@ -17,6 +18,7 @@ import { confirmAction, setButtonPending, setStatus, showToast } from "../core/u
 const configForm = document.querySelector("#connection-config-form");
 const loginForm = document.querySelector("#login-form");
 const organizationForm = document.querySelector("#organization-form");
+const passwordForm = document.querySelector("#change-password-form");
 const endpointInput = document.querySelector("#api-base-url");
 let summaryRequest = 0;
 
@@ -202,6 +204,37 @@ organizationForm.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("#refresh-summary").addEventListener("click", () => refreshSummary());
+document.querySelector("#show-password-form").addEventListener("click", () => {
+  passwordForm.hidden = false;
+  passwordForm.querySelector("input[name=currentPassword]").focus();
+});
+document.querySelector("#cancel-password-change").addEventListener("click", () => {
+  passwordForm.reset();
+  passwordForm.hidden = true;
+  setStatus("#password-status", "", "info");
+});
+passwordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const currentPassword = form.currentPassword.value;
+  const newPassword = form.newPassword.value;
+  const confirmation = form.newPasswordConfirmation.value;
+  setButtonPending(button, true, "Actualizando…");
+  setStatus("#password-status", "", "info");
+  try {
+    await changeApiPassword(currentPassword, newPassword, confirmation);
+    form.reset();
+    form.hidden = true;
+    renderConnectionState();
+    setStatus("#login-status", "Contraseña actualizada. Ingresa nuevamente con tu nueva clave.", "success");
+    showToast({ message: "Contraseña actualizada y sesiones anteriores cerradas.", state: "success" });
+  } catch (error) {
+    setStatus("#password-status", error.message, "error");
+  } finally {
+    setButtonPending(button, false);
+  }
+});
 document.querySelector("#logout-api").addEventListener("click", async () => {
   const accepted = await confirmAction({
     title: "¿Cerrar esta sesión?",

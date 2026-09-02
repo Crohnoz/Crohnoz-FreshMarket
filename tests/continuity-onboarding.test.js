@@ -93,7 +93,7 @@ test("configuration, onboarding and operator home expose continuity controls", a
   assert.match(home, /href="conexion\.html">Conexión/);
 });
 
-test("continuity and connected scripts pass syntax checks and cache v11", async () => {
+test("continuity and connected scripts pass syntax checks and cache v12", async () => {
   for (const path of [
     "assets/js/core/config.js",
     "assets/js/core/storage.js",
@@ -123,7 +123,7 @@ test("continuity and connected scripts pass syntax checks and cache v11", async 
   const config = await text("assets/js/core/config.js");
   assert.match(storage, /recordStorageMutation/);
   assert.match(storage, /recordSnapshotRestore/);
-  assert.match(worker, /crohnoz-fresh-market-v11/);
+  assert.match(worker, /crohnoz-fresh-market-v12/);
   assert.match(worker, /auditoria\.html/);
   assert.match(worker, /conexion\.html/);
   assert.match(worker, /pedidos-remotos\.html/);

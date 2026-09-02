@@ -7,7 +7,7 @@ Software vertical de **Crohnoz Labs** para verdulerías, fruterías y comercios 
 **Piloto comercial con backend Django desplegable y operaciones remotas separadas.** La interfaz mantiene un modo local completo con datos ficticios. Django incorpora autenticación temporal, organizaciones, RBAC, catálogo, recepción y movimientos de lotes, pedidos, preparación, idempotencia, control de versión y auditoría servidor. El Blueprint de hosting está preparado, pero la instancia pública todavía debe crearse y verificarse.
 
 Versión actual: **0.9.0-pilot**.  
-Avance estimado de gestión del MVP real para Camila y Carmelo: **82%**.
+Avance estimado del primer MVP real para la verdulería de Camila: **84%**.
 
 ## Páginas
 
@@ -57,6 +57,7 @@ La pantalla `/conexion` permite:
 - visualizar usuario, negocio y rol;
 - consultar conteos y catálogo preliminar del servidor;
 - cerrar sesión;
+- cambiar la contraseña desde una sesión autenticada, cerrando todos los tokens anteriores;
 - volver explícitamente al modo local.
 
 La URL y el modo se guardan en `localStorage`. El token, la identidad y la organización activa se guardan únicamente en `sessionStorage`, quedan fuera de los respaldos y vencen en el servidor.
@@ -126,7 +127,7 @@ El directorio `backend/` contiene:
 - auditoría append-only con HMAC-SHA256;
 - tokens temporales con vencimiento;
 - Docker y Docker Compose;
-- comando `seed_pilot` para Camila y Carmelo;
+- comando `seed_pilot` para crear a Camila como primera propietaria del negocio;
 - Blueprint `render.yaml` con servicio y base aislados.
 
 ### Auditoría local y puente Kernel
@@ -211,7 +212,7 @@ Las instrucciones completas están en `backend/README.md`, `docs/API_BRIDGE.md` 
 - migraciones durante el build compatible con el plan declarado;
 - carga inicial del piloto;
 - secretos generados;
-- contraseñas piloto solicitadas de forma segura;
+- contraseña temporal del piloto solicitada de forma segura;
 - CORS limitado al frontend productivo.
 
 El Blueprint todavía no equivale a un despliegue verificado. Después de crear la instancia deben comprobarse health, login, dos sesiones, recepción, movimientos FEFO, preparación, idempotencia, versiones, logs y backups antes de ingresar datos operacionales.
@@ -253,7 +254,7 @@ La CI ejecuta frontend y backend por separado.
 
 1. crear y verificar la instancia Django/PostgreSQL desde el Blueprint;
 2. restringir CSP al hostname exacto resultante;
-3. probar recepción, movimientos y preparación con Camila y Carmelo en dos sesiones;
+3. probar recepción, movimientos, preparación y cambio de contraseña con Camila;
 4. integrar consumo de inventario con pedidos y reparto automático entre lotes FEFO;
 5. conectar cobro, entrega, pagos y fiados;
 6. conectar cierre diario y respaldos del servidor;

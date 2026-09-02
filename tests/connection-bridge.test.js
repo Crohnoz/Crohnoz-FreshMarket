@@ -22,9 +22,12 @@ test("connection workspace exposes guided endpoint, login, organization and sess
   for (const id of [
     "connection-config-form", "api-base-url", "test-api", "use-local-mode", "login-form",
     "organization-form", "organization-select", "session-card", "refresh-summary", "logout-api",
+    "show-password-form", "change-password-form", "cancel-password-change", "password-status",
   ]) assert.match(html, new RegExp(`id=["']${id}["']`));
   assert.match(html, /autocomplete="username"/);
   assert.match(html, /autocomplete="current-password"/);
+  assert.match(html, /autocomplete="new-password"/);
+  assert.match(html, /minlength="12"/);
   assert.match(html, /La contraseña nunca se guarda/);
 });
 
@@ -70,11 +73,14 @@ test("login API and pilot seed command avoid default credentials", async () => {
   assert.match(views, /LoginRateThrottle/);
   assert.match(views, /expires_at/);
   assert.match(urls, /auth\/login\//);
+  assert.match(urls, /auth\/change-password\//);
   assert.match(urls, /connection-summary\//);
   assert.match(seed, /CAMILA_PILOT_PASSWORD/);
-  assert.match(seed, /CARMELO_PILOT_PASSWORD/);
+  assert.match(seed, /Membership\.Role\.OWNER/);
+  assert.match(seed, /default="administracion"/);
   assert.match(seed, /al menos 12 caracteres/);
   assert.doesNotMatch(seed, /password\s*=\s*["'](?:camila|carmelo|admin|123)/i);
+  assert.doesNotMatch(seed, /CARMELO_PILOT_PASSWORD/);
 });
 
 test("connection assets pass syntax checks and are cached offline", async () => {
@@ -91,7 +97,7 @@ test("connection assets pass syntax checks and are cached offline", async () => 
   ]) execFileSync(process.execPath, ["--check", fileURLToPath(new URL(`../${path}`, import.meta.url))]);
   const worker = await text("sw.js");
   const netlify = await text("netlify.toml");
-  assert.match(worker, /crohnoz-fresh-market-v11/);
+  assert.match(worker, /crohnoz-fresh-market-v12/);
   assert.match(worker, /conexion\.html/);
   assert.match(worker, /pedidos-remotos\.html/);
   assert.match(worker, /inventario-remoto\.html/);

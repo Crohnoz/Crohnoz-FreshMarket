@@ -183,7 +183,7 @@ test("remote inventory assets, route and cache are wired", async () => {
   const worker = await text("sw.js");
   const netlify = await text("netlify.toml");
   const tasks = await text("assets/js/domain/operator-tasks.js");
-  assert.match(worker, /crohnoz-fresh-market-v11/);
+  assert.match(worker, /crohnoz-fresh-market-v12/);
   assert.match(worker, /inventario-remoto\.html/);
   assert.match(worker, /assets\/css\/remote-inventory\.css/);
   assert.match(worker, /assets\/js\/remote-inventory\/app\.js/);
