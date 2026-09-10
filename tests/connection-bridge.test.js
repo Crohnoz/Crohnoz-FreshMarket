@@ -49,7 +49,8 @@ test("connection state is mounted globally and remains explicit", async () => {
   const guided = await text("assets/js/core/guided-shell.js");
   const tasks = await text("assets/js/domain/operator-tasks.js");
   assert.match(config, /connection-shell\.js/);
-  assert.match(config, /0\.9\.0-pilot/);
+  assert.match(config, /0\.9\.0-prototype/);
+  assert.match(config, /Prototype \/ R&D/);
   assert.match(shell, /Modo local/);
   assert.match(shell, /API configurada, sin sesión/);
   assert.match(shell, /sesión protegida en esta pestaña/);
@@ -62,7 +63,7 @@ test("connection state is mounted globally and remains explicit", async () => {
   assert.match(tasks, /inventario-remoto\.html/);
 });
 
-test("login API and pilot seed command avoid default credentials", async () => {
+test("login API and prototype seed command avoid default credentials", async () => {
   const views = await text("backend/market/views.py");
   const urls = await text("backend/market/urls.py");
   const seed = await text("backend/market/management/commands/seed_pilot.py");
@@ -71,10 +72,10 @@ test("login API and pilot seed command avoid default credentials", async () => {
   assert.match(views, /expires_at/);
   assert.match(urls, /auth\/login\//);
   assert.match(urls, /connection-summary\//);
-  assert.match(seed, /CAMILA_PILOT_PASSWORD/);
-  assert.match(seed, /CARMELO_PILOT_PASSWORD/);
+  assert.match(seed, /PILOT_MANAGER_PASSWORD/);
+  assert.match(seed, /PILOT_OPERATOR_PASSWORD/);
   assert.match(seed, /al menos 12 caracteres/);
-  assert.doesNotMatch(seed, /password\s*=\s*["'](?:camila|carmelo|admin|123)/i);
+  assert.doesNotMatch(seed, /password\s*=\s*["'](?:admin|123)/i);
 });
 
 test("connection assets pass syntax checks and are cached offline", async () => {
