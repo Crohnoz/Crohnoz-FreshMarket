@@ -1,15 +1,15 @@
 # Créditos y política de imágenes
 
-Crohnoz Fresh Market utiliza fotografías externas únicamente en el piloto comercial para validar la presentación visual del producto sin aumentar innecesariamente el peso del repositorio.
+Crohnoz Fresh Market utiliza fotografías externas en la superficie pública de **Prototype / R&D** para validar la presentación visual del producto sin aumentar innecesariamente el peso del repositorio.
 
-## Política del piloto
+## Política del prototipo
 
 - Las imágenes se cargan mediante HTTPS.
 - Los dominios permitidos están declarados explícitamente en la Content Security Policy de `netlify.toml`.
 - Cada producto debe tener texto alternativo descriptivo.
 - El catálogo usa carga diferida y respaldo visual mediante emoji cuando una fotografía no está disponible.
-- Las imágenes no contienen datos de clientes ni del comercio piloto.
-- Antes de una versión productiva, los activos aprobados deberán optimizarse, versionarse y alojarse en infraestructura controlada por Crohnoz Labs o por el comercio.
+- Las imágenes no contienen datos de clientes ni de una operación real.
+- Antes de una eventual versión productiva, los activos aprobados deberán optimizarse, versionarse y alojarse en infraestructura controlada por Crohnoz Labs o por la organización operadora.
 
 ## Fuentes
 
@@ -36,4 +36,4 @@ Las fotografías deben utilizarse conforme a las condiciones vigentes de cada pr
 - Unsplash License: `https://unsplash.com/license`
 - Pexels License: `https://www.pexels.com/license/`
 
-La inclusión de una fotografía en el piloto no implica que sea un activo permanente del producto. La selección final debe revisarse antes de comercializar o entregar una instancia productiva.
+La inclusión de una fotografía en el prototipo no implica que sea un activo permanente del producto. La selección final debe revisarse antes de comercializar o entregar una instancia productiva.
