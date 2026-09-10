@@ -151,10 +151,10 @@ test("Render blueprint isolates secrets, database and health checks", async () =
   assert.match(blueprint, /rootDir: backend/);
   assert.match(blueprint, /healthCheckPath: \/api\/v1\/health\//);
   assert.match(blueprint, /fromDatabase:[\s\S]*crohnoz-fresh-market-db[\s\S]*connectionString/);
-  assert.match(blueprint, /CAMILA_PILOT_PASSWORD[\s\S]*sync: false/);
-  assert.match(blueprint, /CARMELO_PILOT_PASSWORD[\s\S]*sync: false/);
+  assert.match(blueprint, /PILOT_MANAGER_PASSWORD[\s\S]*sync: false/);
+  assert.match(blueprint, /PILOT_OPERATOR_PASSWORD[\s\S]*sync: false/);
   assert.doesNotMatch(blueprint, /preDeployCommand/);
-  assert.doesNotMatch(blueprint, /camila-pilot-only|carmelo-pilot-only|safe-test-password/);
+  assert.doesNotMatch(blueprint, /manager-prototype-only|operator-prototype-only|safe-test-password/);
   assert.match(build, /collectstatic --no-input/);
   assert.match(build, /check --deploy/);
   assert.match(build, /migrate --noinput/);
