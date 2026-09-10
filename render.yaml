@@ -24,9 +24,9 @@ services:
         value: https://crohnozfreshmarket.netlify.app
       - key: PILOT_TOKEN_MAX_HOURS
         value: "12"
-      - key: CAMILA_PILOT_PASSWORD
+      - key: PILOT_MANAGER_PASSWORD
         sync: false
-      - key: CARMELO_PILOT_PASSWORD
+      - key: PILOT_OPERATOR_PASSWORD
         sync: false
 
 databases:
