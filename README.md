@@ -1,5 +1,7 @@
 # Crohnoz Fresh Market
 
+[![CI](https://github.com/Crohnoz/Crohnoz-FreshMarket/actions/workflows/ci.yml/badge.svg)](https://github.com/Crohnoz/Crohnoz-FreshMarket/actions/workflows/ci.yml)
+
 **L1 · Prototype / R&D**
 
 Crohnoz Fresh Market is an early product exploration for small fresh-food retailers. The project is being used to model inventory, receiving, orders, preparation, waste and day-to-day operational workflows before treating the product as a commercial pilot.
