@@ -11,7 +11,11 @@ from .models import Membership, Organization, Product
 
 class SeedPilotCommandTests(TestCase):
     def test_seed_requires_explicit_passwords(self):
-        with patch.dict("os.environ", {"CAMILA_PILOT_PASSWORD": "", "CARMELO_PILOT_PASSWORD": ""}, clear=False):
+        with patch.dict(
+            "os.environ",
+            {"PILOT_MANAGER_PASSWORD": "", "PILOT_OPERATOR_PASSWORD": ""},
+            clear=False,
+        ):
             with self.assertRaises(CommandError):
                 call_command("seed_pilot")
         self.assertFalse(User.objects.exists())
@@ -19,7 +23,7 @@ class SeedPilotCommandTests(TestCase):
     def test_seed_rejects_passwords_shorter_than_minimum(self):
         with patch.dict(
             "os.environ",
-            {"CAMILA_PILOT_PASSWORD": "corta-123", "CARMELO_PILOT_PASSWORD": "breve-456"},
+            {"PILOT_MANAGER_PASSWORD": "corta-123", "PILOT_OPERATOR_PASSWORD": "breve-456"},
             clear=False,
         ):
             with self.assertRaisesRegex(CommandError, "al menos 12 caracteres"):
@@ -28,44 +32,44 @@ class SeedPilotCommandTests(TestCase):
         self.assertFalse(Organization.objects.exists())
 
     def test_seed_creates_separate_accounts_without_printing_passwords(self):
-        camila_password = "camila-pilot-only-2026"
-        carmelo_password = "carmelo-pilot-only-2026"
+        manager_password = "manager-prototype-only-2026"
+        operator_password = "operator-prototype-only-2026"
         output = StringIO()
         with patch.dict(
             "os.environ",
             {
-                "CAMILA_PILOT_PASSWORD": camila_password,
-                "CARMELO_PILOT_PASSWORD": carmelo_password,
+                "PILOT_MANAGER_PASSWORD": manager_password,
+                "PILOT_OPERATOR_PASSWORD": operator_password,
             },
             clear=False,
         ):
             call_command("seed_pilot", stdout=output)
 
-        organization = Organization.objects.get(slug="mercado-piloto-camila-carmelo")
-        camila = User.objects.get(username="camila")
-        carmelo = User.objects.get(username="carmelo")
-        self.assertTrue(camila.check_password(camila_password))
-        self.assertTrue(carmelo.check_password(carmelo_password))
+        organization = Organization.objects.get(slug="mercado-piloto")
+        manager = User.objects.get(username="pilot-manager")
+        operator = User.objects.get(username="pilot-operator")
+        self.assertTrue(manager.check_password(manager_password))
+        self.assertTrue(operator.check_password(operator_password))
         self.assertEqual(
-            Membership.objects.get(user=camila, organization=organization).role,
+            Membership.objects.get(user=manager, organization=organization).role,
             Membership.Role.MANAGER,
         )
         self.assertEqual(
-            Membership.objects.get(user=carmelo, organization=organization).role,
+            Membership.objects.get(user=operator, organization=organization).role,
             Membership.Role.OPERATOR,
         )
         self.assertEqual(Product.objects.filter(organization=organization).count(), 4)
-        self.assertNotIn(camila_password, output.getvalue())
-        self.assertNotIn(carmelo_password, output.getvalue())
+        self.assertNotIn(manager_password, output.getvalue())
+        self.assertNotIn(operator_password, output.getvalue())
 
         with patch.dict(
             "os.environ",
             {
-                "CAMILA_PILOT_PASSWORD": camila_password,
-                "CARMELO_PILOT_PASSWORD": carmelo_password,
+                "PILOT_MANAGER_PASSWORD": manager_password,
+                "PILOT_OPERATOR_PASSWORD": operator_password,
             },
             clear=False,
         ):
             call_command("seed_pilot", stdout=StringIO())
-        self.assertEqual(User.objects.filter(username__in=["camila", "carmelo"]).count(), 2)
+        self.assertEqual(User.objects.filter(username__in=["pilot-manager", "pilot-operator"]).count(), 2)
         self.assertEqual(Product.objects.filter(organization=organization).count(), 4)
