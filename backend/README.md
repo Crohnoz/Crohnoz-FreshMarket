@@ -1,24 +1,30 @@
-# Backend MVP · Crohnoz Fresh Market
+# Crohnoz Fresh Market · Backend Prototype
 
-Backend ejecutable para validar Crohnoz Fresh Market con Camila y Carmelo sin reemplazar silenciosamente la operación local existente.
+**L1 · Prototype / R&D · Django / DRF operational boundary**
 
-## Decisión técnica
+This backend exists to validate which Fresh Market workflows require a real server-side trust boundary instead of relying on browser state. It is intentionally narrower than the complete product concept and should not be interpreted as a production deployment claim.
 
-- Django 5.2 LTS.
-- Django REST Framework 3.16.
-- PostgreSQL 17 en el Blueprint administrado; SQLite solo para desarrollo y CI rápido.
-- Monolito modular pequeño.
-- Organización explícita mediante `X-Organization-ID`.
-- Roles `owner`, `manager`, `operator` y `viewer`.
-- Auditoría servidor append-only con cadena HMAC-SHA256.
-- Libro append-only de movimientos de inventario.
-- Control optimista obligatorio mediante `If-Match: <version>` en mutaciones operacionales.
-- Token temporal del piloto con vencimiento servidor configurable, por defecto 12 horas.
-- Idempotencia en pedidos, recepciones, movimientos y cambios de estado.
+## What it demonstrates
 
-La autenticación por token sigue siendo transitoria. Antes de una apertura comercial debe migrarse a JWT rotatorio u OIDC, agregar recuperación de cuenta, MFA opcional y una política de sesiones formal.
+- Django 5.2 LTS + Django REST Framework 3.16;
+- PostgreSQL-ready deployment with SQLite for local development and fast CI;
+- organization-scoped operations via `X-Organization-ID`;
+- roles: `owner`, `manager`, `operator`, `viewer`;
+- append-only audit events with HMAC-SHA256 chaining;
+- append-only inventory movement ledger;
+- optimistic concurrency through `If-Match` on operational mutations;
+- idempotency for orders, receiving, inventory movements and state transitions;
+- explicit server-side workflow validation;
+- exact CORS allowlisting and HTTPS-only remote API configuration;
+- managed health checks and reproducible migrations.
 
-## Ejecutar con SQLite
+## Current trust boundary
+
+The prototype introduces a server boundary for selected workflows, but the wider Fresh Market product remains L1.
+
+Current authentication is intentionally transitional. The implementation uses finite server-side tokens and rotates the previous token on login. Before any production claim, authentication and account lifecycle would need a production-grade design such as rotating JWT/OIDC, recovery flows, session policy and stronger operational monitoring.
+
+## Local development
 
 ```bash
 cd backend
@@ -30,73 +36,49 @@ python manage.py migrate
 python manage.py runserver 8001
 ```
 
-Las variables del archivo `.env` deben cargarse mediante el mecanismo seguro del entorno. El repositorio no carga `.env` automáticamente y no debe contener secretos reales.
+The repository does not load real secrets automatically. Local or managed environments are responsible for securely providing configuration.
 
-## Preparar el piloto de Camila y Carmelo
+## Seed a fictitious test organization
+
+The existing command name `seed_pilot` is retained as an internal implementation identifier. It creates **generic fictitious role accounts**, not client identities.
 
 ```bash
-export CAMILA_PILOT_PASSWORD='una-clave-unica-de-al-menos-12-caracteres'
-export CARMELO_PILOT_PASSWORD='otra-clave-unica-de-al-menos-12-caracteres'
+export PILOT_MANAGER_PASSWORD='unique-test-password-at-least-12-chars'
+export PILOT_OPERATOR_PASSWORD='another-unique-test-password-12-chars'
 python manage.py seed_pilot
 ```
 
-En PowerShell:
+PowerShell:
 
 ```powershell
-$env:CAMILA_PILOT_PASSWORD="una-clave-unica-de-al-menos-12-caracteres"
-$env:CARMELO_PILOT_PASSWORD="otra-clave-unica-de-al-menos-12-caracteres"
+$env:PILOT_MANAGER_PASSWORD="unique-test-password-at-least-12-chars"
+$env:PILOT_OPERATOR_PASSWORD="another-unique-test-password-12-chars"
 python manage.py seed_pilot
 ```
 
-El comando es idempotente y:
+The command is idempotent and:
 
-- crea o actualiza una organización piloto;
-- asigna a Camila como `manager`;
-- asigna a Carmelo como `operator`;
-- carga un catálogo ficticio;
-- no genera contraseñas predeterminadas;
-- no imprime contraseñas.
+- creates or updates a fictitious organization;
+- creates separate `manager` and `operator` accounts;
+- loads a small fictitious catalog;
+- requires explicit passwords;
+- never prints passwords.
 
-## Ejecutar con PostgreSQL local
+## PostgreSQL / managed deployment
 
 ```bash
 cd backend
 docker compose up --build
 ```
 
-API local: `http://localhost:8001/api/v1/health/`  
-Admin: `http://localhost:8001/admin/`  
-Conexión: `http://localhost:8000/conexion.html`  
-Inventario remoto: `http://localhost:8000/inventario-remoto.html`  
-Pedidos remotos: `http://localhost:8000/pedidos-remotos.html`
+Local API:
 
-## Blueprint administrado
+- health: `http://localhost:8001/api/v1/health/`
+- admin: `http://localhost:8001/admin/`
 
-`render.yaml` declara recursos aislados:
+`render.yaml` defines an isolated web service and PostgreSQL database, a health check, migration/build flow and non-synchronized password variables for the two generic test roles.
 
-- servicio `crohnoz-fresh-market-api`;
-- base `crohnoz-fresh-market-db`;
-- PostgreSQL sin acceso público directo;
-- health check `/api/v1/health/`;
-- migraciones durante el build;
-- carga inicial del piloto;
-- secretos generados para Django y auditoría;
-- contraseñas solicitadas al crear el Blueprint.
-
-Flujo:
-
-1. Conectar el repositorio como Blueprint.
-2. Confirmar que apunta a `main`.
-3. Ingresar las contraseñas piloto por el panel seguro.
-4. Aplicar el Blueprint.
-5. Verificar build, migraciones, seed y health check.
-6. Copiar la URL HTTPS terminada en `/api/v1`.
-7. Probarla desde `/conexion`.
-8. Restringir el CSP de Netlify al hostname definitivo.
-
-No ejecutar `seed_pilot` con claves enviadas por correo, chat público, commits o logs.
-
-## Endpoints principales
+## Core endpoints
 
 - `GET /api/v1/health/`
 - `POST /api/v1/auth/login/`
@@ -109,135 +91,63 @@ No ejecutar `seed_pilot` con claves enviadas por correo, chat público, commits 
 - `POST /api/v1/inventory-lots/receive/`
 - `GET /api/v1/inventory-movements/`
 - `POST /api/v1/inventory-movements/`
-- `GET` y `POST /api/v1/orders/`
+- `GET` / `POST /api/v1/orders/`
 - `POST /api/v1/orders/{id}/start-preparing/`
 - `POST /api/v1/orders/{id}/confirm-weighing/`
 - `POST /api/v1/orders/{id}/mark-ready/`
-- `GET /api/v1/audit-events/` para `manager` y `owner`
+- `GET /api/v1/audit-events/` for `manager` and `owner`
 
-## Recepción de inventario
+## Inventory integrity
 
-`POST /inventory-lots/receive/` requiere `Idempotency-Key`.
-
-El servidor:
-
-- valida producto activo y organización;
-- exige cantidad positiva y costo no negativo;
-- exige cantidades enteras para unidad y paquete;
-- crea el lote con disponibilidad inicial completa;
-- registra `inventorylot.received`;
-- devuelve replay seguro para la misma solicitud;
-- responde conflicto si la clave cambia de contenido.
-
-Los lotes no aceptan creación, reemplazo, edición ni eliminación genérica.
-
-## Movimientos de inventario
-
-`POST /inventory-movements/` exige:
+Receiving requires an `Idempotency-Key`. Inventory mutations require both:
 
 ```text
-If-Match: <version-del-lote>
-Idempotency-Key: <clave-estable>
+If-Match: <lot-version>
+Idempotency-Key: <stable-request-key>
 ```
 
-Tipos:
+The backend rejects negative inventory, invalid units, stale versions and unsafe cross-request idempotency reuse. Generic `PATCH` / `DELETE` operations are intentionally blocked for ledger-style movement records.
 
-- `consumption`: descuenta consumo; rol `operator`.
-- `waste`: descuenta merma; rol `operator`.
-- `supplier_return`: descuenta devolución; rol `operator`.
-- `adjustment`: fija un nuevo saldo; rol `manager`.
+### FEFO validation
 
-Cada movimiento guarda:
+Before consumption, the server resolves the first usable lot by availability, quality, preferred date, receiving date and deterministic tie-breaking. Attempting to consume a later lot is rejected while an earlier eligible lot remains available.
 
-- saldo anterior;
-- variación;
-- saldo resultante;
-- motivo y referencia;
-- actor;
-- firma de solicitud;
-- clave de idempotencia.
+The current version does not automatically distribute one requested quantity across multiple lots; separate movements are recorded instead.
 
-Reglas:
+## Order lifecycle
 
-- no existe saldo negativo;
-- una salida no supera la disponibilidad;
-- unidad y paquete requieren enteros;
-- un ajuste no supera la recepción original;
-- un lote dañado no se consume;
-- un lote agotado no admite nuevas salidas;
-- versión obsoleta devuelve `409`;
-- replay idéntico devuelve `200` y `X-Idempotent-Replay: true`;
-- clave cruzada entre lote, tipo o contenido devuelve `409`;
-- movimientos no aceptan `PATCH` ni `DELETE`.
+Remote orders use explicit transitions rather than unrestricted CRUD:
 
-## FEFO remoto
+`confirmed → preparing → ready`
 
-Antes de `consumption`, el servidor bloquea organización y lotes dentro de la transacción y determina el primer lote utilizable:
+The server controls initial state, validates complete weighing before readiness, recalculates totals server-side and requires concurrency/idempotency controls for state transitions.
 
-1. activo y con saldo;
-2. calidad distinta de `damaged`;
-3. fecha preferente más próxima;
-4. si no hay fecha, recepción más antigua;
-5. desempate por creación e ID.
+## Security controls
 
-Consumir un lote posterior devuelve `400` indicando el lote prioritario. Al agotarse el primero, el siguiente queda habilitado. Un replay exitoso no se invalida si después aparece una recepción con fecha anterior.
+- login throttling;
+- finite token expiry;
+- token rotation on login and deletion on logout;
+- HTTPS-only remote endpoints except localhost development;
+- passwords are never persisted in the browser;
+- exact CORS allowlist;
+- membership and role revalidation per request;
+- no silent fallback from remote mode to local mode;
+- transactional critical mutations;
+- secrets excluded from the repository.
 
-La versión actual no distribuye automáticamente una cantidad entre varios lotes; se registran movimientos separados.
+## Current limits
 
-## Pedidos y preparación
+This backend is evidence of engineering direction, not production maturity.
 
-La creación remota incluye `idempotency_key`:
+- the managed instance still needs independent operational verification before being treated as a live pilot;
+- only selected inventory and order workflows are server-backed;
+- there is no complete bidirectional/offline synchronization;
+- payment, credit, delivery and day-closing are not fully remote;
+- account recovery and formal session lifecycle are incomplete;
+- provider backup policy must be verified operationally;
+- CSP should be restricted to the final deployed hostname;
+- real personal/customer data should not be used in this phase.
 
-- primer envío: `201`;
-- replay idéntico: `200` y `X-Idempotent-Replay: true`;
-- misma clave con datos distintos: `409`;
-- una sola auditoría `order.created`.
+`L0 IDEA → ● L1 PROTOTYPE → L2 PILOT → L3 PRODUCTION → L4 SCALE`
 
-El backend fija todo pedido nuevo como `confirmed`, `pending`, `operator` y rechaza cantidades reales prellenadas.
-
-Las transiciones exigen `If-Match` e `Idempotency-Key`:
-
-- `confirmed → preparing`;
-- pesaje completo solo en `preparing`;
-- recálculo del total en servidor;
-- `preparing → ready` solo con todas las líneas completas;
-- versión obsoleta devuelve `409`;
-- una clave no cruza pedidos;
-- `PUT`, `PATCH` y `DELETE` genéricos están bloqueados.
-
-## Seguridad del puente
-
-- Login limitado a 8 intentos por minuto por origen.
-- Tokens vencidos rechazados.
-- Cada login rota el token anterior; logout lo elimina.
-- Frontend solo acepta HTTPS, salvo `localhost` y `127.0.0.1`.
-- La contraseña no se persiste.
-- CORS usa una allowlist exacta.
-- Cada petición vuelve a validar membresía y rol.
-- Cambiar la URL API elimina la sesión anterior.
-- No existe fallback silencioso a modo local.
-- Mutaciones críticas usan transacciones, idempotencia y versión.
-
-## Variables relevantes
-
-- `DATABASE_URL` o `DATABASE_*`.
-- `DJANGO_SECRET_KEY`.
-- `DJANGO_ALLOWED_HOSTS` o `RENDER_EXTERNAL_HOSTNAME`.
-- `DJANGO_CORS_ALLOWED_ORIGINS`.
-- `DJANGO_CSRF_TRUSTED_ORIGINS`.
-- `AUDIT_HMAC_KEY`.
-- `PILOT_TOKEN_MAX_HOURS`, entre 1 y 24.
-- `CAMILA_PILOT_PASSWORD`.
-- `CARMELO_PILOT_PASSWORD`.
-
-## Límites de esta versión
-
-- El Blueprint está listo, pero la instancia pública debe crearse y verificarse.
-- Catálogo, recepción, movimientos, pedidos, preparación y estado listo tienen API separada.
-- No hay reparto automático entre lotes, cobro, fiado, entrega ni cierre remotos.
-- No existe sincronización bidireccional ni cola offline.
-- No hay recuperación de contraseña ni correo.
-- Debe verificarse la política real de backups del proveedor.
-- El CSP debe restringirse al hostname definitivo.
-- No hay importador ejecutable del paquete Kernel.
-- No deben usarse datos personales reales en esta fase.
+The maturity label moves only when evidence supports it.
