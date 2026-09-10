@@ -25,7 +25,7 @@ test("checksummed backups round-trip and reject invalid input", () => {
   const entries = { business: { name: "Mercado" }, orders: [{ id: "FM-1" }, { id: "FM-2" }] };
   const envelope = createBackupEnvelope(entries, {
     namespace: "crohnoz-fresh-market",
-    appVersion: "0.9.0-pilot",
+    appVersion: "0.9.0-prototype",
     exportedAt: "2026-08-02T19:00:00.000Z",
   });
   const restored = parseBackupText(serializeBackup(envelope), { expectedNamespace: "crohnoz-fresh-market" });
@@ -131,5 +131,5 @@ test("continuity and connected scripts pass syntax checks and cache v11", async 
   assert.match(worker, /assets\/js\/domain\/remote-orders\.js/);
   assert.match(worker, /assets\/js\/domain\/remote-inventory\.js/);
   assert.match(worker, /assets\/js\/repositories\/api-market\.js/);
-  assert.match(config, /0\.9\.0-pilot/);
+  assert.match(config, /0\.9\.0-prototype/);
 });
